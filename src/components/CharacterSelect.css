@@ -1,0 +1,74 @@
+.character-select {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+  padding: 40px 20px;
+}
+
+.character-select h1 {
+  font-size: 48px;
+  margin: 0 0 10px 0;
+  background: linear-gradient(135deg, #4a9eff 0%, #00ffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+}
+
+.character-select p {
+  font-size: 18px;
+  color: #aaa;
+  margin: 0 0 40px 0;
+}
+
+.characters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.character-card {
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+  border: 2px solid #4a9eff;
+  border-radius: 8px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #fff;
+  font-family: inherit;
+  text-align: center;
+}
+
+.character-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(74, 158, 255, 0.3);
+  border-color: #00ffff;
+}
+
+.character-name {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #4a9eff;
+}
+
+.character-universe {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.character-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #ccc;
+}

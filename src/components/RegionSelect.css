@@ -1,0 +1,120 @@
+.region-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+  padding: 20px;
+}
+
+.region-container {
+  max-width: 900px;
+  width: 100%;
+}
+
+.region-header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.region-header h1 {
+  font-size: 48px;
+  margin: 0 0 10px 0;
+  background: linear-gradient(135deg, #4a9eff 0%, #00ffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+}
+
+.subtitle {
+  color: #aaa;
+  font-size: 16px;
+  margin: 0;
+}
+
+.regions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.region-card {
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+  border: 2px solid var(--accent-color, #4a9eff);
+  border-radius: 12px;
+  padding: 30px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #fff;
+  font-family: inherit;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.region-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgba(74, 158, 255, 0.3);
+  border-color: #00ffff;
+}
+
+.region-emoji {
+  font-size: 56px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.region-name {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--accent-color, #4a9eff);
+}
+
+.region-description {
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.region-info {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid #4a9eff;
+  border-radius: 12px;
+  padding: 25px;
+  text-align: center;
+}
+
+.region-info h3 {
+  color: #4a9eff;
+  font-size: 18px;
+  margin: 0 0 15px 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.region-info p {
+  color: #ddd;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 10px 0;
+}
+
+.region-info p:last-child {
+  margin: 0;
+}
+
+.region-info strong {
+  color: #00ffff;
+  font-weight: bold;
+}
