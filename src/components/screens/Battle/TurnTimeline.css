@@ -1,0 +1,317 @@
+.turn-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  border: 2px solid #4a9eff;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.timeline-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a9eff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.timeline-container {
+  position: relative;
+  height: 60px;
+  width: 100%;
+  padding: 0 10px;
+  overflow: hidden;
+}
+
+/* Animated grid background synced with action time */
+.timeline-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    repeating-linear-gradient(
+      90deg,
+      rgba(74, 158, 255, 0.1) 0px,
+      rgba(74, 158, 255, 0.1) 1px,
+      transparent 1px,
+      transparent 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(74, 158, 255, 0.2) 0px,
+      rgba(74, 158, 255, 0.2) 2px,
+      transparent 2px,
+      transparent 100px
+    );
+  background-size: 2000px 100%, 2000px 100%;
+  background-position: calc(var(--current-time, 1) * -100px) 0, calc(var(--current-time, 1) * -100px) 0;
+  transition: background-position 0.4s ease-out;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Pause transition when it's player's turn */
+.timeline-container.paused::before {
+  transition: none;
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4a9eff 0%, #7c3aed 50%, #ff6b6b 100%);
+  border-radius: 2px;
+  transform: translateY(-50%);
+  box-shadow: 0 0 10px rgba(74, 158, 255, 0.3);
+  z-index: 1;
+}
+
+/* Current action marker (leftmost) */
+.current-action-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.current-action-marker .marker-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, 
+    rgba(255, 215, 0, 0.8) 0%, 
+    rgba(255, 215, 0, 1) 50%, 
+    rgba(255, 215, 0, 0.8) 100%
+  );
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.4);
+  animation: pulse-marker 1.5s ease-in-out infinite;
+}
+
+.current-action-marker .marker-arrow {
+  position: absolute;
+  top: 50%;
+  left: 5px;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+  animation: pulse-arrow 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-marker {
+  0%, 100% {
+    opacity: 0.8;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.6);
+  }
+}
+
+@keyframes pulse-arrow {
+  0%, 100% {
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.15);
+  }
+}
+
+/* Turn markers (T1, T2, T3...) */
+.turn-marker {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.turn-marker-line {
+  width: 2px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.turn-marker-label {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: #aaa;
+  white-space: nowrap;
+  background: #1a1a1a;
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Action indicators on timeline */
+.action-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.action-indicator:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  z-index: 20;
+}
+
+.action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  border: 2px solid;
+  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.action-indicator.player .action-icon {
+  border-color: #4a9eff;
+  color: #4a9eff;
+}
+
+.action-indicator.enemy .action-icon {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+}
+
+.action-indicator.active .action-icon {
+  border-width: 3px;
+  animation: pulse-action 1s ease-in-out infinite;
+  box-shadow: 0 0 15px currentColor;
+}
+
+@keyframes pulse-action {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.action-label {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid;
+}
+
+.action-indicator.player .action-label {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.2);
+}
+
+.action-indicator.enemy .action-label {
+  border-color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.2);
+}
+
+/* Simultaneous actions - merged indicator with gradient */
+.action-indicator.simultaneous .action-icon-merged {
+  width: 40px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  border: 2px solid;
+  border-image: linear-gradient(90deg, #4a9eff 0%, #ff6b6b 100%) 1;
+  background: linear-gradient(90deg, 
+    rgba(74, 158, 255, 0.3) 0%, 
+    rgba(74, 158, 255, 0.2) 25%,
+    rgba(255, 107, 107, 0.2) 75%,
+    rgba(255, 107, 107, 0.3) 100%
+  );
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.action-indicator.simultaneous .action-icon-merged::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  background: linear-gradient(90deg, #4a9eff 0%, #ff6b6b 100%) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.action-indicator.simultaneous .player-icon {
+  font-size: 14px;
+  color: #4a9eff;
+  text-shadow: 0 0 4px #4a9eff;
+}
+
+.action-indicator.simultaneous .enemy-icon {
+  font-size: 14px;
+  color: #ff6b6b;
+  text-shadow: 0 0 4px #ff6b6b;
+}
+
+.action-indicator.simultaneous .action-label {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.action-indicator.simultaneous.active .action-icon-merged {
+  border-width: 3px;
+  animation: pulse-simultaneous 1s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(74, 158, 255, 0.5), 0 0 15px rgba(255, 107, 107, 0.5);
+}
+
+@keyframes pulse-simultaneous {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}

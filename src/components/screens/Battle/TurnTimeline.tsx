@@ -1,0 +1,195 @@
+import React from 'react';
+import './TurnTimeline.css';
+
+interface TurnAction {
+  entityId: string;
+  actionType: 'attack' | 'spell' | 'move';
+  time: number;
+  turnNumber: number;
+}
+
+interface TurnTimelineProps {
+  turnSequence: TurnAction[];
+  currentIndex: number;
+  playerName: string;
+  enemyName: string;
+  isPlayerTurn: boolean;
+  onSimultaneousAction?: (playerAction: string, enemyAction: string, time: number) => void;
+}
+
+export const TurnTimeline: React.FC<TurnTimelineProps> = ({
+  turnSequence,
+  currentIndex,
+  playerName,
+  enemyName,
+  isPlayerTurn,
+  onSimultaneousAction,
+}) => {
+  // Get next 10 actions starting from current
+  const visibleActions = turnSequence.slice(currentIndex, currentIndex + 10);
+  
+  if (visibleActions.length === 0) return null;
+
+  // Track previous action time for smooth transitions
+  const prevActionTimeRef = React.useRef<number>(visibleActions[0]?.time || 1);
+  const currentActionTime = visibleActions[0]?.time || 1;
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+
+  // Trigger transition when action time changes
+  React.useEffect(() => {
+    if (currentActionTime !== prevActionTimeRef.current) {
+      setIsTransitioning(true);
+      prevActionTimeRef.current = currentActionTime;
+      const timer = setTimeout(() => setIsTransitioning(false), 400); // Match CSS transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [currentActionTime]);
+
+  // Group actions by exact time to detect simultaneous actions
+  const actionGroups = visibleActions.reduce((groups, action, idx) => {
+    const time = action.time.toFixed(3); // Use 3 decimals for precise grouping
+    if (!groups[time]) {
+      groups[time] = [];
+    }
+    groups[time].push({ action, originalIndex: idx });
+    return groups;
+  }, {} as Record<string, Array<{ action: TurnAction; originalIndex: number }>>);
+
+  // Track last logged simultaneous action to prevent duplicates
+  const lastLoggedSimultaneous = React.useRef<string | null>(null);
+
+  // Check for simultaneous active action and call callback
+  React.useEffect(() => {
+    if (visibleActions.length === 0) return;
+    
+    const firstTimeKey = visibleActions[0].time.toFixed(3);
+    const firstGroup = actionGroups[firstTimeKey];
+    
+    if (firstGroup && firstGroup.length > 1 && firstGroup[0].originalIndex === 0) {
+      const hasPlayer = firstGroup.some(g => g.action.entityId === 'player');
+      const hasEnemy = firstGroup.some(g => g.action.entityId === 'enemy');
+      
+      if (hasPlayer && hasEnemy && onSimultaneousAction) {
+        const playerAction = firstGroup.find(g => g.action.entityId === 'player')!.action;
+        const enemyAction = firstGroup.find(g => g.action.entityId === 'enemy')!.action;
+        const simultaneousKey = `${playerAction.time}-${currentIndex}`;
+        
+        // Only log if we haven't logged this exact simultaneous action yet
+        if (lastLoggedSimultaneous.current !== simultaneousKey) {
+          lastLoggedSimultaneous.current = simultaneousKey;
+          onSimultaneousAction(playerAction.actionType, enemyAction.actionType, playerAction.time);
+        }
+      }
+    }
+  }, [currentIndex, turnSequence.length]); // Trigger when sequence advances
+
+  // Fixed window with padding to prevent icon cutoff (2.10 turn range)
+  const startTurn = currentActionTime - 0.05; // Start slightly before current action to show full icon
+  const endTurn = currentActionTime + 2.05; // Show next 2.05 turns (full icon at 2.00)
+  const turnRange = 2.1; // Fixed range (2.05 + 0.05)
+
+  // Generate turn markers that fall within the visible window
+  const turnMarkers = [];
+  const firstMarker = Math.ceil(currentActionTime);
+  const lastMarker = Math.floor(endTurn);
+  for (let i = firstMarker; i <= lastMarker; i++) {
+    turnMarkers.push(i);
+  }
+
+  // Calculate position percentage on timeline (works with decimal turn numbers)
+  const getPositionPercent = (turnNumber: number) => {
+    return ((turnNumber - startTurn) / turnRange) * 100;
+  };
+
+  return (
+    <div className="turn-timeline">
+      <div className="timeline-header">Encounter Timeline</div>
+      <div 
+        className={`timeline-container ${isPlayerTurn ? 'paused' : ''} ${isTransitioning ? 'transitioning' : ''}`}
+        style={{
+          '--current-time': currentActionTime,
+        } as React.CSSProperties}
+      >
+        {/* Current action marker (leftmost) */}
+        <div className="current-action-marker" title="Current Action">
+          <div className="marker-line" />
+          <div className="marker-arrow">▶</div>
+        </div>
+        
+        {/* Timeline bar */}
+        <div className="timeline-bar" />
+        
+        {/* Turn number markers */}
+        {turnMarkers.map((turn) => (
+          <div
+            key={turn}
+            className="turn-marker"
+            style={{ left: `${getPositionPercent(turn)}%` }}
+          >
+            <div className="turn-marker-line" />
+            <div className="turn-marker-label">T{turn}</div>
+          </div>
+        ))}
+
+        {/* Action indicators - grouped by time to handle simultaneous actions */}
+        {Object.entries(actionGroups).map(([timeKey, group]) => {
+          const firstAction = group[0].action;
+          const isActive = group[0].originalIndex === 0;
+          
+          // Only show actions within the visible window
+          if (firstAction.time < startTurn || firstAction.time > endTurn) {
+            return null;
+          }
+          
+          const position = getPositionPercent(firstAction.time);
+          
+          // Check if this is a simultaneous action (both player and enemy)
+          const hasPlayer = group.some(g => g.action.entityId === 'player');
+          const hasEnemy = group.some(g => g.action.entityId === 'enemy');
+          const isSimultaneous = hasPlayer && hasEnemy;
+          
+          if (isSimultaneous) {
+            const playerAction = group.find(g => g.action.entityId === 'player')!.action;
+            const enemyAction = group.find(g => g.action.entityId === 'enemy')!.action;
+            const playerIcon = playerAction.actionType === 'spell' ? '✨' : playerAction.actionType === 'move' ? '↔' : '⚔️';
+            const enemyIcon = enemyAction.actionType === 'spell' ? '✨' : enemyAction.actionType === 'move' ? '↔' : '⚔️';
+            
+            return (
+              <div
+                key={timeKey}
+                className={`action-indicator simultaneous ${isActive ? 'active' : ''}`}
+                style={{ left: `${position}%` }}
+                title={`SIMULTANEOUS at ${firstAction.time.toFixed(2)}\n${playerName}: ${playerAction.actionType}\n${enemyName}: ${enemyAction.actionType}\n${playerName} has priority!`}
+              >
+                <div className="action-icon-merged">
+                  <span className="player-icon">{playerIcon}</span>
+                  <span className="enemy-icon">{enemyIcon}</span>
+                </div>
+                <div className="action-label">BOTH</div>
+              </div>
+            );
+          }
+          
+          // Single action (normal case)
+          const action = firstAction;
+          const isPlayer = action.entityId === 'player';
+          const name = isPlayer ? playerName : enemyName;
+          
+          return (
+            <div
+              key={timeKey}
+              className={`action-indicator ${isActive ? 'active' : ''} ${isPlayer ? 'player' : 'enemy'}`}
+              style={{ left: `${position}%` }}
+              title={`${name} - ${action.actionType} at ${action.time.toFixed(2)}`}
+            >
+              <div className="action-icon">
+                {action.actionType === 'spell' ? '✨' : action.actionType === 'move' ? '↔' : '⚔️'}
+              </div>
+              <div className="action-label">{isPlayer ? 'P' : 'E'}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};

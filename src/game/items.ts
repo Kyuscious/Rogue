@@ -1,7 +1,19 @@
+import { PassiveId } from './itemPassives';
+import { ITEM_PASSIVES } from './itemPassives';
+
 export type ItemRarity = 'starter' | 'common' | 'epic' | 'legendary' | 'mythic' | 'ultimate' | 'exalted' | 'transcendent';
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 export type LootType = 'attackDamage' | 'abilityPower' | 'tankDefense' | 'mobility' | 'utility' | 'hybrid' | 'critical';
+
+/**
+ * Helper function to get passive description from passiveId
+ */
+function getPassiveDescription(passiveId?: PassiveId): string | undefined {
+  if (!passiveId) return undefined;
+  const passive = ITEM_PASSIVES[passiveId];
+  return passive ? `${passive.name}: ${passive.description}` : undefined;
+}
 
 export interface Item {
   id: string;
@@ -9,16 +21,39 @@ export interface Item {
   description: string;
   rarity: ItemRarity;
   stats: {
-    attackDamage?: number;
-    abilityPower?: number;
+    // Survivability
     health?: number;
+    health_regen?: number;
     armor?: number;
     magicResist?: number;
+    tenacity?: number;
+    
+    // Attack
+    attackRange?: number;
+    attackDamage?: number;
     attackSpeed?: number;
+    criticalChance?: number;
+    criticalDamage?: number;
+    lethality?: number;
     lifeSteal?: number;
-    spellVamp?: number;
+    
+    // Spell
+    abilityPower?: number;
+    abilityHaste?: number;
+    magicPenetration?: number;
+    heal_shield_power?: number;
+    omnivamp?: number;
+    
+    // Mobility
+    movementSpeed?: number;
+    
+    // Misc
+    goldGain?: number;
+    xpGain?: number;
+    magicFind?: number;
   };
   passive?: string;
+  passiveId?: PassiveId;
 }
 
 export interface InventoryItem {
@@ -117,6 +152,8 @@ export const STARTING_ITEMS: Item[] = [
       health: 80,
       lifeSteal: 1,
     },
+    passiveId: 'blade_lifesteal_amplifier',
+    get passive() { return getPassiveDescription(this.passiveId); },
   },
   {
     id: 'dorans_shield',
@@ -128,6 +165,8 @@ export const STARTING_ITEMS: Item[] = [
       magicResist: 8,
       health: 120,
     },
+    passiveId: 'shield_adaptive_defense',
+    get passive() { return getPassiveDescription(this.passiveId); },
   },
   {
     id: 'dorans_ring',
@@ -138,6 +177,8 @@ export const STARTING_ITEMS: Item[] = [
       abilityPower: 15,
       health: 80,
     },
+    passiveId: 'ring_spell_scaling',
+    get passive() { return getPassiveDescription(this.passiveId); },
   },
 ];
 
@@ -169,6 +210,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Basic protection',
     rarity: 'common',
     stats: { armor: 15 },
+
   },
   amplifying_tome: {
     id: 'amplifying_tome',
@@ -209,14 +251,13 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Attack damage and critical strike power',
     rarity: 'legendary',
     stats: { attackDamage: 70, lifeSteal: 10 },
-    passive: 'Critical strikes deal bonus damage',
   },
   abyssal_mask: {
     id: 'abyssal_mask',
     name: 'Abyssal Mask',
     description: 'Deep sea protection',
     rarity: 'legendary',
-    stats: { health: 300, magicResist: 40, spellVamp: 10 },
+    stats: { health: 300, magicResist: 40, omnivamp: 10 },
   },
   nashor_tooth: {
     id: 'nashor_tooth',
@@ -237,23 +278,24 @@ export const ITEM_DATABASE: Record<string, Item> = {
       health: 250,
       attackSpeed: 0.5,
     },
-    passive: 'Every 3 attacks deals bonus damage',
   },
+
   rabadons_deathcap: {
     id: 'rabadons_deathcap',
     name: "Rabadon's Deathcap",
     description: 'Amplifies all ability power',
     rarity: 'legendary',
     stats: { abilityPower: 120, health: 200 },
-    passive: 'Increases ability power by 35%',
+    passiveId: 'magical_opus',
+    get passive() { return getPassiveDescription(this.passiveId); },
   },
+
   kaenic_rookern: {
     id: 'kaenic_rookern',
     name: 'Kaenic Rookern',
     description: 'A legendary shield',
     rarity: 'legendary',
     stats: { armor: 80, magicResist: 40, health: 400 },
-    passive: 'Reduces magic damage taken',
   },
   warmogs_armor: {
     id: 'warmogs_armor',
@@ -278,7 +320,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: "Luci's Staff",
     description: 'Empowers abilities with dark magic',
     rarity: 'exalted',
-    stats: { abilityPower: 100, spellVamp: 15, health: 250 },
+    stats: { abilityPower: 100, omnivamp: 15, health: 250 },
     passive: 'Abilities deal bonus magic damage over time',
   },
   // Transcendent Items
@@ -352,4 +394,20 @@ export function getRandomLootByTier(enemyTier: 'minion' | 'elite' | 'champion' |
 // Backwards compatibility wrapper
 export function getRandomLootByClass(_characterClass: CharacterClass, enemyTier: 'minion' | 'elite' | 'champion' | 'boss' = 'minion'): Item | undefined {
   return getRandomLootByTier(enemyTier);
+}
+
+/**
+ * Get all passive IDs from a list of inventory items
+ */
+export function getPassiveIdsFromInventory(inventory: Array<{ itemId: string; quantity: number }>): PassiveId[] {
+  const passiveIds: PassiveId[] = [];
+  
+  for (const invItem of inventory) {
+    const item = ITEM_DATABASE[invItem.itemId];
+    if (item && item.passiveId) {
+      passiveIds.push(item.passiveId);
+    }
+  }
+  
+  return passiveIds;
 }

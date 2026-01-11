@@ -4,8 +4,8 @@ import { DEFAULT_STATS } from '../game/statsSystem';
 export const SUMMONER: Character = {
   id: 'summoner',
   name: 'Summoner',
-  role: 'summoner',
   region: 'demacia',
+  role: 'player',
   class: 'juggernaut',
   hp: DEFAULT_STATS.health,
   abilities: [],

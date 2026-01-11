@@ -28,7 +28,7 @@ export interface TurnAction {
   entityName: string;
   turnNumber: number; // Which turn boundary (1, 2, 3, etc.)
   time: number; // Exact time on bar (1.0, 1.3, 1.5, 2.0, etc.)
-  actionType: 'attack' | 'spell';
+  actionType: 'attack' | 'spell' | 'move';
   description: string;
   priority: number; // 0 = player first, 1 = enemy second (for ties)
   accumulatedTime?: number; // For backwards compatibility
@@ -183,9 +183,9 @@ export function stunEntity(entity: TurnEntity): TurnEntity {
 }
 
 /**
- * Slow an entity (reduces attack speed)
+ * Chills an entity (reduces attack speed)
  */
-export function slowEntity(entity: TurnEntity, amount: number): TurnEntity {
+export function chillEntity(entity: TurnEntity, amount: number): TurnEntity {
   return {
     ...entity,
     attackSpeed: Math.max(0.1, entity.attackSpeed * (1 - amount / 100)),

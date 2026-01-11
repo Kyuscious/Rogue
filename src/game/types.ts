@@ -8,7 +8,7 @@ export interface Character {
   id: string;
   name: string;
   region?: Region;
-  role: 'enemy' | 'summoner';
+  role: 'enemy' | 'player';
   class: CharacterClass;
   tier?: EnemyTier; // Enemy tier for loot determination
   faction?: string; // Optional faction (e.g., 'guard', 'beast' for Demacia enemies)

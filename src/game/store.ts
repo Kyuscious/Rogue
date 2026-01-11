@@ -7,7 +7,7 @@ import { STARTING_ITEMS, ITEM_DATABASE } from './items';
 const DEFAULT_PLAYER: Character = {
   id: 'summoner',
   name: 'Summoner',
-  role: 'summoner',
+  role: 'player',
   region: 'demacia',
   class: 'juggernaut',
   hp: DEFAULT_STATS.health,

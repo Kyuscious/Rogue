@@ -4,6 +4,7 @@
  */
 
 import { CharacterClass } from './types';
+import { applyPassiveStatModifiers, PassiveId } from './itemPassives';
 
 export type LootType = 
   | 'attackDamage' 
@@ -19,66 +20,74 @@ export type LootType =
  * Inspired by League of Legends stat system
  */
 export interface CharacterStats {
-  // Primary Stats
-  health: number;
-  attackDamage: number;
-  abilityPower: number;
-  armor: number;
-  magicResist: number;
+  //Survivability
+  health: number,
+  health_regen: number,
+  armor: number,
+  magicResist: number,
+  tenacity: number,
   
-  // Attack Stats
-  attackSpeed: number;
-  attackRange: number;
-  criticalChance: number;
-  criticalDamage: number;
+  //Attack
+  attackRange: number,
+  attackDamage: number,
+  attackSpeed: number,
+  criticalChance: number,
+  criticalDamage: number,
+  lethality: number,
+  lifeSteal: number,
+
+  //Spell
+  abilityPower: number,
+  abilityHaste: number,
+  magicPenetration: number,
+  heal_shield_power: number,
+  omnivamp: number,
   
-  // Ability Stats
-  abilityHaste: number;
+  //Mobility
+  movementSpeed: number,
   
-  // Survivability
-  lifeSteal: number;
-  spellVamp: number;
-  omnivamp: number;
-  
-  // Mobility & Utility
-  movementSpeed: number;
-  tenacity: number; // Crowd control reduction
-  
-  // Misc
-  goldGain: number;
-  xpGain: number;
-  lethality: number;
-  magicPenetration: number;
+  //Misc
+  goldGain: number,
+  xpGain: number,
+  magicFind: number,
 }
 
 /**
  * Default stat values for new characters
  */
 export const DEFAULT_STATS: CharacterStats = {
+  //Survivability
   health: 125,
-  attackDamage: 50,
-  abilityPower: 30,
+  health_regen: 1,
   armor: 20,
   magicResist: 20,
-  
-  attackSpeed: 0.7,
-  attackRange: 125,
-  criticalChance: 0,
-  criticalDamage: 0,
-  
-  abilityHaste: 0,
-  
-  lifeSteal: 0,
-  spellVamp: 0,
-  omnivamp: 0,
-  
-  movementSpeed: 350,
   tenacity: 0,
   
+  //Attack
+  attackRange: 125,
+  attackDamage: 50,
+  attackSpeed: 0.7,
+  criticalChance: 0,
+  criticalDamage: 200,
+  lethality: 0,
+  lifeSteal: 0,
+
+  //Spell
+  abilityPower: 30,
+  abilityHaste: 0,
+  magicPenetration: 0,
+  heal_shield_power: 0,
+  omnivamp: 0,
+  
+  //Mobility
+  movementSpeed: 350,
+  
+  //Misc
   goldGain: 1,
   xpGain: 1,
-  lethality: 0,
-  magicPenetration: 0,
+  magicFind: 0,
+  
+  
 };
 
 /**
@@ -192,14 +201,16 @@ export function getClassStatBonuses(
 
 /**
  * Get scaled stats for a character based on level and class
+ * Now includes passive item effects
  */
 export function getScaledStats(
   baseStats: CharacterStats,
   level: number,
-  characterClass: CharacterClass
+  characterClass: CharacterClass,
+  passiveIds: PassiveId[] = []
 ): CharacterStats {
   const scaledStats: CharacterStats = { ...baseStats };
-  const decimalStats = ['attackSpeed', 'lifeSteal', 'spellVamp', 'omnivamp', 'tenacity', 'goldGain', 'xpGain', 'criticalChance', 'criticalDamage', 'abilityHaste'];
+  const decimalStats = ['attackSpeed', 'lifeSteal', 'spellVamp', 'omnivamp', 'tenacity', 'goldGain', 'xpGain', 'criticalChance', 'criticalDamage', 'abilityHaste', 'health_regen', 'heal_shield_power', 'magicFind'];
   const classBonuses = getClassStatBonuses(characterClass, level);
   
   // Apply level scaling (each level adds ~5% to most stats)
@@ -225,7 +236,17 @@ export function getScaledStats(
       : Math.round(newValue);
   });
   
-  return scaledStats;
+  // Finally, apply passive item modifiers (e.g., conversions, multipliers)
+  const finalStats = applyPassiveStatModifiers(scaledStats, level, passiveIds);
+  
+  // Round decimal stats properly
+  (Object.keys(finalStats) as Array<keyof CharacterStats>).forEach((stat) => {
+    if (!decimalStats.includes(stat)) {
+      finalStats[stat as keyof CharacterStats] = Math.round(finalStats[stat as keyof CharacterStats]);
+    }
+  });
+  
+  return finalStats;
 }
 
 /**

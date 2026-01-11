@@ -1,0 +1,150 @@
+.battlefield-display {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #0f3460;
+  border-radius: 8px;
+  padding: 8px;
+  color: #e0e0e0;
+}
+
+.battlefield-display.vertical {
+  margin: 0;
+  padding: 8px;
+}
+
+.battlefield-display.horizontal {
+  margin: 12px 0;
+  padding: 16px;
+}
+
+.battlefield-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.battlefield-display.vertical .battlefield-info {
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.battlefield-display.horizontal .battlefield-info {
+  margin-bottom: 12px;
+}
+
+.distance-label {
+  color: #b0bec5;
+}
+
+.range-status {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.range-status.in-range {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+  border: 1px solid #4caf50;
+}
+
+.range-status.out-range {
+  background-color: rgba(255, 107, 107, 0.2);
+  color: #ef5350;
+  border: 1px solid #ff6b6b;
+}
+
+.battlefield-canvas {
+  display: block;
+  background-color: transparent;
+  border-radius: 4px;
+  border: none;
+}
+
+.battlefield-display.horizontal .battlefield-canvas {
+  width: 100%;
+  height: auto;
+  margin: 8px 0;
+}
+
+.battlefield-display.vertical .battlefield-canvas {
+  width: auto;
+  height: auto;
+  margin: 4px auto;
+  display: block;
+}
+
+.boundary-marker {
+  font-size: 12px;
+  fill: #78909c;
+}
+
+.battlefield-labels {
+  font-size: 13px;
+}
+
+.battlefield-labels.horizontal {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.battlefield-labels.vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.player-label,
+.enemy-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #000;
+}
+
+.player-label {
+  color: #81c784;
+}
+
+.enemy-label {
+  color: #ef5350;
+}
+
+.range-indicator {
+  font-size: 11px;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.range-indicator.in-range {
+  color: #81c784;
+  background-color: rgba(76, 175, 80, 0.15);
+}
+
+.range-indicator.out-range {
+  color: #ef5350;
+  background-color: rgba(255, 107, 107, 0.15);
+}
+
+.flee-marker {
+  font-size: 10px;
+  font-weight: 600;
+}
