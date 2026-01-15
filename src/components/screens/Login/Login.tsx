@@ -167,7 +167,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="login-screen">
       <div className="login-container">
         <div className="login-header">
-          <h1>Riot Roguelike</h1>
+          <h1>Runeterrogue</h1>
           <p className="subtitle">Connect to Your Account</p>
         </div>
 
@@ -214,6 +214,15 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               maxLength={50}
             />
             {!isSignUp && <p className="input-hint">At least 4 characters</p>}
+            {!isSignUp && (
+              <button 
+                type="button" 
+                className="forgot-password-link"
+                onClick={() => setError('Password recovery coming soon!')}
+              >
+                Forgot my password?
+              </button>
+            )}
           </div>
 
           <div className="remember-me-group">

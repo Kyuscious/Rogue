@@ -1,5 +1,15 @@
+.disclaimer-screen {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
+  padding: 20px;
+}
+
 .disclaimer-container {
-  max-width: 600px;
+  max-width: 50vw;
   width: 100%;
   background: rgba(20, 20, 40, 0.8);
   border: 2px solid #4a9eff;
@@ -26,7 +36,7 @@
 }
 
 .disclaimer-header h1 {
-  font-size: 42px;
+  font-size: 52px;
   margin: 0 0 10px 0;
   background: linear-gradient(135deg, #4a9eff 0%, #00ffff 100%);
   -webkit-background-clip: text;
@@ -36,7 +46,7 @@
 
 .subtitle {
   color: #aaa;
-  font-size: 14px;
+  font-size: 16px;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -48,17 +58,31 @@
   padding: 15px;
   margin-bottom: 30px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 .legal-notice p {
-  margin: 0;
+  margin: 0 0 8px 0;
   color: #ddd;
   line-height: 1.5;
 }
 
+.legal-notice p.paragraph-spacing {
+  margin-bottom: 20px;
+}
+
 .legal-notice strong {
   color: #ff6b6b;
+}
+
+.legal-link {
+  color: #4a9eff;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.legal-link:hover {
+  color: #00ffff;
 }
 
 .loading-section {
@@ -88,15 +112,40 @@
   margin: 0;
 }
 
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-container input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #4a9eff;
+}
+
+.checkbox-label {
+  color: #aaa;
+  font-size: 15px;
+}
+
+.checkbox-container:hover .checkbox-label {
+  color: #4a9eff;
+}
+
 .btn-skip {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background: rgba(74, 158, 255, 0.1);
   border: 2px solid #4a9eff;
   border-radius: 6px;
   color: #4a9eff;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: inherit;
@@ -109,6 +158,88 @@
   background: rgba(74, 158, 255, 0.2);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
+}
+
+.footer-boxes {
+  display: flex;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(74, 158, 255, 0.2);
+}
+
+.footer-box {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.footer-box h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #4a9eff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.social-links {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(74, 158, 255, 0.1);
+  border: 2px solid #4a9eff;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 20px;
+}
+
+.social-icon:hover {
+  background: rgba(74, 158, 255, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+.social-icon.discord:hover {
+  border-color: #5865f2;
+  background: rgba(88, 101, 242, 0.2);
+  box-shadow: 0 4px 12px rgba(88, 101, 242, 0.3);
+}
+
+.creator-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.contact-link {
+  color: #4a9eff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.contact-link:hover {
+  color: #00ffff;
+  text-decoration: underline;
+}
+
+.company-name {
+  margin: 0;
+  color: #888;
+  font-size: 12px;
 }
 
 .social-footer {

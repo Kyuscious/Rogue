@@ -1,27 +1,20 @@
 import React, { useState } from 'react';
 import { Region } from '../../../game/types';
 import { ITEM_DATABASE } from '../../../game/items';
+import { useGameStore } from '../../../game/store';
 import './PreGameSetup.css';
 
 interface PreGameSetupProps {
   onStartRun: (region: Region, itemId: string) => void;
   onTestMode: () => void;
+  onLogout?: () => void;
+  onGoToDisclaimer?: () => void;
 }
 
 const REGIONS = [
   { id: 'demacia', name: 'Demacia', unlocked: true, description: 'A strong, lawful kingdom with a prestigious military. Known for its justice and honor.' },
   { id: 'ionia', name: 'Ionia', unlocked: true, description: 'A land of natural magic and spirituality. Home to ancient traditions and martial arts.' },
   { id: 'shurima', name: 'Shurima', unlocked: true, description: 'A vast desert empire of ancient power. Ascended warriors and buried treasures await.' },
-  { id: 'noxus', name: 'Noxus', unlocked: false, description: 'A brutal expansionist empire. Only the strong survive in this warlike nation.' },
-  { id: 'piltover', name: 'Piltover', unlocked: false, description: 'The City of Progress. Home to brilliant inventors and hextech innovation.' },
-  { id: 'zaun', name: 'Zaun', unlocked: false, description: 'The undercity of chemtech and experimentation. Dangerous but full of opportunity.' },
-  { id: 'freljord', name: 'Freljord', unlocked: false, description: 'A harsh, frozen tundra. Survival of the fittest among warring tribes.' },
-  { id: 'bilgewater', name: 'Bilgewater', unlocked: false, description: 'A lawless port city of pirates and sea monsters. Fortunes won and lost daily.' },
-  { id: 'shadow_isles', name: 'Shadow Isles', unlocked: false, description: 'A cursed land of undeath and torment. Dark magic corrupts all who enter.' },
-  { id: 'targon', name: 'Targon', unlocked: false, description: 'A mystical mountain realm. Celestial beings and divine power reside at the peak.' },
-  { id: 'void', name: 'The Void', unlocked: false, description: 'An unknowable dimension of horror. Reality breaks down in the face of the Void.' },
-  { id: 'ixtal', name: 'Ixtal', unlocked: false, description: 'A jungle nation of elemental magic. Isolated and protective of their secrets.' },
-  { id: 'bandle_city', name: 'Bandle City', unlocked: false, description: 'A whimsical yordle haven. Portals to this magical place appear unpredictably.' },
 ];
 
 const STARTER_ITEMS = [
@@ -47,7 +40,8 @@ const STARTER_ITEMS = [
   { id: 'locked_17', name: 'Locked', unlocked: false },
 ];
 
-export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMode }) => {
+export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMode, onLogout, onGoToDisclaimer }) => {
+  const { state } = useGameStore();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
@@ -89,6 +83,31 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
 
   return (
     <div className="pregame-setup">
+      {/* Header with Disclaimer, Username, and Logout */}
+      <div className="setup-header">
+        <div className="header-left">
+          <button 
+            className="disclaimer-link" 
+            onClick={onGoToDisclaimer}
+            title="View Disclaimer"
+          >
+            ⓘ Disclaimer
+          </button>
+          <h2 className="game-title">Runeterrogue</h2>
+        </div>
+        
+        <div className="user-info">
+          <span className="username">{state.username}</span>
+          <button 
+            className="logout-btn" 
+            onClick={onLogout}
+            title="Logout"
+          >
+            🚪 Logout
+          </button>
+        </div>
+      </div>
+
       <div className="pregame-header">
         <h1>{title}</h1>
       </div>

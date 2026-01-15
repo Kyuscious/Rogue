@@ -250,18 +250,116 @@ export function getScaledStats(
 }
 
 /**
- * Calculate damage based on attacker's AD and defender's armor
- * Formula inspired by LoL: damage * (100 / (100 + armor))
+ * Calculate damage reduction percentage based on armor/magic resist
+ * Uses diminishing returns formula:
+ * - 100 armor/MR = ~9% reduction
+ * - 1000 armor/MR = 50% reduction
+ * - 5000 armor/MR = ~83% reduction
+ * Formula: resistance / (resistance + 1000)
+ * Capped at 90% reduction maximum
  */
-export function calculateArmorMitigation(baseDamage: number, armor: number): number {
-  return Math.round(baseDamage * (100 / (100 + Math.max(0, armor))));
+export function calculateDamageReduction(resistance: number): number {
+  const reduction = resistance / (resistance + 1000);
+  return Math.min(0.90, Math.max(0, reduction));
 }
 
 /**
- * Calculate magic damage based on AP and magic resist
+ * Calculate physical damage after armor mitigation and lethality
+ * Lethality reduces enemy armor before damage calculation
+ */
+export function calculatePhysicalDamage(
+  baseDamage: number, 
+  enemyArmor: number, 
+  attackerLethality: number = 0
+): number {
+  // Apply lethality (flat armor reduction)
+  const effectiveArmor = Math.max(0, enemyArmor - attackerLethality);
+  
+  // Calculate damage reduction
+  const damageReduction = calculateDamageReduction(effectiveArmor);
+  
+  // Apply reduction to damage
+  const finalDamage = baseDamage * (1 - damageReduction);
+  
+  return Math.max(1, Math.floor(finalDamage));
+}
+
+/**
+ * Calculate magic damage after magic resist mitigation and magic penetration
+ * Magic penetration reduces enemy magic resist before damage calculation
+ */
+export function calculateMagicDamage(
+  baseDamage: number, 
+  enemyMagicResist: number, 
+  attackerMagicPenetration: number = 0
+): number {
+  // Apply magic penetration (flat magic resist reduction)
+  const effectiveMagicResist = Math.max(0, enemyMagicResist - attackerMagicPenetration);
+  
+  // Calculate damage reduction
+  const damageReduction = calculateDamageReduction(effectiveMagicResist);
+  
+  // Apply reduction to damage
+  const finalDamage = baseDamage * (1 - damageReduction);
+  
+  return Math.max(1, Math.floor(finalDamage));
+}
+
+/**
+ * Check if an attack critically strikes
+ * Critical chance is stored as a decimal (25% = 0.25)
+ * Returns true if the attack crits
+ */
+export function rollCriticalStrike(criticalChance: number): boolean {
+  if (criticalChance <= 0) return false;
+  const cappedChance = Math.min(1.0, Math.max(0, criticalChance));
+  return Math.random() < cappedChance;
+}
+
+/**
+ * Calculate critical strike damage multiplier
+ * Base crit damage is 200% (2.0x)
+ * criticalDamage stat (stored as percentage) adds to the base
+ * Example: criticalDamage = 200 means 200% total = 2.0x multiplier
+ *          criticalDamage = 250 means 250% total = 2.5x multiplier
+ */
+export function calculateCriticalDamage(
+  baseDamage: number,
+  criticalDamage: number
+): number {
+  // criticalDamage stat is stored as a percentage (200 = 200% = 2.0x)
+  const multiplier = criticalDamage / 100;
+  return baseDamage * multiplier;
+}
+
+/**
+ * Calculate lifesteal healing based on damage dealt
+ * Lifesteal is stored as a percentage (5 = 5%, 10 = 10%)
+ * Returns the amount of HP to heal
+ */
+export function calculateLifestealHealing(
+  damageDealt: number,
+  lifeStealPercent: number
+): number {
+  // Convert percentage to decimal (5 -> 0.05)
+  const healing = damageDealt * (lifeStealPercent / 100);
+  return Math.floor(healing);
+}
+
+/**
+ * DEPRECATED: Old armor mitigation formula (kept for backwards compatibility)
+ * Use calculatePhysicalDamage instead
+ */
+export function calculateArmorMitigation(baseDamage: number, armor: number): number {
+  return calculatePhysicalDamage(baseDamage, armor, 0);
+}
+
+/**
+ * DEPRECATED: Old magic mitigation formula (kept for backwards compatibility)
+ * Use calculateMagicDamage instead
  */
 export function calculateMagicMitigation(baseDamage: number, magicResist: number): number {
-  return Math.round(baseDamage * (100 / (100 + Math.max(0, magicResist))));
+  return calculateMagicDamage(baseDamage, magicResist, 0);
 }
 
 /**

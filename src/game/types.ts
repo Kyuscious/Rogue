@@ -1,7 +1,20 @@
 import { CharacterStats } from './statsSystem';
 
-export type Region = 'shurima' | 'ionia' | 'demacia';
-export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss';
+export type Region = 
+  | 'demacia' 
+  | 'ionia' 
+  | 'shurima' 
+  | 'noxus' 
+  | 'freljord' 
+  | 'zaun' 
+  | 'ixtal' 
+  | 'bandle_city' 
+  | 'bilgewater' 
+  | 'piltover' 
+  | 'shadow_isles' 
+  | 'void' 
+  | 'targon';
+export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 
 export interface Character {
@@ -18,6 +31,7 @@ export interface Character {
   level: number;
   experience: number;
   stats: CharacterStats;
+  inventory?: InventoryItem[]; // Optional inventory for displaying equipped items
 }
 
 export interface Ability {

@@ -3,8 +3,8 @@ import { useGameStore } from '../../../game/store';
 import { CharacterStatus } from '../../entity/CharacterStatus';
 import { BattlefieldDisplay } from './BattlefieldDisplay';
 import { TurnTimeline } from './TurnTimeline';
-import { getScaledStats } from '../../../game/statsSystem';
-import { getRandomLootByClass, getPassiveIdsFromInventory } from '../../../game/items';
+import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, calculateLifestealHealing, rollCriticalStrike, calculateCriticalDamage } from '../../../game/statsSystem';
+import { getPassiveIdsFromInventory } from '../../../game/items';
 import { 
   TurnEntity, 
   TurnAction, 
@@ -13,21 +13,36 @@ import {
 import { 
   getItemById,
   createBuffFromItem,
-  getUsableItems
+  getUsableItems,
+  createHealthPotionBuff,
+  CombatBuff
 } from '../../../game/itemSystem';
+import { 
+  handleEnemyDefeat,
+  getVictoryMessages,
+  applyVictoryRewards,
+} from '../../../game/battleFlow';
+import { generateRewardOptions } from '../../../game/rewardPool';
+import { checkLevelUp } from '../../../game/experienceSystem';
+import { ItemBar } from './ItemBar';
+import { RewardSelection } from './RewardSelection';
+import { InventoryItem } from '../../../game/types';
 import './Battle.css';
 
 interface BattleProps {
   onBack?: () => void;
+  onQuestComplete?: () => void;
 }
 
-export const Battle: React.FC<BattleProps> = ({ onBack }) => {
-  const { state, updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle } = useGameStore();
+export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
+  const { state, updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll } = useGameStore();
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
   const [battleResult, setBattleResult] = useState<'victory' | 'defeat' | 'reward_selection' | null>(null);
   const [turnCounter, setTurnCounter] = useState(0);
+  const [rewardOptions, setRewardOptions] = useState<InventoryItem[]>([]);
+  const [pendingBattleData, setPendingBattleData] = useState<any>(null);
   
   // Turn entities for new system
   const [playerEntity, setPlayerEntity] = useState<TurnEntity | null>(null);
@@ -58,18 +73,22 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
 
   // Initialize/reset turn entities when enemy changes (new encounter)
   useEffect(() => {
+    // Recalculate scaled stats inside effect to ensure fresh values
+    const freshPlayerStats = getScaledStats(playerChar.stats, playerChar.level, playerChar.class, playerPassiveIds);
+    const freshEnemyStats = getScaledStats(enemyChar.stats, enemyChar.level, enemyChar.class);
+    
     const pEntity: TurnEntity = {
       id: 'player',
       name: playerChar.name,
-      attackSpeed: playerScaledStats.attackSpeed,
-      abilityHaste: playerScaledStats.abilityHaste,
+      attackSpeed: freshPlayerStats.attackSpeed,
+      abilityHaste: freshPlayerStats.abilityHaste,
     };
 
     const eEntity: TurnEntity = {
       id: 'enemy',
       name: enemyChar.name,
-      attackSpeed: enemyScaledStats.attackSpeed,
-      abilityHaste: enemyScaledStats.abilityHaste,
+      attackSpeed: freshEnemyStats.attackSpeed,
+      abilityHaste: freshEnemyStats.abilityHaste,
     };
 
     setPlayerEntity(pEntity);
@@ -77,18 +96,38 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
     setTurnSequence(generateTurnSequence(pEntity, eEntity, 20));
     
     // Reset battle state for new encounter
+    // =====================================================================
+    // CRITICAL FIX FOR RECURRING BUTTON DISAPPEARANCE BUG:
+    // =====================================================================
+    // Problem: After defeating enemy 1, enemy 2 loads but action buttons don't appear
+    // Root Cause: When victory happens, battleEnded=true and playerTurnDone=true.
+    //             These flags prevent buttons from showing (isPlayerTurn = false).
+    //             The setTimeout delay before startBattle() creates a timing gap.
+    // 
+    // Solution: TWO layers of protection:
+    //   1. This useEffect resets ALL state when enemyChar.id changes (runs on new enemy)
+    //   2. Explicit state reset BEFORE startBattle() in victory handler (lines ~740)
+    // 
+    // Both resets are needed because:
+    //   - This useEffect might not run immediately due to React batching
+    //   - The setTimeout creates async timing where state can be stale
+    //   - Resetting BEFORE startBattle ensures clean state transition
+    // =====================================================================
     setTurnCounter(0);
     setSequenceIndex(0);
-    setPlayerTurnDone(false);
-    setBattleEnded(false);
-    setBattleResult(null);
+    setPlayerTurnDone(false); // Critical: Must reset to false for buttons to appear
+    setBattleEnded(false);     // Critical: Must reset to false for buttons to appear
+    // Don't reset battleResult if we're in reward selection mode
+    // (player leveling up triggers this effect but shouldn't interrupt rewards)
+    setBattleResult(prev => prev === 'reward_selection' ? prev : null);
     setBattleLog([{ message: 'Battle started!' }, { message: '---' }]);
     setLastLoggedTurn(0);
+    setItemModeActive(false); // Reset item mode for new encounter
     
     // Reset positions for new encounter
     setPlayerPosition(50);
     setEnemyPosition(-50);
-  }, [enemyChar.id]);
+  }, [enemyChar.id, playerChar.level, playerChar.class]);
 
   // Initialize battle log
   interface LogEntry {
@@ -104,6 +143,12 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
 
   // Track which turn we've logged to avoid duplicate messages
   const [lastLoggedTurn, setLastLoggedTurn] = useState(0);
+
+  // Track active buffs on player
+  const [playerBuffs, setPlayerBuffs] = useState<CombatBuff[]>([]);
+
+  // Track item mode active state (when UseItem button is clicked)
+  const [itemModeActive, setItemModeActive] = useState(false);
 
   // Handler for simultaneous actions detected by timeline
   const handleSimultaneousAction = (playerAction: string, enemyAction: string, time: number) => {
@@ -123,6 +168,75 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
   // Movement distance is player's movement speed scaled down for battlefield
   const MOVE_DISTANCE = Math.floor((playerScaledStats.movementSpeed || 350) / 10);
 
+  const handleRewardSelection = (selectedItem: InventoryItem) => {
+    // Add selected reward to inventory
+    addInventoryItem(selectedItem);
+    
+    setBattleLog((prev) => [
+      ...prev,
+      { message: `🎁 Reward selected: ${selectedItem.itemId}` },
+    ]);
+    
+    continueAfterReward();
+  };
+
+  const handleSkipReward = () => {
+    setBattleLog((prev) => [
+      ...prev,
+      { message: `⏭️ Reward skipped` },
+    ]);
+    
+    continueAfterReward();
+  };
+
+  const handleRerollRewards = () => {
+    // Try to use a reroll from global currency
+    if (!useReroll()) return;
+    
+    // Generate new rewards
+    const newRewards = generateRewardOptions(state.selectedRegion, state.currentFloor, playerChar.class);
+    setRewardOptions(newRewards);
+    
+    setBattleLog((prev) => [
+      ...prev,
+      { message: `🎲 Rerolled rewards! (${state.rerolls} rerolls left)` },
+    ]);
+  };
+
+  const continueAfterReward = () => {
+    // Reset battle state
+    setBattleResult(null);
+    setBattleEnded(false);
+    setRewardOptions([]);
+    // Note: Rerolls are now global currency, no reset needed
+    
+    // Continue to next enemy if there are any
+    if (pendingBattleData && pendingBattleData.length > 0) {
+      setTimeout(() => {
+        // CRITICAL FIX: Reset battle state BEFORE calling startBattle
+        setBattleEnded(false);
+        setPlayerTurnDone(false);
+        setBattleResult(null);
+        
+        // Now start the next battle
+        startBattle(pendingBattleData);
+        setPendingBattleData(null);
+      }, 500);
+    } else {
+      // No more enemies - check if quest is complete (floor 10+)
+      if (state.currentFloor >= 10) {
+        // Quest complete! Trigger region selection
+        if (onQuestComplete) {
+          onQuestComplete();
+        }
+      } else {
+        // Continue quest - show victory
+        setBattleEnded(true);
+        setBattleResult('victory');
+      }
+    }
+  };
+
   const handleAttack = () => {
     if (!playerEntity || !enemyEntity) return;
     
@@ -140,19 +254,51 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
     }
     
     // Use actual Attack Damage stat
-    const damage = playerScaledStats.attackDamage;
+    let baseDamage = playerScaledStats.attackDamage;
+    let isCrit = false;
     
-    // Apply enemy armor mitigation (simplified formula)
-    const mitigatedDamage = Math.max(1, Math.floor(damage * (100 / (100 + (enemyScaledStats.armor || 0)))));
+    // Check for critical strike
+    if (rollCriticalStrike(playerScaledStats.criticalChance || 0)) {
+      baseDamage = calculateCriticalDamage(baseDamage, playerScaledStats.criticalDamage || 200);
+      isCrit = true;
+    }
+    
+    // Apply enemy armor mitigation with lethality
+    const finalDamage = calculatePhysicalDamage(
+      baseDamage,
+      enemyScaledStats.armor || 0,
+      playerScaledStats.lethality || 0
+    );
     
     // Update enemy HP
-    const newEnemyHp = Math.max(0, enemyChar.hp - mitigatedDamage);
+    const newEnemyHp = Math.max(0, enemyChar.hp - finalDamage);
     updateEnemyHp(0, newEnemyHp);
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `${playerChar.name} attacks ${enemyChar.name} for ${mitigatedDamage} damage!` },
-    ]);
+    // Apply lifesteal healing
+    const lifestealHealing = calculateLifestealHealing(
+      finalDamage,
+      playerScaledStats.lifeSteal || 0
+    );
+    
+    // Build battle log messages
+    const logMessages: Array<{ message: string }> = [];
+    
+    if (isCrit) {
+      logMessages.push({ message: `💥 CRITICAL HIT! ${playerChar.name} attacks ${enemyChar.name} for ${finalDamage} damage!` });
+    } else {
+      logMessages.push({ message: `${playerChar.name} attacks ${enemyChar.name} for ${finalDamage} damage!` });
+    }
+    
+    if (lifestealHealing > 0) {
+      const newPlayerHp = Math.min(
+        playerChar.hp + lifestealHealing,
+        playerScaledStats.health
+      );
+      updatePlayerHp(newPlayerHp);
+      logMessages.push({ message: `💚 Lifesteal healed ${lifestealHealing} HP!` });
+    }
+    
+    setBattleLog((prev) => [...prev, ...logMessages]);
     
     // Advance to next action in sequence
     setSequenceIndex((prev) => prev + 1);
@@ -183,18 +329,22 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
     }
     
     // Use Ability Power stat for spell damage
-    const spellDamage = playerScaledStats.abilityPower;
+    const baseSpellDamage = playerScaledStats.abilityPower;
     
-    // Apply enemy magic resist mitigation (simplified formula)
-    const mitigatedDamage = Math.max(1, Math.floor(spellDamage * (100 / (100 + (enemyScaledStats.magicResist || 0)))));
+    // Apply enemy magic resist mitigation with magic penetration
+    const finalDamage = calculateMagicDamage(
+      baseSpellDamage,
+      enemyScaledStats.magicResist || 0,
+      playerScaledStats.magicPenetration || 0
+    );
     
     // Update enemy HP
-    const newEnemyHp = Math.max(0, enemyChar.hp - mitigatedDamage);
+    const newEnemyHp = Math.max(0, enemyChar.hp - finalDamage);
     updateEnemyHp(0, newEnemyHp);
     
     setBattleLog((prev) => [
       ...prev,
-      { message: `${playerChar.name} casts a spell on ${enemyChar.name} for ${mitigatedDamage} magic damage!` },
+      { message: `${playerChar.name} casts a spell on ${enemyChar.name} for ${finalDamage} magic damage!` },
     ]);
     
     // Advance to next action
@@ -260,22 +410,52 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
     const item = getItemById(itemId);
     if (!item) return;
     
-    // Create buff from item
-    const newBuff = createBuffFromItem(itemId, `buff-${Date.now()}`);
-    if (!newBuff) {
+    // Check if item is consumable
+    if (!item.consumable) {
       setBattleLog((prev) => [
         ...prev,
-        { message: `${item.name} has no usable effects!` },
+        { message: `${item.name} cannot be used in battle!` },
       ]);
       return;
     }
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `${playerChar.name} used ${item.name}! +${newBuff.amount} ${newBuff.stat} for ${newBuff.duration} turns!` },
-    ]);
+    // Handle specific item effects
+    if (itemId === 'health_potion') {
+      const newBuff = createHealthPotionBuff(`buff-${Date.now()}`);
+      setPlayerBuffs((prev) => [...prev, newBuff]);
+      
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${playerChar.name} used ${item.name}! Restoring 10 HP per turn for 5 turns.` },
+      ]);
+      
+      // Consume the item from inventory
+      consumeInventoryItem(itemId);
+    } else {
+      // Fallback for other items
+      const newBuff = createBuffFromItem(itemId, `buff-${Date.now()}`);
+      if (!newBuff) {
+        setBattleLog((prev) => [
+          ...prev,
+          { message: `${item.name} has no usable effects!` },
+        ]);
+        return;
+      }
+      
+      setPlayerBuffs((prev) => [...prev, newBuff]);
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${playerChar.name} used ${item.name}! +${newBuff.amount} ${newBuff.stat} for ${newBuff.duration} turns!` },
+      ]);
+      
+      // Consume the item from inventory
+      consumeInventoryItem(itemId);
+    }
     
-    // Advance to next action in sequence
+    // Reset item mode after using an item
+    setItemModeActive(false);
+    
+    // Advance to next action in sequence (using item counts as an action)
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
@@ -365,19 +545,37 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
         return;
       }
       
-      const enemyDamage = enemyScaledStats.attackDamage;
+      let enemyBaseDamage = enemyScaledStats.attackDamage;
+      let isCrit = false;
       
-      // Apply player armor mitigation
-      const mitigatedDamage = Math.max(1, Math.floor(enemyDamage * (100 / (100 + (playerScaledStats.armor || 0)))));
+      // Check for critical strike
+      if (rollCriticalStrike(enemyScaledStats.criticalChance || 0)) {
+        enemyBaseDamage = calculateCriticalDamage(enemyBaseDamage, enemyScaledStats.criticalDamage || 200);
+        isCrit = true;
+      }
+      
+      // Apply player armor mitigation with enemy lethality
+      const finalDamage = calculatePhysicalDamage(
+        enemyBaseDamage,
+        playerScaledStats.armor || 0,
+        enemyScaledStats.lethality || 0
+      );
       
       // Update player HP
-      const newPlayerHp = Math.max(0, playerChar.hp - mitigatedDamage);
+      const newPlayerHp = Math.max(0, playerChar.hp - finalDamage);
       updatePlayerHp(newPlayerHp);
       
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${enemyChar.name} attacks ${playerChar.name} for ${mitigatedDamage} damage!` },
-      ]);
+      if (isCrit) {
+        setBattleLog((prev) => [
+          ...prev,
+          { message: `💥 CRITICAL HIT! ${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
+        ]);
+      } else {
+        setBattleLog((prev) => [
+          ...prev,
+          { message: `${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
+        ]);
+      }
     } else if (currentAction.actionType === 'spell') {
       // Check if enemy spell is in range
       if (currentDistance > 500) {
@@ -394,18 +592,22 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
         return;
       }
       
-      const enemySpellDamage = enemyScaledStats.abilityPower;
+      const enemyBaseSpellDamage = enemyScaledStats.abilityPower;
       
-      // Apply player magic resist mitigation
-      const mitigatedDamage = Math.max(1, Math.floor(enemySpellDamage * (100 / (100 + (playerScaledStats.magicResist || 0)))));
+      // Apply player magic resist mitigation with enemy magic penetration
+      const finalDamage = calculateMagicDamage(
+        enemyBaseSpellDamage,
+        playerScaledStats.magicResist || 0,
+        enemyScaledStats.magicPenetration || 0
+      );
       
       // Update player HP
-      const newPlayerHp = Math.max(0, playerChar.hp - mitigatedDamage);
+      const newPlayerHp = Math.max(0, playerChar.hp - finalDamage);
       updatePlayerHp(newPlayerHp);
       
       setBattleLog((prev) => [
         ...prev,
-        { message: `${enemyChar.name} casts a spell on ${playerChar.name} for ${mitigatedDamage} magic damage!` },
+        { message: `${enemyChar.name} casts a spell on ${playerChar.name} for ${finalDamage} magic damage!` },
       ]);
     }
     
@@ -453,28 +655,66 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
     }
   }, [sequenceIndex, playerTurnDone, battleEnded, turnSequence]);
 
-  // Reset battle state when new enemy is loaded
-  useEffect(() => {
-    setBattleEnded(false);
-    setBattleResult(null);
-    setSequenceIndex(0);
-    setTurnCounter(0);
-    // Don't reset player HP here - preserve damage from previous battles
-  }, [enemyChar.id]);
-
   // Apply turn-based effects every turn
   useEffect(() => {
     const currentTurn = Math.ceil(turnCounter);
     if (turnCounter > 0 && currentTurn > lastLoggedTurn && turnCounter % 1 === 0) {
       // Turn-based effects trigger at each integer turn count
-      // This is where you could add bleed damage, poison, etc.
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `--- Turn ${currentTurn} ---` },
-      ]);
+      const newLogMessages: Array<{ message: string }> = [];
+      newLogMessages.push({ message: `--- Turn ${currentTurn} ---` });
+      
+      // Apply player health regeneration from base stats
+      if (playerChar && playerScaledStats.health_regen > 0) {
+        const regenAmount = Math.floor(playerScaledStats.health_regen);
+        if (regenAmount > 0 && playerChar.hp > 0 && playerChar.hp < playerScaledStats.health) {
+          const newPlayerHp = Math.min(playerChar.hp + regenAmount, playerScaledStats.health);
+          const actualHealing = newPlayerHp - playerChar.hp;
+          if (actualHealing > 0) {
+            updatePlayerHp(newPlayerHp);
+            newLogMessages.push({ message: `💚 ${playerChar.name} regenerated ${actualHealing} HP` });
+          }
+        }
+      }
+      
+      // Apply heal-over-time buffs
+      if (playerBuffs.length > 0) {
+        const hotBuffs = playerBuffs.filter(b => b.type === 'heal_over_time');
+        if (hotBuffs.length > 0 && playerChar && playerChar.hp > 0 && playerChar.hp < playerScaledStats.health) {
+          const totalHealing = hotBuffs.reduce((sum, buff) => sum + buff.amount, 0);
+          const newPlayerHp = Math.min(playerChar.hp + totalHealing, playerScaledStats.health);
+          const actualHealing = newPlayerHp - playerChar.hp;
+          if (actualHealing > 0) {
+            updatePlayerHp(newPlayerHp);
+            newLogMessages.push({ message: `🧪 ${playerChar.name} healed ${actualHealing} HP from potion` });
+          }
+        }
+        
+        // Decay buff durations
+        setPlayerBuffs((prevBuffs) => 
+          prevBuffs
+            .map(buff => ({ ...buff, duration: buff.duration - 1 }))
+            .filter(buff => buff.duration > 0)
+        );
+      }
+      
+      // Apply enemy health regeneration
+      if (enemyChar && enemyScaledStats.health_regen > 0) {
+        const regenAmount = Math.floor(enemyScaledStats.health_regen);
+        if (regenAmount > 0 && enemyChar.hp > 0 && enemyChar.hp < enemyScaledStats.health) {
+          const newEnemyHp = Math.min(enemyChar.hp + regenAmount, enemyScaledStats.health);
+          const actualHealing = newEnemyHp - enemyChar.hp;
+          if (actualHealing > 0) {
+            updateEnemyHp(0, newEnemyHp);
+            newLogMessages.push({ message: `💚 ${enemyChar.name} regenerated ${actualHealing} HP` });
+          }
+        }
+      }
+      
+      setBattleLog((prev) => [...prev, ...newLogMessages]);
       setLastLoggedTurn(currentTurn);
     }
-  }, [turnCounter, lastLoggedTurn]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnCounter, lastLoggedTurn, playerBuffs]);
 
   // Reset playerTurnDone when it becomes player's turn again
   useEffect(() => {
@@ -512,61 +752,69 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
     if (enemyChar.hp <= 0 && !battleEnded) {
       setBattleEnded(true);
       
-      // Drop loot based on enemy tier (not level - level only affects stats)
-      const tierForLoot = enemyChar.tier || 'minion';
-      const lootItem = getRandomLootByClass(enemyChar.class, tierForLoot);
-      if (lootItem) {
-        addInventoryItem({ itemId: lootItem.id, quantity: 1 });
-        
-        // If item has HP, heal the player by that amount
-        if (lootItem.stats.health) {
-          const healthGain = lootItem.stats.health;
-          const newHp = Math.min(playerChar.hp + healthGain, playerScaledStats.health + healthGain);
-          updatePlayerHp(newHp);
-          setBattleLog((prev) => [
-            ...prev,
-            { message: `${enemyChar.name} defeated!` },
-            { message: `🎁 Obtained: ${lootItem.name}` },
-            { message: `💚 Gained ${healthGain} HP from item` },
-          ]);
-        } else {
-          setBattleLog((prev) => [
-            ...prev,
-            { message: `${enemyChar.name} defeated!` },
-            { message: `🎁 Obtained: ${lootItem.name}` },
-          ]);
-        }
-      } else {
+      // Use battleFlow system to handle victory
+      const victoryResult = handleEnemyDefeat(
+        enemyChar,
+        state.enemyCharacters.slice(1),
+        state.currentFloor,
+        state.selectedRegion,
+        playerChar.level
+      );
+      
+      // Apply rewards to game state
+      applyVictoryRewards(
+        victoryResult,
+        addInventoryItem,
+        addGold,
+        addExperience,
+        updatePlayerHp,
+        playerChar.hp,
+        playerScaledStats.health
+      );
+      
+      // Add victory messages to battle log
+      const messages = getVictoryMessages(enemyChar.name, victoryResult);
+      setBattleLog((prev) => [...prev, ...messages.map(msg => ({ message: msg }))]);
+      
+      // Check for level up after applying experience
+      const newPlayerExp = playerChar.experience + victoryResult.expReward;
+      const levelUpResult = checkLevelUp(newPlayerExp, playerChar.level);
+      if (levelUpResult) {
+        const levelsGained = levelUpResult.newLevel - playerChar.level;
         setBattleLog((prev) => [
           ...prev,
-          { message: `${enemyChar.name} defeated!` },
+          { message: `🎉 LEVEL UP! ${playerChar.name} reached level ${levelUpResult.newLevel}!` },
+          { message: `💪 Gained ${levelsGained} level${levelsGained > 1 ? 's' : ''}! All stats increased and HP restored!` },
         ]);
       }
       
-      // Add gold reward
-      addGold(10);
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `+10 Gold` },
-      ]);
-      
-      // Check encounter number for reward selection (5 and 10)
-      const currentEncounter = state.currentFloor;
-      if (currentEncounter === 5 || currentEncounter === 10) {
-        // Show reward selection screen instead of auto-advancing
+      // Handle next steps
+      if (victoryResult.shouldShowRewardSelection) {
+        // Generate reward options
+        const rewards = generateRewardOptions(state.selectedRegion, state.currentFloor, playerChar.class);
+        setRewardOptions(rewards);
+        // Note: Rerolls are now global currency, no reset needed
+        
+        // Store next enemies for after reward selection
+        setPendingBattleData(victoryResult.nextEnemies);
+        
+        // Show reward selection screen
         setBattleResult('reward_selection');
-      } else {
+      } else if (victoryResult.hasMoreEnemies && victoryResult.nextEnemies) {
         // Auto-load next enemy after 1.5 seconds
         setTimeout(() => {
-          const remainingEnemies = state.enemyCharacters.slice(1); // Get all enemies after current
-          if (remainingEnemies.length > 0) {
-            // More enemies in this quest path - start battle with remaining enemies
-            startBattle(remainingEnemies);
-          } else {
-            // All enemies defeated in this quest path - show quest complete
-            setBattleResult('victory');
-          }
+          // CRITICAL FIX: Reset battle state BEFORE calling startBattle
+          // This prevents the button disappearance bug
+          setBattleEnded(false);
+          setPlayerTurnDone(false);
+          setBattleResult(null);
+          
+          // Now start the next battle
+          startBattle(victoryResult.nextEnemies!);
         }, 1500);
+      } else {
+        // All enemies defeated - show quest complete
+        setBattleResult('victory');
       }
     } else if (playerChar.hp <= 0 && !battleEnded) {
       setBattleEnded(true);
@@ -594,7 +842,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
       {/* Character Panels with Battlefield */}
       <div className="battle-arena">
         <div className="team-player">
-          <CharacterStatus />
+          <CharacterStatus combatBuffs={playerBuffs} />
         </div>
         
         {/* Vertical Battlefield Display in Center */}
@@ -716,7 +964,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
                 </button>
               </div>
 
-              {/* Right Section - Spell and Item */}
+              {/* Right Section - Spell & Use Item */}
               <div className="button-section right">
                 <button 
                   onClick={handleSpell} 
@@ -726,25 +974,23 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
                 >
                   ✨ Spell ({playerScaledStats.abilityPower.toFixed(0)} DMG)
                 </button>
-
-                {/* UseItem Button - Only show if player has items and it's a spell turn */}
-                {getUsableItems(state.inventory).length > 0 && (
-                  <button 
-                    onClick={() => {
-                      const usableItems = getUsableItems(state.inventory);
-                      if (usableItems.length > 0) {
-                        handleUseItem(usableItems[0].itemId);
-                      }
-                    }}
-                    className={`action-btn item-btn ${!canSpell ? 'disabled' : ''}`}
-                    disabled={!canSpell}
-                    title={canSpell ? `Use ${getUsableItems(state.inventory)[0]?.item.name || 'item'}` : 'Wait for your spell turn'}
-                  >
-                    🧪 Use Item
-                  </button>
-                )}
+                <button 
+                  onClick={() => setItemModeActive(!itemModeActive)} 
+                  className={`action-btn item-btn ${!canSpell ? 'disabled' : ''}`}
+                  disabled={!canSpell}
+                  title={canSpell ? 'Use an item' : 'Wait for your spell turn'}
+                >
+                  🧪 Use Item
+                </button>
               </div>
             </div>
+            
+            {/* Item Bar - Shows usable items below action buttons */}
+            <ItemBar
+              usableItems={getUsableItems(state.inventory)}
+              onUseItem={handleUseItem}
+              canUse={canSpell && itemModeActive}
+            />
             {playerChar.abilities.length > 0 && (
               <div className="ability-buttons">
                 {playerChar.abilities.map((ability: any, idx: number) => (
@@ -763,6 +1009,18 @@ export const Battle: React.FC<BattleProps> = ({ onBack }) => {
           </>
         )}
       </div>
+      
+      {/* Reward Selection Overlay */}
+      {battleResult === 'reward_selection' && rewardOptions.length > 0 && (
+        <RewardSelection
+          rewardOptions={rewardOptions}
+          onSelectReward={handleRewardSelection}
+          onSkip={handleSkipReward}
+          onReroll={handleRerollRewards}
+          rerollsRemaining={state.rerolls}
+          floor={state.currentFloor}
+        />
+      )}
     </div>
   );
 };

@@ -1,0 +1,194 @@
+.item-bar {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(74, 158, 255, 0.3);
+  border-radius: 8px;
+}
+
+.item-bar-title {
+  font-size: 12px;
+  color: #4a9eff;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.item-bar-items {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.item-bar-slot {
+  position: relative;
+}
+
+.item-bar-btn {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border: 2px solid;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.item-bar-btn:hover:not(.disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  border-color: #fff;
+}
+
+.item-bar-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.item-bar-btn.rarity-common {
+  border-color: #9d9d9d;
+}
+
+.item-bar-btn.rarity-epic {
+  border-color: #a335ee;
+}
+
+.item-bar-btn.rarity-legendary {
+  border-color: #ff8000;
+}
+
+.item-icon {
+  font-size: 24px;
+}
+
+.item-quantity {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1px 4px;
+  border-radius: 3px;
+  min-width: 14px;
+  text-align: center;
+}
+
+/* Tooltip */
+.item-tooltip {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 20, 40, 0.95));
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  border-radius: 6px;
+  padding: 12px;
+  min-width: 200px;
+  max-width: 300px;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Top positioning (default) - tooltip appears above button */
+.item-tooltip.top {
+  bottom: 100%;
+  margin-bottom: 8px;
+}
+
+.item-tooltip.top::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(74, 158, 255, 0.5);
+}
+
+/* Bottom positioning - tooltip appears below button */
+.item-tooltip.bottom {
+  top: 100%;
+  margin-top: 8px;
+}
+
+.item-tooltip.bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: rgba(74, 158, 255, 0.5);
+}
+
+.item-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+}
+
+.item-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.item-name.rarity-common {
+  color: #9d9d9d;
+}
+
+.item-name.rarity-epic {
+  color: #a335ee;
+}
+
+.item-name.rarity-legendary {
+  color: #ff8000;
+}
+
+.item-rarity {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #888;
+}
+
+.item-tooltip-description {
+  font-size: 12px;
+  color: #ccc;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.item-tooltip-effect {
+  font-size: 11px;
+  color: #4a9eff;
+  margin-bottom: 6px;
+  padding: 6px;
+  background: rgba(74, 158, 255, 0.1);
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+.item-tooltip-effect strong {
+  color: #4a9eff;
+  font-weight: bold;
+}
+
+.item-tooltip-hint {
+  font-size: 10px;
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(74, 158, 255, 0.2);
+}

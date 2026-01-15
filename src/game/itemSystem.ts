@@ -9,6 +9,7 @@ export interface CombatBuff {
   stat: keyof CombatBuffStats;
   amount: number;
   duration: number; // number of turns remaining
+  type?: 'instant' | 'heal_over_time'; // Type of buff effect
 }
 
 /**
@@ -21,6 +22,7 @@ export interface CombatBuffStats {
   armor: number;
   magicResist: number;
   attackSpeed: number;
+  heal_over_time: number; // Special stat for HoT effects
 }
 
 /**
@@ -117,7 +119,7 @@ export function hasItemInInventory(inventory: Array<{ itemId: string; quantity: 
 }
 
 /**
- * Get usable items from inventory (items with consumable stat types)
+ * Get usable items from inventory (items marked as consumable)
  */
 export function getUsableItems(
   inventory: Array<{ itemId: string; quantity: number }>
@@ -125,9 +127,23 @@ export function getUsableItems(
   return inventory
     .map((invItem) => {
       const item = getItemById(invItem.itemId);
-      return item ? { itemId: invItem.itemId, item, quantity: invItem.quantity } : null;
+      return item && item.consumable ? { itemId: invItem.itemId, item, quantity: invItem.quantity } : null;
     })
     .filter((item) => item !== null) as Array<{ itemId: string; item: any; quantity: number }>;
+}
+
+/**
+ * Create a heal-over-time buff from health potion
+ */
+export function createHealthPotionBuff(buffId: string): CombatBuff {
+  return {
+    id: buffId,
+    name: 'Health Potion',
+    stat: 'heal_over_time',
+    amount: 10, // 10 HP per turn
+    duration: 5, // 5 turns
+    type: 'heal_over_time',
+  };
 }
 
 /**

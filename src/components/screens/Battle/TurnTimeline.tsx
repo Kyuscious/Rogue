@@ -28,8 +28,6 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   // Get next 10 actions starting from current
   const visibleActions = turnSequence.slice(currentIndex, currentIndex + 10);
   
-  if (visibleActions.length === 0) return null;
-
   // Track previous action time for smooth transitions
   const prevActionTimeRef = React.useRef<number>(visibleActions[0]?.time || 1);
   const currentActionTime = visibleActions[0]?.time || 1;
@@ -100,6 +98,9 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   const getPositionPercent = (turnNumber: number) => {
     return ((turnNumber - startTurn) / turnRange) * 100;
   };
+
+  // Return null AFTER all hooks have been called
+  if (visibleActions.length === 0) return null;
 
   return (
     <div className="turn-timeline">

@@ -23,6 +23,10 @@ export const DEMACIA_MINIONS: Character[] = [
       armor: 5,
       attackSpeed: 0.6,
     },
+    inventory: [
+      { itemId: 'longsword', quantity: 1 },
+      { itemId: 'cloth_armor', quantity: 1 },
+    ],
   },
   {
     id: 'demacia_scout',
@@ -253,17 +257,23 @@ export const DEMACIA_CHAMPIONS: Character[] = [
   },
 ];
 
+// Demacia legend-tier enemies (ultra rare/endgame)
+export const DEMACIA_LEGENDS: Character[] = [
+  // TODO: Add legendary champions like peak-power Garen, Lux, etc.
+];
+
 export function getDemaciaEnemyById(id: string): Character | undefined {
   const allEnemies = [...DEMACIA_MINIONS, ...DEMACIA_ELITES, ...DEMACIA_CHAMPIONS, ...DEMACIA_BOSSES];
   return allEnemies.find((enemy) => enemy.id === id);
 }
 
-export function getRandomDemaciaEnemy(tier: 'minion' | 'elite' | 'champion' | 'boss'): Character {
+export function getRandomDemaciaEnemy(tier: 'minion' | 'elite' | 'boss' | 'champion' | 'legend' ): Character {
   let pool: Character[] = [];
   if (tier === 'minion') pool = DEMACIA_MINIONS;
   if (tier === 'elite') pool = DEMACIA_ELITES;
   if (tier === 'champion') pool = DEMACIA_CHAMPIONS;
   if (tier === 'boss') pool = DEMACIA_BOSSES;
+  if (tier === 'legend') pool = DEMACIA_LEGENDS;
   
   return pool[Math.floor(Math.random() * pool.length)];
 }

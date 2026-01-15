@@ -139,10 +139,14 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
   };
 
   const handlePlayerStatChange = (stat: keyof typeof DEFAULT_STATS, value: number) => {
+    // Prevent NaN values from being set
+    if (isNaN(value)) return;
     setPlayerStats(prev => ({ ...prev, [stat]: value }));
   };
 
   const handleEnemyStatChange = (stat: keyof typeof DEFAULT_STATS, value: number) => {
+    // Prevent NaN values from being set
+    if (isNaN(value)) return;
     setEnemyStats(prev => ({ ...prev, [stat]: value }));
   };
 

@@ -20,6 +20,7 @@ export interface Item {
   name: string;
   description: string;
   rarity: ItemRarity;
+  price: number; // Gold cost to purchase in shop
   stats: {
     // Survivability
     health?: number;
@@ -54,6 +55,8 @@ export interface Item {
   };
   passive?: string;
   passiveId?: PassiveId;
+  consumable?: boolean; // If true, item is consumed on use
+  onUseEffect?: string; // Description of what happens when used
 }
 
 export interface InventoryItem {
@@ -147,6 +150,7 @@ export const STARTING_ITEMS: Item[] = [
     name: "Doran's Blade",
     description: 'The starting weapon of champions who deal physical damage',
     rarity: 'starter',
+    price: 0,
     stats: {
       attackDamage: 8,
       health: 80,
@@ -160,6 +164,7 @@ export const STARTING_ITEMS: Item[] = [
     name: "Doran's Shield",
     description: 'Protective gear for those who prefer defense',
     rarity: 'starter',
+    price: 0,
     stats: {
       armor: 8,
       magicResist: 8,
@@ -173,6 +178,7 @@ export const STARTING_ITEMS: Item[] = [
     name: "Doran's Ring",
     description: 'A mystic focus for spellcasting champions',
     rarity: 'starter',
+    price: 0,
     stats: {
       abilityPower: 15,
       health: 80,
@@ -195,28 +201,33 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Long Sword',
     description: 'A basic sword for the journey ahead',
     rarity: 'common',
+    price: 350,
     stats: { attackDamage: 10 },
   },
   health_potion: {
     id: 'health_potion',
     name: 'Health Potion',
-    description: 'Restore your health in battle',
+    description: 'A magical elixir that restores health over time',
     rarity: 'common',
-    stats: { health: 20 },
+    price: 50,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Restores 50 health over 5 turns',
   },
   cloth_armor: {
     id: 'cloth_armor',
     name: 'Cloth Armor',
     description: 'Basic protection',
     rarity: 'common',
+    price: 300,
     stats: { armor: 15 },
-
   },
   amplifying_tome: {
     id: 'amplifying_tome',
     name: 'Amplifying Tome',
     description: 'A simple book to enhance magical power',
     rarity: 'common',
+    price: 350,
     stats: { abilityPower: 15 },
   },
 
@@ -227,6 +238,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Pickaxe',
     description: 'A powerful mining tool turned weapon',
     rarity: 'epic',
+    price: 80,
     stats: { attackDamage: 25 },
   },
   null_magic_mantle: {
@@ -234,6 +246,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Null-Magic Mantle',
     description: 'Magical protection against spells',
     rarity: 'epic',
+    price: 400,
     stats: { magicResist: 25 },
   },
   kindlegem: {
@@ -241,6 +254,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Kindlegem',
     description: 'A glowing gem of inner warmth',
     rarity: 'epic',
+    price: 400,
     stats: { health: 150 },
   },
 
@@ -250,6 +264,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Infinity Edge',
     description: 'Attack damage and critical strike power',
     rarity: 'legendary',
+    price: 200,
     stats: { attackDamage: 70, lifeSteal: 10 },
   },
   abyssal_mask: {
@@ -257,6 +272,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Abyssal Mask',
     description: 'Deep sea protection',
     rarity: 'legendary',
+    price: 220,
     stats: { health: 300, magicResist: 40, omnivamp: 10 },
   },
   nashor_tooth: {
@@ -264,6 +280,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: "Nashor's Tooth",
     description: "The fang of Nasthor the beast",
     rarity: 'legendary',
+    price: 210,
     stats: { abilityPower: 60, attackSpeed: 0.5, health: 200 },
   },
 
@@ -273,6 +290,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Trinity Force',
     description: 'A legendary combination of power',
     rarity: 'mythic',
+    price: 300,
     stats: {
       attackDamage: 80,
       health: 250,
@@ -285,6 +303,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: "Rabadon's Deathcap",
     description: 'Amplifies all ability power',
     rarity: 'legendary',
+    price: 250,
     stats: { abilityPower: 120, health: 200 },
     passiveId: 'magical_opus',
     get passive() { return getPassiveDescription(this.passiveId); },
@@ -295,6 +314,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Kaenic Rookern',
     description: 'A legendary shield',
     rarity: 'legendary',
+    price: 240,
     stats: { armor: 80, magicResist: 40, health: 400 },
   },
   warmogs_armor: {
@@ -302,6 +322,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: "Warmog's Armor",
     description: 'Massive health boost ',
     rarity: 'legendary',
+    price: 280,
     stats: { health: 1000 },
     passive: 'Heals 5% every round you do not get damaged',
   },
@@ -311,6 +332,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Guardian Angel',
     description: 'Revive upon death',
     rarity: 'transcendent',
+    price: 500,
     stats: { attackDamage: 50, armor: 40, health: 300 },
     passive: 'Upon death, revive with 50% health on the next turn',
   },
@@ -320,6 +342,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: "Luci's Staff",
     description: 'Empowers abilities with dark magic',
     rarity: 'exalted',
+    price: 400,
     stats: { abilityPower: 100, omnivamp: 15, health: 250 },
     passive: 'Abilities deal bonus magic damage over time',
   },
@@ -329,6 +352,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: "Lich Bane",
     description: 'Empowers your next attack after using an ability',
     rarity: 'transcendent',
+    price: 450,
     stats: { abilityPower: 80, attackSpeed: 0.3, health: 200 },
     passive: 'After using an ability, your next basic attack deals bonus magic damage',
   },

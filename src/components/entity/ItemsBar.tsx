@@ -1,21 +1,38 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../game/store';
 import { getItemById } from '../../game/items';
+import { InventoryItem } from '../../game/types';
 import './ItemsBar.css';
 
-export const ItemsBar: React.FC = () => {
+interface ItemsBarProps {
+  inventory?: InventoryItem[]; // Optional inventory prop for enemy/custom display
+}
+
+export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }) => {
   const { state } = useGameStore();
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [showTotalTooltip, setShowTotalTooltip] = useState(false);
   const [totalTooltipPosition, setTotalTooltipPosition] = useState({ x: 0, y: 0 });
 
-  if (state.inventory.length === 0) return null;
+  // Use custom inventory if provided, otherwise use player inventory from state
+  const inventory = customInventory || state.inventory;
+  
+  // Filter to only show items with stats (equipment), not consumables without stats
+  const equipmentItems = inventory.filter(item => {
+    const itemData = getItemById(item.itemId);
+    if (!itemData) return false;
+    // Show item if it has any stats (even if also consumable)
+    const hasStats = Object.values(itemData.stats).some(value => value && value > 0);
+    return hasStats;
+  });
 
-  // Calculate total stats from all items
+  if (equipmentItems.length === 0) return null;
+
+  // Calculate total stats from all equipment items
   const calculateTotalStats = () => {
     const totals: any = {};
-    state.inventory.forEach((item) => {
+    equipmentItems.forEach((item) => {
       const itemData = getItemById(item.itemId);
       if (itemData) {
         Object.entries(itemData.stats).forEach(([stat, value]) => {
@@ -58,7 +75,7 @@ export const ItemsBar: React.FC = () => {
         </div>
 
         {/* Item Slots */}
-        {state.inventory.map((item, idx) => {
+        {equipmentItems.map((item, idx) => {
           const itemData = getItemById(item.itemId);
           if (!itemData) return null;
 
@@ -117,7 +134,7 @@ export const ItemsBar: React.FC = () => {
       {/* Single Item Tooltip */}
       {hoveredItemId && getItemById(hoveredItemId) && (() => {
         const itemData = getItemById(hoveredItemId);
-        const inventoryItem = state.inventory.find(i => i.itemId === hoveredItemId);
+        const inventoryItem = inventory.find(i => i.itemId === hoveredItemId);
         const quantity = inventoryItem?.quantity || 1;
         const isStacked = quantity > 1;
 
