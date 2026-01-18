@@ -1,19 +1,9 @@
-import { PassiveId } from './itemPassives';
-import { ITEM_PASSIVES } from './itemPassives';
+import { PassiveId, getPassiveById } from './itemPassives';
 
 export type ItemRarity = 'starter' | 'common' | 'epic' | 'legendary' | 'mythic' | 'ultimate' | 'exalted' | 'transcendent';
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 export type LootType = 'attackDamage' | 'abilityPower' | 'tankDefense' | 'mobility' | 'utility' | 'hybrid' | 'critical';
-
-/**
- * Helper function to get passive description from passiveId
- */
-function getPassiveDescription(passiveId?: PassiveId): string | undefined {
-  if (!passiveId) return undefined;
-  const passive = ITEM_PASSIVES[passiveId];
-  return passive ? `${passive.name}: ${passive.description}` : undefined;
-}
 
 export interface Item {
   id: string;
@@ -21,6 +11,7 @@ export interface Item {
   description: string;
   rarity: ItemRarity;
   price: number; // Gold cost to purchase in shop
+  imagePath?: string; // Path to item image asset
   stats: {
     // Survivability
     health?: number;
@@ -37,6 +28,7 @@ export interface Item {
     criticalDamage?: number;
     lethality?: number;
     lifeSteal?: number;
+    healingOnHit?: number; // Flat healing when attack lands
     
     // Spell
     abilityPower?: number;
@@ -52,11 +44,24 @@ export interface Item {
     goldGain?: number;
     xpGain?: number;
     magicFind?: number;
+    trueDamage?: number; // Flat damage that bypasses armor/MR (on-hit for attacks and spells)
   };
   passive?: string;
   passiveId?: PassiveId;
   consumable?: boolean; // If true, item is consumed on use
   onUseEffect?: string; // Description of what happens when used
+  unlockRequirement?: {
+    type: 'stat_threshold' | 'achievement' | 'progression';
+    description: string; // Human-readable unlock condition
+    // For stat_threshold type
+    stat?: 'abilityPower' | 'attackDamage' | 'health';
+    threshold?: number; // Required stat value
+    // For achievement type
+    achievementId?: string;
+    // For progression type
+    regionsVisited?: number;
+    enemiesKilled?: number;
+  };
 }
 
 export interface InventoryItem {
@@ -87,30 +92,84 @@ export interface Enemy {
  * Each tier determines which rarities can be looted
  */
 
-// Minion tier loot: 80% Common, 20% Epic
+// Minion tier loot: 5% Starter, 75% Common, 20% Epic
+// Lower rarities allow negative magicFind to reduce loot quality
 export const MINION_RARITY_POOL = [
-  { rarity: 'common' as const, weight: 80 },
+  { rarity: 'starter' as const, weight: 5 },
+  { rarity: 'common' as const, weight: 75 },
   { rarity: 'epic' as const, weight: 20 },
 ];
 
-// Elite tier loot: 20% Epic, 70% Legendary, 10% Mythic
+// Elite tier loot: 10% Common, 15% Epic, 60% Legendary, 15% Mythic
+// Lower rarities allow negative magicFind to reduce loot quality
 export const ELITE_RARITY_POOL = [
-  { rarity: 'epic' as const, weight: 20 },
-  { rarity: 'legendary' as const, weight: 70 },
-  { rarity: 'mythic' as const, weight: 10 },
+  { rarity: 'common' as const, weight: 10 },
+  { rarity: 'epic' as const, weight: 15 },
+  { rarity: 'legendary' as const, weight: 60 },
+  { rarity: 'mythic' as const, weight: 15 },
 ];
 
-// Champion tier loot: 75% Ultimate, 25% Exalted
+// Champion tier loot: 5% Epic, 10% Legendary, 15% Mythic, 55% Ultimate, 15% Exalted
+// Lower rarities allow negative magicFind to reduce loot quality significantly
 export const CHAMPION_RARITY_POOL = [
-  { rarity: 'ultimate' as const, weight: 75 },
-  { rarity: 'exalted' as const, weight: 25 },
+  { rarity: 'epic' as const, weight: 5 },
+  { rarity: 'legendary' as const, weight: 10 },
+  { rarity: 'mythic' as const, weight: 15 },
+  { rarity: 'ultimate' as const, weight: 55 },
+  { rarity: 'exalted' as const, weight: 15 },
 ];
 
-// Boss tier loot: 55% Legendary, 40% Mythic, 5% Ultimate
+// Boss tier loot: 5% Epic, 45% Legendary, 35% Mythic, 10% Ultimate, 5% Exalted
+// Lower rarities allow negative magicFind to reduce loot quality
 export const BOSS_RARITY_POOL = [
-  { rarity: 'legendary' as const, weight: 55 },
-  { rarity: 'mythic' as const, weight: 40 },
-  { rarity: 'ultimate' as const, weight: 5 },
+  { rarity: 'epic' as const, weight: 5 },
+  { rarity: 'legendary' as const, weight: 45 },
+  { rarity: 'mythic' as const, weight: 35 },
+  { rarity: 'ultimate' as const, weight: 10 },
+  { rarity: 'exalted' as const, weight: 5 },
+];
+
+/**
+ * Shop rarity pools by act (influenced by magicFind)
+ */
+
+// Act 1 shop: 5% Starter, 60% Common, 30% Epic, 5% Legendary
+// Lower rarities allow negative magicFind to reduce shop quality
+export const SHOP_ACT_1_POOL = [
+  { rarity: 'starter' as const, weight: 5 },
+  { rarity: 'common' as const, weight: 60 },
+  { rarity: 'epic' as const, weight: 30 },
+  { rarity: 'legendary' as const, weight: 5 },
+];
+
+// Act 2 shop: 5% Common, 60% Epic, 30% Legendary, 5% Mythic
+// Lower rarities allow negative magicFind to reduce shop quality
+export const SHOP_ACT_2_POOL = [
+  { rarity: 'common' as const, weight: 5 },
+  { rarity: 'epic' as const, weight: 60 },
+  { rarity: 'legendary' as const, weight: 30 },
+  { rarity: 'mythic' as const, weight: 5 },
+];
+
+// Act 3 shop: 3% Common, 7% Epic, 10% Legendary, 55% Mythic, 20% Ultimate, 5% Exalted
+// Lower rarities allow negative magicFind to reduce shop quality significantly
+export const SHOP_ACT_3_POOL = [
+  { rarity: 'common' as const, weight: 3 },
+  { rarity: 'epic' as const, weight: 7 },
+  { rarity: 'legendary' as const, weight: 10 },
+  { rarity: 'mythic' as const, weight: 55 },
+  { rarity: 'ultimate' as const, weight: 20 },
+  { rarity: 'exalted' as const, weight: 5 },
+];
+
+// Act 4+ (Endless) shop: 2% Epic, 5% Legendary, 60% Mythic, 25% Ultimate, 8% Exalted
+// Lower rarities allow deep negative magicFind to severely reduce shop quality
+export const SHOP_ENDLESS_POOL = [
+  { rarity: 'epic' as const, weight: 2 },
+  { rarity: 'legendary' as const, weight: 5 },
+  { rarity: 'mythic' as const, weight: 60 },
+  { rarity: 'ultimate' as const, weight: 25 },
+  { rarity: 'exalted' as const, weight: 8 },
 ];
 
 // Legacy table for backwards compatibility
@@ -143,67 +202,126 @@ export interface SummonerStats {
   attackSpeed: number;
 }
 
-// Starting items for the beginning of the journey
-export const STARTING_ITEMS: Item[] = [
+// Default starting items (always available)
+export const DEFAULT_STARTING_ITEMS: Item[] = [
   {
     id: 'dorans_blade',
     name: "Doran's Blade",
-    description: 'The starting weapon of champions who deal physical damage',
+    description: 'A blade for explorers who deal physical damage',
     rarity: 'starter',
     price: 0,
+    imagePath: '/assets/global/images/item-dorans-blade.svg',
     stats: {
       attackDamage: 8,
       health: 80,
       lifeSteal: 1,
     },
-    passiveId: 'blade_lifesteal_amplifier',
-    get passive() { return getPassiveDescription(this.passiveId); },
+    passiveId: 'life_draining',
   },
   {
     id: 'dorans_shield',
     name: "Doran's Shield",
-    description: 'Protective gear for those who prefer defense',
+    description: 'Protective gear for explorers who prefer defense',
     rarity: 'starter',
     price: 0,
     stats: {
-      armor: 8,
-      magicResist: 8,
-      health: 120,
+      health: 110,
+      health_regen: 4,
     },
-    passiveId: 'shield_adaptive_defense',
-    get passive() { return getPassiveDescription(this.passiveId); },
+    passiveId: 'enduring_focus',
   },
   {
     id: 'dorans_ring',
     name: "Doran's Ring",
-    description: 'A mystic focus for spellcasting champions',
+    description: 'A mystic focus for spellcasting explorers',
     rarity: 'starter',
     price: 0,
     stats: {
-      abilityPower: 15,
-      health: 80,
+      abilityPower: 18,
+      health: 90,
     },
-    passiveId: 'ring_spell_scaling',
-    get passive() { return getPassiveDescription(this.passiveId); },
+    passiveId: 'drain',
   },
+];
+
+// Unlockable starting items (require achievements/progression)
+export const UNLOCKABLE_STARTING_ITEMS: Item[] = [
+  {
+    id: 'cull',
+    name: 'Cull',
+    description: 'A scythe for greedy explorers',
+    rarity: 'starter',
+    price: 0,
+    stats: {
+      health: 50,
+      attackDamage: 7,
+      healingOnHit: 3,
+      goldGain: 50,
+    },
+    passiveId: 'reap',
+    unlockRequirement: {
+      type: 'achievement',
+      description: 'Complete Act 1 with 5000+ gold',
+      achievementId: 'wealthy_explorer',
+    },
+  },
+  {
+    id: 'world_atlas',
+    name: 'World Atlas',
+    description: 'The book for the most curious explorers',
+    rarity: 'starter',
+    price: 0,
+    stats: {
+      health: 50,
+      xpGain: 50,
+    },
+    passiveId: 'pathfinder',
+    unlockRequirement: {
+      type: 'progression',
+      description: 'Visit 10 different regions',
+      regionsVisited: 10,
+    },
+  },
+  {
+    id: 'dark_seal',
+    name: 'Dark Seal',
+    description: 'Glory: Defeating Champion or Legend tier enemies grants +10 AP permanently (stacks endlessly).',
+    rarity: 'starter',
+    price: 350,
+    stats: {
+      health: 50,
+      abilityPower: 15,
+    },
+    passiveId: 'glory',
+    unlockRequirement: {
+      type: 'stat_threshold',
+      description: 'Reach 150 Ability Power in a single run',
+      stat: 'abilityPower',
+      threshold: 150,
+    },
+  },
+];
+
+// Combined array of all starting items
+export const STARTING_ITEMS: Item[] = [
+  ...DEFAULT_STARTING_ITEMS,
+  ...UNLOCKABLE_STARTING_ITEMS,
 ];
 
 // Complete item database
 export const ITEM_DATABASE: Record<string, Item> = {
-  // Starter Items
-  dorans_blade: STARTING_ITEMS[0],
-  dorans_shield: STARTING_ITEMS[1],
-  dorans_ring: STARTING_ITEMS[2],
+  // Starter Items (Default)
+  dorans_blade: DEFAULT_STARTING_ITEMS[0],
+  dorans_shield: DEFAULT_STARTING_ITEMS[1],
+  dorans_ring: DEFAULT_STARTING_ITEMS[2],
+  
+  // Starter Items (Unlockable)
+  cull: UNLOCKABLE_STARTING_ITEMS[0],
+  world_atlas: UNLOCKABLE_STARTING_ITEMS[1],
+  dark_seal: UNLOCKABLE_STARTING_ITEMS[2],
 
-  // Common Items
-  long_sword: {
-    id: 'long_sword',
-    name: 'Long Sword',
-    description: 'A basic sword for the journey ahead',
-    rarity: 'common',
-    price: 350,
-    stats: { attackDamage: 10 },
-  },
+  // Common Usables
+  
   health_potion: {
     id: 'health_potion',
     name: 'Health Potion',
@@ -214,12 +332,55 @@ export const ITEM_DATABASE: Record<string, Item> = {
     consumable: true,
     onUseEffect: 'Restores 50 health over 5 turns',
   },
+  
+  stealth_ward: {
+    id: 'stealth_ward',
+    name: 'Stealth Ward',
+    description: 'Invisible ward that reveals the stats of the enemy',
+    rarity: 'common',
+    price: 75,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Reveals the enemy stats for the remainder of the encounter',
+  },
+  oracle_lens: {
+    id: 'oracle_lens',
+    name: 'Oracle Lens',
+    description: 'A mystical lens that reveals hidden enemies',
+    rarity: 'common',
+    price: 50,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Allows to attack invisible enemies for the next 3 turns',
+  },
+  farsight_alteration: {
+    id: 'farsight_alteration',
+    name: 'Farsight Alteration',
+    description: 'A magical device that allows to plan ahead',
+    rarity: 'common',
+    price: 50,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Reveals what the next encounter will be',
+  },
+
+
+  // Common Items
+  long_sword: {
+    id: 'long_sword',
+    name: 'Long Sword',
+    description: 'A basic sword for the journey ahead',
+    rarity: 'common',
+    price: 350,
+    stats: { attackDamage: 10 },
+  },
   cloth_armor: {
     id: 'cloth_armor',
     name: 'Cloth Armor',
     description: 'Basic protection',
     rarity: 'common',
     price: 300,
+    imagePath: '/assets/global/images/item-cloth-armor.svg',
     stats: { armor: 15 },
   },
   amplifying_tome: {
@@ -230,8 +391,90 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 350,
     stats: { abilityPower: 15 },
   },
+  kindlegem: {
+    id: 'kindlegem',
+    name: 'Kindlegem',
+    description: 'A glowing gem of inner warmth',
+    rarity: 'common',
+    price: 400,
+    stats: { health: 150 },
+  },
+  sapphire_crystal: {
+    id: 'sapphire_crystal',
+    name: 'Sapphire Crystal',
+    description: 'A crystal that enhances magical abilities',
+    rarity: 'common',
+    price: 300,
+    stats: { xpGain: 1 },
+  },
+  fearie_charm: {
+    id: 'fearie_charm',
+    name: 'Faerie Charm',
+    description: 'A charm that boosts magical abilities',
+    rarity: 'common',
+    price: 200,
+    stats: { magicFind: 5 },
+  },
+  dagger: {
+    id: 'dagger',
+    name: 'Dagger',
+    description: 'A small blade for quick strikes',
+    rarity: 'common',
+    price: 250,
+    stats: { attackSpeed: 0.1 },
+  },
+  rejuvenation_bead: {
+    id: 'rejuvenation_bead',
+    name: 'Rejuvenation Bead',
+    description: 'A bead that enhances health regeneration',
+    rarity: 'common',
+    price: 150,
+    stats: { health_regen: 2 },
+  },
+  boots: {
+    id: 'boots',
+    name: 'Boots',
+    description: 'Basic footwear to increase movement speed',
+    rarity: 'common',
+    price: 300,
+    stats: { movementSpeed: 25 },
+  },
+  // Epic Usables
+  
+  elixir_of_iron: {
+    id: 'elixir_of_iron',
+    name: 'Elixir of Iron',
+    description: 'Grants a powerful buff for 15 encounters',
+    rarity: 'epic',
+    price: 500,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Gain +300 Health, +250 Tenacity, and +150 Movement Speed for 15 encounters (persists across acts/regions)',
+  },
+  
+  elixir_of_sorcery: {
+    id: 'elixir_of_sorcery',
+    name: 'Elixir of Sorcery',
+    description: 'Grants magical power and true damage for 15 encounters',
+    rarity: 'epic',
+    price: 500,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Gain +50 Ability Power, +10 Magic Find, and +25 True Damage (ignores armor/MR) for 15 encounters (persists across acts/regions)',
+  },
+  
+  elixir_of_wrath: {
+    id: 'elixir_of_wrath',
+    name: 'Elixir of Wrath',
+    description: 'Grants physical power and lifesteal for 15 encounters',
+    rarity: 'epic',
+    price: 500,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Gain +30 Attack Damage and +12% Lifesteal for 15 encounters (persists across acts/regions)',
+  },
 
-
+  // <<  Elixirs here ! 
   // Epic Items
   pickaxe: {
     id: 'pickaxe',
@@ -249,16 +492,24 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 400,
     stats: { magicResist: 25 },
   },
-  kindlegem: {
-    id: 'kindlegem',
-    name: 'Kindlegem',
-    description: 'A glowing gem of inner warmth',
-    rarity: 'epic',
-    price: 400,
-    stats: { health: 150 },
-  },
+  
 
   // Legendary Items
+  
+  mejais_soulstealer: {
+    id: 'mejais_soulstealer',
+    name: "Mejai's Soulstealer",
+    description: 'Upgraded Glory: Defeating Champion or Legend tier enemies grants +15 AP permanently (stacks endlessly). Carries over stacks from Dark Seal.',
+    rarity: 'legendary',
+    price: 1150,
+    stats: {
+      health: 50,
+      abilityPower: 20,
+      movementSpeed: 100,
+    },
+    passiveId: 'glory_upgraded',
+  },
+  
   infinity_edge: {
     id: 'infinity_edge',
     name: 'Infinity Edge',
@@ -306,7 +557,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 250,
     stats: { abilityPower: 120, health: 200 },
     passiveId: 'magical_opus',
-    get passive() { return getPassiveDescription(this.passiveId); },
+    passive: 'Magical Opus: Increases your total Ability Power by 30%.',
   },
 
   kaenic_rookern: {
@@ -326,6 +577,15 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: { health: 1000 },
     passive: 'Heals 5% every round you do not get damaged',
   },
+  lich_bane: {
+    id: 'lich_bane',
+    name: "Lich Bane",
+    description: 'Empowers your next attack after using an ability',
+    rarity: 'transcendent',
+    price: 450,
+    stats: { abilityPower: 80, attackSpeed: 0.3, health: 200 },
+    passive: 'After using an ability, your next basic attack deals bonus magic damage',
+  },
   //Ultimate Items
   guardian_angel: {
     id: 'guardian_angel', 
@@ -337,25 +597,16 @@ export const ITEM_DATABASE: Record<string, Item> = {
     passive: 'Upon death, revive with 50% health on the next turn',
   },
   // Exalted Items
-  luci_staff: {
-    id: 'luci_staff',
-    name: "Luci's Staff",
-    description: 'Empowers abilities with dark magic',
+  chalicar: {
+    id: 'chalicar',
+    name: 'Chalicar',
+    description: 'The Legendary Jeweled crossblade boomerang',
     rarity: 'exalted',
-    price: 400,
-    stats: { abilityPower: 100, omnivamp: 15, health: 250 },
-    passive: 'Abilities deal bonus magic damage over time',
-  },
+    price: 5000,
+    stats: { attackDamage: 90, health: 200 },
+    }
   // Transcendent Items
-  lich_bane: {
-    id: 'lich_bane',
-    name: "Lich Bane",
-    description: 'Empowers your next attack after using an ability',
-    rarity: 'transcendent',
-    price: 450,
-    stats: { abilityPower: 80, attackSpeed: 0.3, health: 200 },
-    passive: 'After using an ability, your next basic attack deals bonus magic damage',
-  },
+  
 };
 
 export function getItemById(id: string): Item | undefined {
@@ -374,12 +625,17 @@ export function getRandomItemByRarity(rarity: ItemRarity): Item {
 /**
  * Get a random loot item based on enemy tier
  * Tier determines rarity pools, not level
- * MINION: 80% Common, 20% Epic
- * ELITE: 20% Epic, 70% Legendary, 10% Mythic
- * CHAMPION: 75% Ultimate, 25% Exalted
- * BOSS: 55% Legendary, 40% Mythic, 5% Ultimate
+ * Pools include lower rarities to enable negative magicFind penalties
+ * 
+ * MINION: 5% Starter, 75% Common, 20% Epic
+ * ELITE: 10% Common, 15% Epic, 60% Legendary, 15% Mythic
+ * CHAMPION: 5% Epic, 10% Legendary, 15% Mythic, 55% Ultimate, 15% Exalted
+ * BOSS: 5% Epic, 45% Legendary, 35% Mythic, 10% Ultimate, 5% Exalted
+ * 
+ * @param enemyTier - The tier of the enemy
+ * @param magicFind - Player's magic find stat (positive increases high rarities, negative increases low rarities)
  */
-export function getRandomLootByTier(enemyTier: 'minion' | 'elite' | 'champion' | 'boss' = 'minion'): Item | undefined {
+export function getRandomLootByTier(enemyTier: 'minion' | 'elite' | 'champion' | 'boss' = 'minion', magicFind: number = 0): Item | undefined {
   let rarityPool: Array<{ rarity: ItemRarity; weight: number }>;
   
   if (enemyTier === 'boss') {
@@ -392,12 +648,23 @@ export function getRandomLootByTier(enemyTier: 'minion' | 'elite' | 'champion' |
     rarityPool = MINION_RARITY_POOL as Array<{ rarity: ItemRarity; weight: number }>;
   }
   
+  // Apply magic find modifier to rarity weights
+  // Positive magic find increases weight of higher rarities
+  // Negative magic find increases weight of lower rarities
+  const modifiedPool = rarityPool.map((entry, index) => {
+    // Higher index = higher rarity. Magic find shifts weights toward higher rarities
+    const rarityBonus = magicFind * (index / (rarityPool.length - 1));
+    // Ensure weight doesn't go below 1
+    const newWeight = Math.max(1, entry.weight + rarityBonus);
+    return { ...entry, weight: newWeight };
+  });
+  
   // Weighted random selection of rarity
-  const totalWeight = rarityPool.reduce((sum, item) => sum + item.weight, 0);
+  const totalWeight = modifiedPool.reduce((sum, item) => sum + item.weight, 0);
   let randomWeight = Math.random() * totalWeight;
   
   let selectedRarity: ItemRarity = 'common';
-  for (const item of rarityPool) {
+  for (const item of modifiedPool) {
     randomWeight -= item.weight;
     if (randomWeight <= 0) {
       selectedRarity = item.rarity;
@@ -416,8 +683,73 @@ export function getRandomLootByTier(enemyTier: 'minion' | 'elite' | 'champion' |
 }
 
 // Backwards compatibility wrapper
-export function getRandomLootByClass(_characterClass: CharacterClass, enemyTier: 'minion' | 'elite' | 'champion' | 'boss' = 'minion'): Item | undefined {
-  return getRandomLootByTier(enemyTier);
+export function getRandomLootByClass(_characterClass: CharacterClass, enemyTier: 'minion' | 'elite' | 'champion' | 'boss' = 'minion', magicFind: number = 0): Item | undefined {
+  return getRandomLootByTier(enemyTier, magicFind);
+}
+
+/**
+ * Get a random shop item based on current act
+ * Act determines base rarity pools, magicFind shifts weights toward higher/lower rarities
+ * Pools include lower rarities to enable negative magicFind penalties
+ * 
+ * Act 1: 5% Starter, 60% Common, 30% Epic, 5% Legendary
+ * Act 2: 5% Common, 60% Epic, 30% Legendary, 5% Mythic
+ * Act 3: 3% Common, 7% Epic, 10% Legendary, 55% Mythic, 20% Ultimate, 5% Exalted
+ * Act 4+ (Endless): 2% Epic, 5% Legendary, 60% Mythic, 25% Ultimate, 8% Exalted
+ * 
+ * @param currentAct - The current act number (1-4+)
+ * @param magicFind - Player's magic find stat (positive = better items, negative = worse items)
+ * @param excludeIds - Optional array of item IDs to exclude from selection
+ */
+export function getRandomShopItemByAct(currentAct: number, magicFind: number = 0, excludeIds: string[] = []): Item | undefined {
+  let rarityPool: Array<{ rarity: ItemRarity; weight: number }>;
+  
+  if (currentAct >= 4) {
+    rarityPool = SHOP_ENDLESS_POOL as Array<{ rarity: ItemRarity; weight: number }>;
+  } else if (currentAct === 3) {
+    rarityPool = SHOP_ACT_3_POOL as Array<{ rarity: ItemRarity; weight: number }>;
+  } else if (currentAct === 2) {
+    rarityPool = SHOP_ACT_2_POOL as Array<{ rarity: ItemRarity; weight: number }>;
+  } else {
+    rarityPool = SHOP_ACT_1_POOL as Array<{ rarity: ItemRarity; weight: number }>;
+  }
+  
+  // Apply magic find modifier to rarity weights
+  // Positive magic find increases weight of higher rarities
+  const modifiedPool = rarityPool.map((entry, index) => {
+    // Higher index = higher rarity. Magic find shifts weights toward higher rarities
+    const rarityBonus = magicFind * (index / (rarityPool.length - 1));
+    // Ensure weight doesn't go below 1
+    const newWeight = Math.max(1, entry.weight + rarityBonus);
+    return { ...entry, weight: newWeight };
+  });
+  
+  // Weighted random selection of rarity
+  const totalWeight = modifiedPool.reduce((sum, item) => sum + item.weight, 0);
+  let randomWeight = Math.random() * totalWeight;
+  
+  let selectedRarity: ItemRarity = 'common';
+  for (const item of modifiedPool) {
+    randomWeight -= item.weight;
+    if (randomWeight <= 0) {
+      selectedRarity = item.rarity;
+      break;
+    }
+  }
+  
+  // Get items of the selected rarity (excluding specified IDs and consumables)
+  const potentialItems = Object.values(ITEM_DATABASE).filter(
+    (item) => 
+      item.rarity === selectedRarity && 
+      !excludeIds.includes(item.id) &&
+      !item.consumable &&
+      item.stats && 
+      Object.keys(item.stats).length > 0
+  );
+  
+  if (potentialItems.length === 0) return undefined;
+  
+  return potentialItems[Math.floor(Math.random() * potentialItems.length)];
 }
 
 /**
@@ -434,4 +766,13 @@ export function getPassiveIdsFromInventory(inventory: Array<{ itemId: string; qu
   }
   
   return passiveIds;
+}
+
+/**
+ * Get passive description from ITEM_PASSIVES by ID
+ * This eliminates the need to duplicate passive descriptions in items
+ */
+export function getPassiveDescription(passiveId: PassiveId): string | undefined {
+  const passive = getPassiveById(passiveId);
+  return passive?.description;
 }

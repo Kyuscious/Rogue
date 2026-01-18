@@ -35,6 +35,7 @@ export interface CharacterStats {
   criticalDamage: number,
   lethality: number,
   lifeSteal: number,
+  healingOnHit: number,
 
   //Spell
   abilityPower: number,
@@ -50,6 +51,7 @@ export interface CharacterStats {
   goldGain: number,
   xpGain: number,
   magicFind: number,
+  trueDamage: number, // Flat damage that bypasses all resistances (on-hit)
 }
 
 /**
@@ -71,6 +73,7 @@ export const DEFAULT_STATS: CharacterStats = {
   criticalDamage: 200,
   lethality: 0,
   lifeSteal: 0,
+  healingOnHit: 0,
 
   //Spell
   abilityPower: 30,
@@ -86,6 +89,7 @@ export const DEFAULT_STATS: CharacterStats = {
   goldGain: 1,
   xpGain: 1,
   magicFind: 0,
+  trueDamage: 0,
   
   
 };
@@ -314,6 +318,46 @@ export function rollCriticalStrike(criticalChance: number): boolean {
   if (criticalChance <= 0) return false;
   const cappedChance = Math.min(1.0, Math.max(0, criticalChance));
   return Math.random() < cappedChance;
+}
+
+/**
+ * Calculate total damage including physical/magic damage with resistances + true damage
+ * True damage bypasses all armor and magic resist
+ * 
+ * @param physicalDamage - Base physical damage (before mitigation)
+ * @param magicDamage - Base magic damage (before mitigation)
+ * @param trueDamage - True damage (bypasses resistances)
+ * @param enemyArmor - Enemy's armor stat
+ * @param enemyMagicResist - Enemy's magic resist stat
+ * @param attackerLethality - Attacker's lethality (reduces enemy armor)
+ * @param attackerMagicPen - Attacker's magic penetration (reduces enemy MR)
+ * @returns Total damage dealt
+ */
+export function calculateTotalDamage(
+  physicalDamage: number,
+  magicDamage: number,
+  trueDamage: number,
+  enemyArmor: number,
+  enemyMagicResist: number,
+  attackerLethality: number = 0,
+  attackerMagicPen: number = 0
+): number {
+  let totalDamage = 0;
+
+  // Apply physical damage with armor mitigation
+  if (physicalDamage > 0) {
+    totalDamage += calculatePhysicalDamage(physicalDamage, enemyArmor, attackerLethality);
+  }
+
+  // Apply magic damage with MR mitigation
+  if (magicDamage > 0) {
+    totalDamage += calculateMagicDamage(magicDamage, enemyMagicResist, attackerMagicPen);
+  }
+
+  // Add true damage (no mitigation)
+  totalDamage += trueDamage;
+
+  return Math.max(1, Math.floor(totalDamage));
 }
 
 /**

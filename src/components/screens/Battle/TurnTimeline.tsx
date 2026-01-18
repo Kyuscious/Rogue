@@ -86,12 +86,18 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   const endTurn = currentActionTime + 2.05; // Show next 2.05 turns (full icon at 2.00)
   const turnRange = 2.1; // Fixed range (2.05 + 0.05)
 
-  // Generate turn markers that fall within the visible window
+  // Generate turn markers at MIDPOINTS (.5) that fall within the visible window
   const turnMarkers = [];
-  const firstMarker = Math.ceil(currentActionTime);
-  const lastMarker = Math.floor(endTurn);
+  const firstMarker = Math.ceil(currentActionTime); // First whole turn visible
+  const lastMarker = Math.floor(endTurn); // Last whole turn visible
   for (let i = firstMarker; i <= lastMarker; i++) {
     turnMarkers.push(i);
+  }
+  
+  // Generate turn background sections (from turn N to turn N+1)
+  const turnBackgrounds = [];
+  for (let i = firstMarker; i <= lastMarker; i++) {
+    turnBackgrounds.push(i);
   }
 
   // Calculate position percentage on timeline (works with decimal turn numbers)
@@ -117,20 +123,60 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
           <div className="marker-arrow">▶</div>
         </div>
         
+        {/* Turn background sections - alternating colors */}
+        {turnBackgrounds.map((turn) => {
+          const turnStart = getPositionPercent(turn);
+          const turnEnd = getPositionPercent(turn + 1);
+          const width = turnEnd - turnStart;
+          // Alternating colors based on turn number
+          const colors = [
+            'rgba(74, 158, 255, 0.08)', // Blue
+            'rgba(124, 58, 237, 0.08)', // Purple
+            'rgba(255, 107, 107, 0.08)', // Red
+          ];
+          const bgColor = colors[turn % colors.length];
+          
+          return (
+            <div
+              key={`bg-${turn}`}
+              className="turn-background"
+              style={{ 
+                left: `${turnStart}%`,
+                width: `${width}%`,
+                background: bgColor,
+              }}
+            />
+          );
+        })}
+        
         {/* Timeline bar */}
         <div className="timeline-bar" />
         
-        {/* Turn number markers */}
-        {turnMarkers.map((turn) => (
-          <div
-            key={turn}
-            className="turn-marker"
-            style={{ left: `${getPositionPercent(turn)}%` }}
-          >
-            <div className="turn-marker-line" />
-            <div className="turn-marker-label">T{turn}</div>
-          </div>
-        ))}
+        {/* Turn number markers - positioned at MIDPOINTS */}
+        {turnMarkers.map((turn) => {
+          const midpoint = turn + 0.5; // Position at T1.5, T2.5, T3.5, etc.
+          const position = getPositionPercent(midpoint);
+          // Match label color to background color
+          const colors = [
+            '#4a9eff', // Blue
+            '#7c3aed', // Purple
+            '#ff6b6b', // Red
+          ];
+          const labelColor = colors[turn % colors.length];
+          
+          return (
+            <div
+              key={turn}
+              className="turn-marker"
+              style={{ 
+                left: `${position}%`,
+                '--label-color': labelColor,
+              } as React.CSSProperties}
+            >
+              <div className="turn-marker-label">T{turn}</div>
+            </div>
+          );
+        })}
 
         {/* Action indicators - grouped by time to handle simultaneous actions */}
         {Object.entries(actionGroups).map(([timeKey, group]) => {

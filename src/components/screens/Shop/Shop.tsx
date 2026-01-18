@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useGameStore } from '../../../game/store';
 import { getItemById } from '../../../game/items';
 import './Shop.css';
@@ -8,69 +8,16 @@ interface ShopProps {
   region: string;
 }
 
-interface ShopSlot {
-  itemId: string;
-  hasDiscount: boolean;
-  discountPercent: number;
-  soldOut: boolean;
-}
-
-// Generate random discount (10% to 90%, multiple of 10, weighted toward lower discounts)
-const generateDiscount = (): number => {
-  const roll = Math.random();
-  
-  // Weighted distribution:
-  // 10-20%: 40% chance
-  // 30-40%: 30% chance
-  // 50-60%: 20% chance
-  // 70-90%: 10% chance
-  
-  if (roll < 0.4) {
-    return Math.random() < 0.5 ? 10 : 20;
-  } else if (roll < 0.7) {
-    return Math.random() < 0.5 ? 30 : 40;
-  } else if (roll < 0.9) {
-    return Math.random() < 0.5 ? 50 : 60;
-  } else {
-    const options = [70, 80, 90];
-    return options[Math.floor(Math.random() * options.length)];
-  }
-};
-
-// Generate initial shop inventory
-const generateShopInventory = (): ShopSlot[] => {
-  // 3 stat items (equipment)
-  const statItems = ['cloth_armor', 'cloth_armor', 'cloth_armor'];
-  
-  // 2 usable items (consumables)
-  const usableItems = ['health_potion', 'health_potion'];
-  
-  // Combine in alternating pattern: equipment, consumable, equipment, consumable, equipment
-  const allItems = [statItems[0], usableItems[0], statItems[1], usableItems[1], statItems[2]];
-  
-  // Randomly select one slot for discount
-  const discountSlotIndex = Math.floor(Math.random() * allItems.length);
-  const discountPercent = generateDiscount();
-  
-  return allItems.map((itemId, index) => ({
-    itemId,
-    hasDiscount: index === discountSlotIndex,
-    discountPercent: index === discountSlotIndex ? discountPercent : 0,
-    soldOut: false,
-  }));
-};
-
 export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
-  const { state, addInventoryItem, addGold, useReroll } = useGameStore();
+  const { state, addInventoryItem, removeInventoryItem, addGold, useReroll, generateShopInventory, rerollShop, markShopItemSold } = useGameStore();
   
   // Capitalize region name
   const regionName = region.charAt(0).toUpperCase() + region.slice(1);
-  const [shopInventory, setShopInventory] = useState<ShopSlot[]>([]);
   
-  // Initialize shop on mount
+  // Generate shop inventory on mount (only if needed)
   useEffect(() => {
-    setShopInventory(generateShopInventory());
-  }, []);
+    generateShopInventory();
+  }, [generateShopInventory]);
   
   const handleRerollShop = () => {
     if (!useReroll()) {
@@ -79,11 +26,11 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
     }
     
     // Regenerate shop inventory
-    setShopInventory(generateShopInventory());
+    rerollShop();
   };
   
   const handlePurchase = (slotIndex: number) => {
-    const slot = shopInventory[slotIndex];
+    const slot = state.shopInventory[slotIndex];
     if (slot.soldOut) return;
     
     const item = getItemById(slot.itemId);
@@ -99,17 +46,32 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
       return;
     }
     
-    // Purchase item
+    // Special case: Buying Mejai's Soulstealer with Dark Seal in inventory
+    // Swap Dark Seal for Mejai's, preserving Glory stacks
+    if (item.id === 'mejais_soulstealer') {
+      const hasDarkSeal = state.inventory.some((i: any) => i.itemId === 'dark_seal');
+      if (hasDarkSeal) {
+        console.log('🔄 Upgrading Dark Seal to Mejai\'s Soulstealer - Glory stacks preserved!');
+        // Remove Dark Seal from inventory
+        removeInventoryItem('dark_seal');
+        // Add Mejai's (the glory_stacks buff in Battle.tsx will automatically use glory_upgraded)
+        addInventoryItem({ itemId: item.id, quantity: 1 });
+        // Purchase complete
+        addGold(-finalPrice);
+        markShopItemSold(slotIndex);
+        return;
+      }
+    }
+    
+    // Normal purchase
     addGold(-finalPrice);
     addInventoryItem({ itemId: item.id, quantity: 1 });
     
     // Mark item as sold out
-    const newInventory = [...shopInventory];
-    newInventory[slotIndex] = { ...slot, soldOut: true };
-    setShopInventory(newInventory);
+    markShopItemSold(slotIndex);
   };
   
-  const renderShopSlot = (slot: ShopSlot, index: number) => {
+  const renderShopSlot = (slot: any, index: number) => {
     const item = getItemById(slot.itemId);
     if (!item) return null;
     
@@ -138,7 +100,11 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
         )}
         
         <div className="shop-item-icon">
-          {item.consumable ? '🧪' : '⚔️'}
+          {item.imagePath ? (
+            <img src={item.imagePath} alt={item.name} className="shop-item-image" />
+          ) : (
+            <span>{item.consumable ? '🧪' : '⚔️'}</span>
+          )}
         </div>
         
         <div className="shop-item-name">{item.name}</div>
@@ -198,7 +164,7 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
       <div className="shop-grid">
         <h3 className="shop-title">Merchant's Wares</h3>
         <div className="shop-slots-merged">
-          {shopInventory.map((slot, index) => renderShopSlot(slot, index))}
+          {state.shopInventory.map((slot: any, index: number) => renderShopSlot(slot, index))}
         </div>
       </div>
       

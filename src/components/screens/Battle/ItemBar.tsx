@@ -64,7 +64,13 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse
                 onClick={() => canUse && onUseItem(item.id)}
                 disabled={!canUse}
               >
-                <div className="item-icon">🧪</div>
+                <div className="item-icon">
+                  {item.imagePath ? (
+                    <img src={item.imagePath} alt={item.name} />
+                  ) : (
+                    <span>🧪</span>
+                  )}
+                </div>
                 <div className="item-quantity">{usableItem.quantity}</div>
               </button>
 

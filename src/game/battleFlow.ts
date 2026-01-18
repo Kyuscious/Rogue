@@ -1,5 +1,5 @@
 import { Character, InventoryItem, Region } from './types';
-import { getRandomLootByClass } from './items';
+import { getRandomLootByClass, ITEM_DATABASE } from './items';
 import { calculateExpReward } from './experienceSystem';
 
 export interface BattleReward {
@@ -26,14 +26,17 @@ export function handleEnemyDefeat(
   remainingEnemies: Character[],
   currentFloor: number,
   _currentRegion: Region | null,
-  playerLevel: number
+  playerLevel: number,
+  playerMagicFind: number = 0,
+  playerGoldGain: number = 0,
+  hasReapPassive: boolean = false
 ): BattleVictoryResult {
   const result: BattleVictoryResult = {
     loot: [],
     shouldShowRewardSelection: false,
     hasMoreEnemies: remainingEnemies.length > 0,
     nextEnemies: remainingEnemies,
-    goldReward: calculateGoldReward(defeatedEnemy, currentFloor),
+    goldReward: calculateGoldReward(defeatedEnemy, currentFloor, playerGoldGain, hasReapPassive),
     expReward: calculateExpReward(defeatedEnemy, playerLevel),
   };
 
@@ -41,7 +44,7 @@ export function handleEnemyDefeat(
   // Legend tier enemies don't drop random loot - they have special rewards
   if (defeatedEnemy.tier !== 'legend') {
     const tierForLoot = defeatedEnemy.tier || 'minion';
-    const lootItem = getRandomLootByClass(defeatedEnemy.class, tierForLoot as 'minion' | 'elite' | 'champion' | 'boss');
+    const lootItem = getRandomLootByClass(defeatedEnemy.class, tierForLoot as 'minion' | 'elite' | 'champion' | 'boss', playerMagicFind);
     
     if (lootItem) {
       result.loot!.push({
@@ -68,7 +71,14 @@ export function handleEnemyDefeat(
 /**
  * Calculate gold reward based on enemy and floor
  */
-function calculateGoldReward(enemy: Character, floor: number): number {
+/**
+ * Calculate gold reward based on enemy and floor
+ * @param enemy - The defeated enemy
+ * @param floor - Current floor number
+ * @param goldGain - Player's goldGain stat (percentage modifier, can be negative)
+ * @param hasReapPassive - Whether player has Cull's reap passive (+10 flat gold)
+ */
+function calculateGoldReward(enemy: Character, floor: number, goldGain: number = 0, hasReapPassive: boolean = false): number {
   const baseTierGold: Record<string, number> = {
     minion: 10,
     elite: 25,
@@ -76,10 +86,20 @@ function calculateGoldReward(enemy: Character, floor: number): number {
     boss: 100,
   };
   
-  const tierGold = baseTierGold[enemy.tier || 'minion'] || 10;
-  const floorMultiplier = 1 + (floor * 0.1); // 10% more gold per floor
+  let tierGold = baseTierGold[enemy.tier || 'minion'] || 10;
   
-  return Math.floor(tierGold * floorMultiplier);
+  // Add reap passive bonus (+10 flat gold, not affected by goldGain)
+  const reapBonus = hasReapPassive ? 10 : 0;
+  
+  const floorMultiplier = 1 + (floor * 0.1); // 10% more gold per floor
+  const goldGainMultiplier = 1 + (goldGain / 100); // goldGain as percentage
+  
+  // Apply multipliers to base gold, then add flat reap bonus
+  const baseGoldWithMultipliers = tierGold * floorMultiplier * goldGainMultiplier;
+  const totalGold = baseGoldWithMultipliers + reapBonus;
+  
+  // Can go negative if goldGain is very negative, but floor at 0
+  return Math.max(0, Math.floor(totalGold));
 }
 
 /**
@@ -115,6 +135,7 @@ export function generateRewardOptions(
     shadow_isles: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
     void: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
     targon: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
+    camavor: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
   };
   
   // Default pool if no region selected
@@ -190,7 +211,8 @@ export function applyVictoryRewards(
   addExperience: (amount: number) => void,
   updatePlayerHp: (hp: number) => void,
   currentPlayerHp: number,
-  maxPlayerHp: number
+  maxPlayerHp: number,
+  inventory: InventoryItem[]
 ): void {
   // Add loot items
   if (result.loot) {
@@ -208,6 +230,20 @@ export function applyVictoryRewards(
   // Add gold
   addGold(result.goldReward);
   
-  // Add experience
-  addExperience(result.expReward);
+  // Calculate xpGain bonus from inventory (can be negative!)
+  let totalXpGain = 0;
+  inventory.forEach(invItem => {
+    const item = ITEM_DATABASE[invItem.itemId];
+    if (item?.stats.xpGain) {
+      totalXpGain += item.stats.xpGain;
+    }
+  });
+  
+  // Apply xpGain multiplier: 100 xpGain = 100% bonus = 2x experience
+  // Negative xpGain reduces experience (can go to 0 but not negative)
+  const xpMultiplier = 1 + (totalXpGain / 100);
+  const finalExpReward = Math.max(0, Math.floor(result.expReward * xpMultiplier));
+  
+  // Add experience with multiplier
+  addExperience(finalExpReward);
 }

@@ -56,6 +56,7 @@ const STAT_DISPLAY_NAMES: Record<string, string> = {
   xpGain: 'XP Gain',
   lethality: 'Lethality',
   magicPenetration: 'Magic Penetration',
+  heal_over_time: 'Heal/Turn',
 };
 
 export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporaryStats = [] }) => {
@@ -168,9 +169,9 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporary
       {/* Individual Buff Tooltip */}
       {hoveredBuffIndex !== null && temporaryStats[hoveredBuffIndex] && (
         <div className="stat-bonus-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-          <div className="tooltip-title">{temporaryStats[hoveredBuffIndex].source === 'buff' ? 'Buff' : 'Debuff'}</div>
+          <div className="tooltip-title">{temporaryStats[hoveredBuffIndex].source}</div>
           <div className="tooltip-level">
-            {temporaryStats[hoveredBuffIndex].duration ? `${temporaryStats[hoveredBuffIndex].duration} turns remaining` : 'Permanent'}
+            {temporaryStats[hoveredBuffIndex].duration && temporaryStats[hoveredBuffIndex].duration < 999 ? `${temporaryStats[hoveredBuffIndex].duration} turns remaining` : 'Permanent'}
           </div>
           <div className="tooltip-stat">
             {temporaryStats[hoveredBuffIndex].value > 0 ? '+' : ''}{temporaryStats[hoveredBuffIndex].value}{' '}

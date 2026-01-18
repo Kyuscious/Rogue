@@ -1,14 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../game/store';
 import { CharacterStatus } from './entity/CharacterStatus';
 import { Battle } from './screens/Battle/Battle';
 import { Disclaimer } from './screens/Disclaimer/Disclaimer';
 import { Login } from './screens/Login/Login';
+import { MainMenu } from './screens/MainMenu/MainMenu';
+import { Profiles } from './screens/Profiles/Profiles';
+import { Index } from './screens/Index/Index';
 import { PreGameSetup } from './screens/PreGameSetup/PreGameSetup';
 import { PreTestSetup } from './screens/PreTestSetup/PreTestSetup';
 import { QuestSelect } from './screens/QuestSelect/QuestSelect';
 import { Shop } from './screens/Shop/Shop';
 import { RegionSelection } from './screens/RegionSelection/RegionSelection';
+import { LoadingScreen } from './screens/LoadingScreen/LoadingScreen';
 import { getQuestById } from '../game/questDatabase';
 import { resolveDemaciaEnemyId } from '../game/regions/demacia';
 import { getEnemyById } from '../game/regions/enemyResolver';
@@ -16,10 +20,12 @@ import { getItemById } from '../game/items';
 import { CharacterStats } from '../game/statsSystem';
 import { Region } from '../game/types';
 import { isEndingRegion } from '../game/regionGraph';
+import { updatePlayTime, incrementBattlesWon, visitRegion } from '../game/profileSystem';
+import { loadRegionAssets, unloadRegionAssets } from '../game/assetLoader';
 import './App.css';
 import './ActComplete.css';
 
-type GameScene = 'disclaimer' | 'login' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'actComplete';
+type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'actComplete' | 'loading';
 
 interface ResetConfirmModalProps {
   isOpen: boolean;
@@ -48,21 +54,165 @@ const ResetConfirmModal: React.FC<ResetConfirmModalProps> = ({ isOpen, onConfirm
   );
 };
 
+interface ContinueRunModalProps {
+  isOpen: boolean;
+  onContinue: () => void;
+  onNewRun: () => void;
+  savedRunData: {
+    regionName: string;
+    floor: number;
+    gold: number;
+    rerolls: number;
+    level: number;
+  } | null;
+}
+
+const ContinueRunModal: React.FC<ContinueRunModalProps> = ({ isOpen, onContinue, onNewRun, savedRunData }) => {
+  const [showAbortConfirm, setShowAbortConfirm] = React.useState(false);
+  const [dontShowAgain, setDontShowAgain] = React.useState(false);
+
+  if (!isOpen || !savedRunData) return null;
+
+  const handleAbortClick = () => {
+    setShowAbortConfirm(true);
+  };
+
+  const handleAbortConfirm = () => {
+    if (dontShowAgain) {
+      localStorage.setItem('skipAbortConfirmation', 'true');
+    }
+    setShowAbortConfirm(false);
+    onNewRun();
+  };
+
+  const handleAbortCancel = () => {
+    setShowAbortConfirm(false);
+    setDontShowAgain(false);
+  };
+
+  if (showAbortConfirm) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal-content">
+          <h2>⚠️ Abort Run?</h2>
+          <p>This will erase the save and start a new run from zero. Are you sure?</p>
+          <div className="abort-confirm-checkbox">
+            <label>
+              <input 
+                type="checkbox" 
+                checked={dontShowAgain} 
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+              />
+              <span>Do not show this again</span>
+            </label>
+          </div>
+          <div className="modal-buttons">
+            <button className="btn-cancel" onClick={handleAbortCancel}>
+              Cancel
+            </button>
+            <button className="btn-danger" onClick={handleAbortConfirm}>
+              Erase & Start New
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h2>💾 Run in Progress...</h2>
+        <p>You have a saved run in progress!</p>
+        <div className="saved-run-info">
+          <p><strong>Region:</strong> {savedRunData.regionName}</p>
+          <p><strong>Level:</strong> {savedRunData.level}</p>
+          <p><strong>Encounters Completed:</strong> {savedRunData.floor}</p>
+          <p><strong>Resources:</strong> {savedRunData.gold} Gold • {savedRunData.rerolls} Rerolls</p>
+        </div>
+        <div className="modal-buttons-continue">
+          <button className="btn-continue-large" onClick={onContinue}>
+            Continue Run
+          </button>
+          <button className="btn-abort-small" onClick={handleAbortClick}>
+            Abort Run
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const App: React.FC = () => {
-  const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, completeAct } = useGameStore();
+  const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, completeAct, saveRun, clearSavedRun, loadRun, setCurrentFloor } = useGameStore();
   
   // Check localStorage on mount to see if we should skip disclaimer
   const shouldSkipDisclaimer = typeof window !== 'undefined' && localStorage.getItem('skipDisclaimer') === 'true';
   const [scene, setScene] = useState<GameScene>(shouldSkipDisclaimer ? 'login' : 'disclaimer');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [skipClickCount, setSkipClickCount] = useState(0);
+  const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+  const [showContinueRunModal, setShowContinueRunModal] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [loadingRegion, setLoadingRegion] = useState<Region | null>(null);
+  const [savedRunData, setSavedRunData] = useState<{ regionName: string; floor: number; gold: number; rerolls: number; level: number } | null>(null);
+
+  // Check for saved run on mount (after login)
+  useEffect(() => {
+    if (scene === 'mainMenu' && typeof window !== 'undefined') {
+      const savedRun = localStorage.getItem('savedRun');
+      if (savedRun) {
+        try {
+          const parsedRun = JSON.parse(savedRun);
+          // Check if it's a valid saved run
+          if (parsedRun.selectedRegion && parsedRun.currentFloor >= 0) {
+            const regionName = parsedRun.selectedRegion.charAt(0).toUpperCase() + parsedRun.selectedRegion.slice(1);
+            setSavedRunData({
+              regionName,
+              floor: parsedRun.currentFloor,
+              gold: parsedRun.gold || 0,
+              rerolls: parsedRun.rerolls || 0,
+              level: parsedRun.playerCharacter?.level || 1,
+            });
+            setShowContinueRunModal(true);
+          }
+        } catch (error) {
+          console.error('Failed to parse saved run:', error);
+        }
+      }
+    }
+  }, [scene]);
+
+  // Track play time every 5 minutes
+  useEffect(() => {
+    const playTimeInterval = setInterval(() => {
+      // Add 5 minutes (converted to hours: 5/60)
+      updatePlayTime(5 / 60);
+    }, 5 * 60 * 1000); // 5 minutes in milliseconds
+
+    return () => clearInterval(playTimeInterval);
+  }, []);
+
+  const handleContinueRun = () => {
+    const success = loadRun();
+    if (success) {
+      setShowContinueRunModal(false);
+      setScene('quest'); // Go to quest selection where they left off
+    }
+  };
+
+  const handleStartNewRun = () => {
+    clearSavedRun();
+    setShowContinueRunModal(false);
+  };
 
   const handleDisclaimerAccept = () => {
     setScene('login');
   };
 
   const handleLoginSuccess = () => {
-    setScene('pregame');
+    setScene('mainMenu');
   };
 
   const handleLogout = () => {
@@ -76,9 +226,28 @@ export const App: React.FC = () => {
     setScene('disclaimer');
   };
 
+  const handleMainMenuStart = () => {
+    setScene('pregame');
+  };
+
+  const handleMainMenuProfiles = () => {
+    setScene('profiles');
+  };
+
+  const handleMainMenuIndex = () => {
+    setScene('index');
+  };
+
+  const handleMainMenuOptions = () => {
+    // TODO: Implement options feature
+    console.log('Options feature coming soon!');
+  };
+
   const handlePreGameSetup = (region: string, itemId: string) => {
     selectRegion(region as any);
     selectStartingItem(itemId);
+    // Track that we've visited this region for unlock progress
+    visitRegion(region);
     // Add 3 health potions to help start the run
     addInventoryItem({ itemId: 'health_potion', quantity: 3 });
     setScene('quest');
@@ -118,7 +287,7 @@ export const App: React.FC = () => {
     }
     
     // Update store with test characters and inventory
-    useGameStore.setState(prev => ({
+    useGameStore.setState((prev: any) => ({
       state: {
         ...prev.state,
         playerCharacter: player,
@@ -153,6 +322,7 @@ export const App: React.FC = () => {
 
   const handleResetConfirm = () => {
     resetRun();
+    clearSavedRun(); // Clear saved run from localStorage
     setShowResetConfirm(false);
     setScene('pregame');
   };
@@ -177,22 +347,45 @@ export const App: React.FC = () => {
   };
 
   // Handle selecting a new region to travel to
-  const handleSelectRegion = (newRegion: Region) => {
+  const handleSelectRegion = async (newRegion: Region) => {
     if (!state.selectedRegion) return;
+    
+    // Show loading screen
+    setLoadingRegion(newRegion);
+    setLoadingProgress(0);
+    setLoadingMessage('Preparing journey...');
+    setScene('loading');
+    
+    // Unload previous region's assets
+    unloadRegionAssets();
+    
+    // Load new region's assets
+    await loadRegionAssets(newRegion, (progress, message) => {
+      setLoadingProgress(progress);
+      setLoadingMessage(message);
+    });
+    
+    // Ensure we stay on loading screen for at least 1 second
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Travel from current region to new region
     travelToRegion(state.selectedRegion, newRegion);
     
+    // Track that we've visited this new region for unlock progress
+    visitRegion(newRegion);
+    
     // Reset skip counter
     setSkipClickCount(0);
     
-    // Check if the new region is an ending region
-    if (isEndingRegion(newRegion)) {
-      // Will complete act after finishing this region's quest
-      setScene('quest');
-    } else {
-      setScene('quest');
-    }
+    // Go to quest scene and save progress
+    setScene('quest');
+    
+    // Save run progress after a short delay (to ensure state is updated)
+    setTimeout(() => {
+      saveRun();
+      setShowSavedIndicator(true);
+      setTimeout(() => setShowSavedIndicator(false), 3000); // Hide after 3 seconds
+    }, 100);
   };
 
   // Handle skip click for testing (hidden feature)
@@ -201,6 +394,15 @@ export const App: React.FC = () => {
     if (skipClickCount + 1 >= 3) {
       // Skip the current quest and go to region selection
       setSkipClickCount(0);
+      
+      // Award 10 battles won for skipping the region
+      for (let i = 0; i < 10; i++) {
+        incrementBattlesWon();
+      }
+      
+      // Increment floor counter by 10 for difficulty scaling
+      setCurrentFloor(state.currentFloor + 10);
+      
       handleQuestComplete();
     }
   };
@@ -213,14 +415,50 @@ export const App: React.FC = () => {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
+  if (scene === 'mainMenu') {
+    return (
+      <div className="game-wrapper">
+        <MainMenu 
+          username={state.username}
+          onStart={handleMainMenuStart}
+          onProfiles={handleMainMenuProfiles}
+          onIndex={handleMainMenuIndex}
+          onOptions={handleMainMenuOptions}
+          onLogout={handleLogout}
+          onDisclaimer={handleGoToDisclaimer}
+        />
+        
+        <ContinueRunModal 
+          isOpen={showContinueRunModal}
+          onContinue={handleContinueRun}
+          onNewRun={handleStartNewRun}
+          savedRunData={savedRunData}
+        />
+      </div>
+    );
+  }
+
+  if (scene === 'profiles') {
+    return (
+      <div className="game-wrapper">
+        <Profiles onBack={() => setScene('mainMenu')} />
+      </div>
+    );
+  }
+  if (scene === 'index') {
+    return (
+      <div className="game-wrapper">
+        <Index onBack={() => setScene('mainMenu')} />
+      </div>
+    );
+  }
   if (scene === 'pregame') {
     return (
       <div className="game-wrapper">
         <PreGameSetup 
           onStartRun={handlePreGameSetup} 
           onTestMode={handleTestMode}
-          onLogout={handleLogout}
-          onGoToDisclaimer={handleGoToDisclaimer}
+          onBack={() => setScene('mainMenu')}
         />
       </div>
     );
@@ -236,6 +474,9 @@ export const App: React.FC = () => {
         <div className="ui-header">
           <div className="header-left">
             <h1>Runeterrogue</h1>
+            {showSavedIndicator && (
+              <span className="saved-indicator">💾 Progress Saved</span>
+            )}
           </div>
           <div className="ui-stats">
             <span 
@@ -265,7 +506,15 @@ export const App: React.FC = () => {
             {/* Shop Button */}
             <button 
               className="btn-shop"
-              onClick={() => setScene('shop')}
+              onClick={() => {
+                setScene('shop');
+                // Save progress when entering shop
+                setTimeout(() => {
+                  saveRun();
+                  setShowSavedIndicator(true);
+                  setTimeout(() => setShowSavedIndicator(false), 3000);
+                }, 100);
+              }}
             >
               🏪 Visit Shop
             </button>
@@ -291,6 +540,9 @@ export const App: React.FC = () => {
         <div className="ui-header">
           <div className="header-left">
             <h1>Runeterrogue</h1>
+            {showSavedIndicator && (
+              <span className="saved-indicator">💾 Progress Saved</span>
+            )}
           </div>
           <div className="ui-stats">
             <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>
@@ -391,6 +643,16 @@ export const App: React.FC = () => {
     );
   }
 
+  if (scene === 'loading' && loadingRegion) {
+    return (
+      <LoadingScreen 
+        regionName={loadingRegion.charAt(0).toUpperCase() + loadingRegion.slice(1)}
+        progress={loadingProgress}
+        message={loadingMessage}
+      />
+    );
+  }
+
   // Explore scene (fallback - shouldn't normally reach here)
   return (
     <div className="game-wrapper">
@@ -418,6 +680,13 @@ export const App: React.FC = () => {
         isOpen={showResetConfirm} 
         onConfirm={handleResetConfirm} 
         onCancel={handleResetCancel} 
+      />
+
+      <ContinueRunModal 
+        isOpen={showContinueRunModal}
+        onContinue={handleContinueRun}
+        onNewRun={handleStartNewRun}
+        savedRunData={savedRunData}
       />
     </div>
   );

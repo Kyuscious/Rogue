@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { getRandomQuests, Quest, QuestPath } from '../../../game/questDatabase';
+import React, { useState, useMemo } from 'react';
+import { getQuestsByRegion, Quest, QuestPath } from '../../../game/questDatabase';
 import { Region } from '../../../game/types';
+import { useGameStore } from '../../../game/store';
 import './QuestSelect.css';
 
 interface QuestSelectProps {
@@ -9,7 +10,42 @@ interface QuestSelectProps {
 }
 
 export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }) => {
-  const quests = useMemo(() => getRandomQuests(region, 3), [region]);
+  const { state, useReroll } = useGameStore();
+  
+  // Get all available quests for this region
+  const allQuests = useMemo(() => getQuestsByRegion(region), [region]);
+  
+  // Initialize with 3 random quests from the available pool
+  const [displayedQuests, setDisplayedQuests] = useState<Quest[]>(() => {
+    const shuffled = [...allQuests].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3);
+  });
+
+  const handleReroll = (questIndex: number) => {
+    // Check if we have rerolls
+    if (state.rerolls <= 0) return;
+    
+    // Use a reroll from the store
+    const success = useReroll();
+    if (!success) return;
+    
+    // Get IDs of currently displayed quests
+    const displayedIds = displayedQuests.map(q => q.id);
+    
+    // Find quests that aren't currently displayed
+    const availableQuests = allQuests.filter(q => !displayedIds.includes(q.id));
+    
+    // If no alternatives available, don't reroll
+    if (availableQuests.length === 0) return;
+    
+    // Pick a random alternative
+    const newQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+    
+    // Replace the quest at the specified index
+    const newDisplayedQuests = [...displayedQuests];
+    newDisplayedQuests[questIndex] = newQuest;
+    setDisplayedQuests(newDisplayedQuests);
+  };
 
   const renderDifficultyBadge = (difficulty: 'safe' | 'risky') => {
     if (difficulty === 'risky') {
@@ -30,11 +66,27 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
   return (
     <div className="quest-select">
       <div className="quests-container">
-        {quests.map((quest: Quest) => (
+        {displayedQuests.map((quest: Quest, index: number) => (
           <div key={quest.id} className="quest-card">
-            <div className="quest-title">
-              <h3>{quest.name}</h3>
-              <p className="quest-flavor-text">{quest.flavor}</p>
+            <div className="quest-title-row">
+              <div className="quest-title">
+                <h3>{quest.name}</h3>
+                <p className="quest-flavor-text">{quest.flavor}</p>
+              </div>
+              <button
+                className="reroll-quest-button"
+                onClick={() => handleReroll(index)}
+                disabled={state.rerolls <= 0 || allQuests.length <= 3}
+                title={
+                  state.rerolls <= 0
+                    ? 'No rerolls remaining'
+                    : allQuests.length <= 3
+                    ? 'No alternative paths available'
+                    : `Reroll this path (${state.rerolls} rerolls left)`
+                }
+              >
+                🔄
+              </button>
             </div>
 
             <div className="quest-paths">

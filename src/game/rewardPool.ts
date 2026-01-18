@@ -12,6 +12,12 @@ export interface RewardPoolConfig {
   boss: string[];  // Floors 10+
 }
 
+export interface ShopPoolConfig {
+  common: string[]; // Basic stat items
+  consumables: string[]; // Potions and usables
+  legendary: string[]; // High-tier items (act 2+)
+}
+
 /**
  * Region-specific reward pools
  * Each region has thematic items that fit its lore
@@ -68,6 +74,87 @@ export const REGION_REWARD_POOLS: Record<Region, RewardPoolConfig> = {
   targon: {
     elite: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
     boss: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
+  },
+  camavor: {
+    elite: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
+    boss: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
+  },
+};
+
+/**
+ * Region-specific shop pools
+ * Each region offers different items for purchase
+ */
+export const REGION_SHOP_POOLS: Record<Region, ShopPoolConfig> = {
+  demacia: {
+    common: ['long_sword', 'cloth_armor', 'amplifying_tome', 'ruby_crystal', 'boots'],
+    consumables: ['health_potion', 'stealth_ward'],
+    legendary: ['infinity_edge', 'guardian_angel', 'trinity_force', 'blade_of_the_ruined_king'],
+  },
+  ionia: {
+    common: ['long_sword', 'amplifying_tome', 'boots', 'ruby_crystal', 'rejuvenation_bead'],
+    consumables: ['health_potion', 'stealth_ward'],
+    legendary: ['nashors_tooth', 'blade_of_the_ruined_king', 'runaans_hurricane'],
+  },
+  shurima: {
+    common: ['amplifying_tome', 'cloth_armor', 'ruby_crystal', 'sapphire_crystal', 'boots'],
+    consumables: ['health_potion', 'oracle_lens'],
+    legendary: ['rabadons_deathcap', 'zhonyas_hourglass', 'ludens_tempest'],
+  },
+  noxus: {
+    common: ['long_sword', 'cloth_armor', 'pickaxe', 'vampiric_scepter', 'boots'],
+    consumables: ['health_potion', 'stealth_ward'],
+    legendary: ['eclipse', 'blade_of_the_ruined_king', 'infinity_edge', 'trinity_force'],
+  },
+  freljord: {
+    common: ['cloth_armor', 'ruby_crystal', 'giants_belt', 'chain_vest', 'boots'],
+    consumables: ['health_potion', 'stealth_ward'],
+    legendary: ['warmogs_armor', 'sunfire_aegis', 'guardian_angel'],
+  },
+  zaun: {
+    common: ['amplifying_tome', 'needlessly_large_rod', 'blasting_wand', 'sapphire_crystal', 'boots'],
+    consumables: ['health_potion', 'oracle_lens', 'farsight_alteration'],
+    legendary: ['zhonyas_hourglass', 'rabadons_deathcap', 'ludens_tempest', 'lich_bane'],
+  },
+  ixtal: {
+    common: ['long_sword', 'recurve_bow', 'cloak_of_agility', 'boots', 'dagger'],
+    consumables: ['health_potion', 'stealth_ward'],
+    legendary: ['runaans_hurricane', 'blade_of_the_ruined_king', 'immortal_shieldbow'],
+  },
+  bandle_city: {
+    common: ['amplifying_tome', 'ruby_crystal', 'boots', 'kindlegem', 'rejuvenation_bead'],
+    consumables: ['health_potion', 'stealth_ward', 'oracle_lens'],
+    legendary: ['rabadons_deathcap', 'nashors_tooth', 'lich_bane', 'banshees_veil'],
+  },
+  bilgewater: {
+    common: ['long_sword', 'pickaxe', 'vampiric_scepter', 'cloth_armor', 'boots'],
+    consumables: ['health_potion', 'oracle_lens'],
+    legendary: ['blade_of_the_ruined_king', 'infinity_edge', 'immortal_shieldbow'],
+  },
+  piltover: {
+    common: ['amplifying_tome', 'needlessly_large_rod', 'long_sword', 'pickaxe', 'boots'],
+    consumables: ['health_potion', 'stealth_ward', 'farsight_alteration'],
+    legendary: ['rabadons_deathcap', 'zhonyas_hourglass', 'trinity_force', 'infinity_edge'],
+  },
+  shadow_isles: {
+    common: ['amplifying_tome', 'needlessly_large_rod', 'cloth_armor', 'null_magic_mantle', 'boots'],
+    consumables: ['health_potion', 'oracle_lens'],
+    legendary: ['zhonyas_hourglass', 'banshees_veil', 'rabadons_deathcap', 'lich_bane'],
+  },
+  void: {
+    common: ['amplifying_tome', 'long_sword', 'null_magic_mantle', 'chain_vest', 'boots'],
+    consumables: ['health_potion', 'oracle_lens'],
+    legendary: ['ludens_tempest', 'eclipse', 'blade_of_the_ruined_king'],
+  },
+  targon: {
+    common: ['cloth_armor', 'ruby_crystal', 'amplifying_tome', 'giants_belt', 'boots'],
+    consumables: ['health_potion', 'stealth_ward'],
+    legendary: ['warmogs_armor', 'guardian_angel', 'rabadons_deathcap', 'sunfire_aegis'],
+  },
+  camavor: {
+    common: ['long_sword', 'cloth_armor', 'amplifying_tome', 'vampiric_scepter', 'boots'],
+    consumables: ['health_potion', 'oracle_lens'],
+    legendary: ['eclipse', 'blade_of_the_ruined_king', 'zhonyas_hourglass'],
   },
 };
 

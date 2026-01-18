@@ -39,6 +39,9 @@ export const REGION_GRAPH: Record<Region, Region[]> = {
   shadow_isles: ['ionia', 'demacia'],
   void: ['shurima', 'ionia'],
   targon: ['demacia', 'shurima'],
+  
+  // Special event-only region
+  camavor: [],
 };
 
 /**
@@ -119,6 +122,7 @@ export function getRegionDisplayName(region: Region): string {
     shadow_isles: 'Shadow Isles',
     void: 'The Void',
     targon: 'Mount Targon',
+    camavor: 'Camavor',
   };
   return names[region] || region;
 }
@@ -141,6 +145,7 @@ export function getRegionDescription(region: Region): string {
     shadow_isles: 'A cursed land of undeath. (Ends Act)',
     void: 'An unknowable dimension of horror. (Ends Act)',
     targon: 'A mystical mountain realm. (Ends Act)',
+    camavor: 'A cursed kingdom of ruin and shadow. (Special Event)',
   };
   return descriptions[region] || '';
 }

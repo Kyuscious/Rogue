@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../game/store';
-import { getItemById } from '../../game/items';
+import { getItemById, getPassiveDescription } from '../../game/items';
 import { InventoryItem } from '../../game/types';
 import './ItemsBar.css';
 
@@ -93,7 +93,11 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
               }}
               onMouseLeave={() => setHoveredItemId(null)}
             >
-              <span className="item-icon">{getItemIcon(itemData.name)}</span>
+              {itemData.imagePath ? (
+                <img src={itemData.imagePath} alt={itemData.name} className="item-icon-image" />
+              ) : (
+                <span className="item-icon">{getItemIcon(itemData.name)}</span>
+              )}
               {item.quantity > 1 && <span className="item-qty">x{item.quantity}</span>}
             </div>
           );
@@ -167,9 +171,9 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
                   <div className="tooltip-stat">💉 Lifesteal: +{itemData.stats.lifeSteal}</div>
                 )}
               </div>
-              {itemData?.passive && (
+              {itemData?.passiveId && getPassiveDescription(itemData.passiveId) && (
                 <div className="tooltip-item-passive">
-                  <strong>Passive:</strong> {itemData.passive}
+                  <strong>Passive:</strong> {getPassiveDescription(itemData.passiveId)}
                 </div>
               )}
             </div>

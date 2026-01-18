@@ -12,14 +12,19 @@ export const LevelDisplay: React.FC<LevelDisplayProps> = ({ character }) => {
     character.level
   );
 
+  // Only show exp bar for player characters
+  const showExpBar = character.role === 'player';
+
   return (
     <div className="level-display">
       <div className="level-exp-container">
         <span className="level">Lvl {character.level}</span>
-        <div className="exp-bar">
-          <div className="exp-fill" style={{ width: `${percentage}%` }}></div>
-          <span className="exp-text">{currentLevelExp}/{expForNextLevel}</span>
-        </div>
+        {showExpBar && (
+          <div className="exp-bar">
+            <div className="exp-fill" style={{ width: `${percentage}%` }}></div>
+            <span className="exp-text">{currentLevelExp}/{expForNextLevel}</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -13,7 +13,8 @@ export type Region =
   | 'piltover' 
   | 'shadow_isles' 
   | 'void' 
-  | 'targon';
+  | 'targon'
+  | 'camavor';
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 

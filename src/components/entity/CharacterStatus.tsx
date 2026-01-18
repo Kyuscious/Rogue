@@ -19,7 +19,7 @@ export const CharacterStatus: React.FC<{ characterId?: string; combatBuffs?: Com
   // Convert CombatBuffs to TemporaryStatModifiers for BuffsDisplay
   const temporaryStats = combatBuffs?.map(buff => ({
     statName: buff.stat,
-    value: buff.amount,
+    value: Math.max(1, Math.round(buff.amount)), // Round to integer, minimum 1
     source: buff.name,
     duration: buff.duration,
   })) || [];

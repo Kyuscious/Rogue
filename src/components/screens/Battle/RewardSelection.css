@@ -196,6 +196,17 @@
   filter: drop-shadow(0 0 10px rgba(244, 197, 66, 0.5));
 }
 
+.reward-card-icon .reward-card-image {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(244, 197, 66, 0.5));
+}
+
+.reward-card-icon span {
+  display: inline-block;
+}
+
 .reward-card-stats {
   min-height: 150px;
   margin-bottom: 15px;

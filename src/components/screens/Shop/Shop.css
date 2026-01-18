@@ -226,6 +226,17 @@
   margin-bottom: 0.5rem;
 }
 
+.shop-item-icon .shop-item-image {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+}
+
+.shop-item-icon span {
+  display: inline-block;
+}
+
 .shop-item-name {
   font-size: 1.2rem;
   font-weight: bold;

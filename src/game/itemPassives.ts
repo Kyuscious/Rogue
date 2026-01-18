@@ -1,10 +1,14 @@
 import { CharacterStats } from './statsSystem';
 
 export type PassiveId = 
-  | 'blade_lifesteal_amplifier'
-  | 'shield_adaptive_defense'
-  | 'ring_spell_scaling'
-  | 'magical_opus';
+  | 'life_draining'
+  | 'enduring_focus'
+  | 'drain'
+  | 'pathfinder'
+  | 'magical_opus'
+  | 'reap'
+  | 'glory'
+  | 'glory_upgraded';
 
 export type PassiveTrigger = 
   | 'battle_start'
@@ -40,50 +44,48 @@ export interface PassiveEffect {
  * These are game-changing effects that alter gameplay mechanics
  */
 export const ITEM_PASSIVES: Record<PassiveId, PassiveEffect> = {
-  // DORAN'S BLADE: Lifesteal Amplifier
-  // Converts 1% of Attack Damage to Lifesteal
-  blade_lifesteal_amplifier: {
-    id: 'blade_lifesteal_amplifier',
-    name: 'Vampiric Edge',
-    description: 'Converts 1% of your Attack Damage into Lifesteal. Trade of damage for healing.',
-    trigger: 'stat_calculation',
-    statModifier: (stats: CharacterStats, _level: number) => {
-      const adToLifesteal = (stats.attackDamage || 0) * 0.01;
-      return {
-        attackDamage: (stats.attackDamage || 0) - adToLifesteal,
-        lifeSteal: (stats.lifeSteal || 0) + adToLifesteal,
-      };
+  // DORAN'S BLADE: Life Draining
+  // Dealing attack damage increases total AD by 1% stacking for the encounter
+  life_draining: {
+    id: 'life_draining',
+    name: 'Life Draining',
+    description: 'Dealing attack damage to enemies increases total AD by 1% (stacks for the encounter).',
+    trigger: 'on_hit',
+    onHit: (damage: number, _state: any) => {
+      // This passive is handled in the Battle component
+      // When player deals attack damage, we add a combat buff that increases AD by 1%
+      // The buff stacks and persists for the entire encounter
+      return damage;
     },
   },
 
-  // DORAN'S SHIELD: Adaptive Defense
-  // Converts Health into Armor and Magic Resist (1 HP = 0.05 Armor/MR)
-  shield_adaptive_defense: {
-    id: 'shield_adaptive_defense',
-    name: 'Adaptive Fortification',
-    description: 'Your vitality strengthens your defenses. Converts 5% of your Health into Armor and Magic Resist.',
-    trigger: 'stat_calculation',
-    statModifier: (stats: CharacterStats, _level: number) => {
-      const healthToDefense = (stats.health || 0) * 0.05;
-      return {
-        armor: (stats.armor || 0) + healthToDefense,
-        magicResist: (stats.magicResist || 0) + healthToDefense,
-      };
+  // DORAN'S SHIELD: Enduring Focus
+  // After taking damage, heal 5% of that damage over 3 turns
+  enduring_focus: {
+    id: 'enduring_focus',
+    name: 'Enduring Focus',
+    description: 'After taking damage, heal 5% of that damage over 3 turns.',
+    trigger: 'on_hit',
+    onHit: (damage: number, _state: any) => {
+      // This passive is handled in the Battle component
+      // When player takes damage, we add/update a heal-over-time buff
+      // 5% of damage taken is healed over 3 turns (1.67% per turn)
+      return damage;
     },
   },
 
-  // DORAN'S RING: Spell Scaling
-  // Ability Power increases by 1% per level (multiplicative)
-  ring_spell_scaling: {
-    id: 'ring_spell_scaling',
-    name: 'Arcane Growth',
-    description: 'Your magical power grows with experience. Gain +5% Ability Power per level.',
-    trigger: 'stat_calculation',
-    statModifier: (stats: CharacterStats, level: number) => {
-      const apMultiplier = 1 + (level * 0.05);
-      return {
-        abilityPower: (stats.abilityPower || 0) * apMultiplier,
-      };
+  // DORAN'S RING: Drain
+  // Dealing spell damage increases total AP by 1% stacking for the encounter
+  drain: {
+    id: 'drain',
+    name: 'Drain',
+    description: 'Dealing spell damage to enemies increases total AP by 1% (stacks for the encounter).',
+    trigger: 'on_hit',
+    onHit: (damage: number, _state: any) => {
+      // This passive is handled in the Battle component
+      // When player deals spell damage, we add a combat buff that increases AP by 1%
+      // The buff stacks and persists for the entire encounter
+      return damage;
     },
   },
 
@@ -100,6 +102,50 @@ export const ITEM_PASSIVES: Record<PassiveId, PassiveEffect> = {
         abilityPower: (stats.abilityPower || 0) + bonusAP,
       };
     },
+  },
+
+  pathfinder: {
+    id: 'pathfinder',
+    name: 'Pathfinder',
+    description: 'Gain +100% experience and start with 10 rerolls instead of 5.',
+    trigger: 'stat_calculation',
+    // This passive's effects are handled directly in the game logic:
+    // - XP gain is applied in battleFlow.ts applyVictoryRewards
+    // - Reroll count is set in store.ts selectStartingItem
+  },
+
+  // THE CULL: Reap
+  // Killing an enemy awards 10 additional gold (flat amount, not affected by goldGain stat)
+  reap: {
+    id: 'reap',
+    name: 'Reap',
+    description: 'Killing an enemy awards 10 additional gold.',
+    trigger: 'on_kill',
+    // This passive is handled in battleFlow.ts handleEnemyDefeat
+    // When an enemy is killed, add +10 flat gold (before goldGain multiplier)
+  },
+  
+  // DARK SEAL: Glory
+  // Defeating Champion or Legend tier enemies grants +10 AP permanently
+  glory: {
+    id: 'glory',
+    name: 'Glory',
+    description: 'Defeating Champion or Legend tier enemies grants +10 AP permanently (stacks endlessly).',
+    trigger: 'on_kill',
+    // This passive is handled in the Battle component
+    // When Champion/Legend is defeated, adds permanent AP buff
+  },
+  
+  // MEJAI'S SOULSTEALER: Glory (Upgraded)
+  // Defeating Champion or Legend tier enemies grants +15 AP permanently
+  glory_upgraded: {
+    id: 'glory_upgraded',
+    name: 'Glory (Upgraded)',
+    description: 'Defeating Champion or Legend tier enemies grants +15 AP permanently (stacks endlessly).',
+    trigger: 'on_kill',
+    // This passive is handled in the Battle component
+    // When Champion/Legend is defeated, adds permanent AP buff
+    // Carries over stacks from Dark Seal
   },
 };
 

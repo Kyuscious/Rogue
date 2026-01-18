@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Region } from '../../../game/types';
 import { useGameStore } from '../../../game/store';
 import { 
@@ -8,6 +8,7 @@ import {
   isEndingRegion,
   isPiltover
 } from '../../../game/regionGraph';
+import { discoverConnection } from '../../../game/profileSystem';
 import './RegionSelection.css';
 
 interface RegionSelectionProps {
@@ -27,6 +28,15 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
     state.originalStartingRegion,
     state.piltoverVisits
   );
+
+  // Discover connections when they become available
+  useEffect(() => {
+    if (state.selectedRegion) {
+      availableRegions.forEach(destination => {
+        discoverConnection(state.selectedRegion!, destination);
+      });
+    }
+  }, [state.selectedRegion, availableRegions]);
   
   const handleRegionClick = (region: Region) => {
     onSelectRegion(region);

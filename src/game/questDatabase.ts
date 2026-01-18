@@ -1,5 +1,7 @@
 import { Region } from './types';
 import { DEMACIA_QUEST_PATHS } from './regions/demacia';
+import { IONIA_QUEST_PATHS } from './regions/ionia/quests';
+import { SHURIMA_QUEST_PATHS } from './regions/shurima/quests';
 import { NOXUS_QUEST_PATHS } from './regions/noxus/quests';
 import { FRELJORD_QUEST_PATHS } from './regions/freljord/quests';
 import { ZAUN_QUEST_PATHS } from './regions/zaun/quests';
@@ -10,6 +12,7 @@ import { PILTOVER_QUEST_PATHS } from './regions/piltover/quests';
 import { SHADOW_ISLES_QUEST_PATHS } from './regions/shadow_isles/quests';
 import { VOID_QUEST_PATHS } from './regions/void/quests';
 import { TARGON_QUEST_PATHS } from './regions/targon/quests';
+import { CAMAVOR_QUEST_PATHS } from './regions/camavor/quests';
 
 export interface QuestPath {
   id: string;
@@ -37,8 +40,15 @@ const DEMACIA_QUESTS: Quest[] = DEMACIA_QUEST_PATHS.map(quest => ({
   region: 'demacia' as Region,
 }));
 
-const IONIA_QUESTS: Quest[] = [];
-const SHURIMA_QUESTS: Quest[] = [];
+const IONIA_QUESTS: Quest[] = IONIA_QUEST_PATHS.map(quest => ({
+  ...quest,
+  region: 'ionia' as Region,
+}));
+
+const SHURIMA_QUESTS: Quest[] = SHURIMA_QUEST_PATHS.map(quest => ({
+  ...quest,
+  region: 'shurima' as Region,
+}));
 
 const NOXUS_QUESTS: Quest[] = NOXUS_QUEST_PATHS.map(quest => ({
   ...quest,
@@ -90,6 +100,11 @@ const TARGON_QUESTS: Quest[] = TARGON_QUEST_PATHS.map(quest => ({
   region: 'targon' as Region,
 }));
 
+const CAMAVOR_QUESTS: Quest[] = CAMAVOR_QUEST_PATHS.map(quest => ({
+  ...quest,
+  region: 'camavor' as Region,
+}));
+
 export const QUESTS_BY_REGION: Record<Region, Quest[]> = {
   demacia: DEMACIA_QUESTS,
   ionia: IONIA_QUESTS,
@@ -104,6 +119,7 @@ export const QUESTS_BY_REGION: Record<Region, Quest[]> = {
   shadow_isles: SHADOW_ISLES_QUESTS,
   void: VOID_QUESTS,
   targon: TARGON_QUESTS,
+  camavor: CAMAVOR_QUESTS,
 };
 
 export function getRandomQuests(region: Region, count: number = 3): Quest[] {

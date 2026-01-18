@@ -8,7 +8,9 @@ export interface CombatBuff {
   name: string;
   stat: keyof CombatBuffStats;
   amount: number;
-  duration: number; // number of turns remaining
+  duration: number; // number of turns remaining (for turn-based buffs)
+  durationType?: 'turns' | 'encounters'; // How the buff duration is tracked
+  encountersRemaining?: number; // For encounter-based buffs (persists across battles)
   type?: 'instant' | 'heal_over_time'; // Type of buff effect
 }
 
@@ -22,6 +24,11 @@ export interface CombatBuffStats {
   armor: number;
   magicResist: number;
   attackSpeed: number;
+  tenacity: number; // TODO: Implement - reduces crowd control duration
+  movementSpeed: number;
+  magicFind: number;
+  lifeSteal: number;
+  trueDamage: number; // Flat damage that bypasses all resistances
   heal_over_time: number; // Special stat for HoT effects
 }
 
@@ -41,7 +48,7 @@ export function getPrimaryStatFromItem(itemId: string): { stat: keyof CombatBuff
   if (!item) return null;
 
   // Check stats in priority order
-  const statPriority: (keyof CombatBuffStats)[] = [
+  const statPriority: Array<keyof CombatBuffStats> = [
     'attackDamage',
     'abilityPower',
     'health',
@@ -51,10 +58,11 @@ export function getPrimaryStatFromItem(itemId: string): { stat: keyof CombatBuff
   ];
 
   for (const stat of statPriority) {
-    if (item.stats[stat] && item.stats[stat] > 0) {
+    const statValue = item.stats[stat as keyof typeof item.stats];
+    if (statValue && statValue > 0) {
       return {
         stat,
-        amount: item.stats[stat],
+        amount: statValue,
       };
     }
   }
@@ -151,4 +159,99 @@ export function createHealthPotionBuff(buffId: string): CombatBuff {
  */
 export function formatBuffDisplay(buff: CombatBuff): string {
   return `${buff.name}: +${buff.amount} ${buff.stat} (${buff.duration} turns)`;
+}
+
+/**
+ * Create or update Life Draining buff (Doran's Blade passive)
+ * Adds 1% of base AD per stack, persists for encounter
+ */
+export function applyLifeDrainingBuff(
+  buffs: CombatBuff[],
+  baseAttackDamage: number,
+  buffIdPrefix: string = 'life_draining'
+): CombatBuff[] {
+  const existingBuff = buffs.find((b) => b.id.startsWith(buffIdPrefix));
+  const adIncrease = baseAttackDamage * 0.01;
+  
+  if (existingBuff) {
+    // Stack the buff
+    return buffs.map((b) =>
+      b.id.startsWith(buffIdPrefix)
+        ? { ...b, amount: b.amount + adIncrease, duration: 999 } // 999 = persists for encounter
+        : b
+    );
+  } else {
+    // Create new buff
+    return [
+      ...buffs,
+      {
+        id: `${buffIdPrefix}_${Date.now()}`,
+        name: 'Life Draining',
+        stat: 'attackDamage',
+        amount: adIncrease,
+        duration: 999, // Persists for entire encounter
+      },
+    ];
+  }
+}
+
+/**
+ * Create or update Drain buff (Doran's Ring passive)
+ * Adds 1% of base AP per stack, persists for encounter
+ */
+export function applyDrainBuff(
+  buffs: CombatBuff[],
+  baseAbilityPower: number,
+  buffIdPrefix: string = 'drain'
+): CombatBuff[] {
+  const existingBuff = buffs.find((b) => b.id.startsWith(buffIdPrefix));
+  const apIncrease = baseAbilityPower * 0.01;
+  
+  if (existingBuff) {
+    // Stack the buff
+    return buffs.map((b) =>
+      b.id.startsWith(buffIdPrefix)
+        ? { ...b, amount: b.amount + apIncrease, duration: 999 }
+        : b
+    );
+  } else {
+    // Create new buff
+    return [
+      ...buffs,
+      {
+        id: `${buffIdPrefix}_${Date.now()}`,
+        name: 'Drain',
+        stat: 'abilityPower',
+        amount: apIncrease,
+        duration: 999, // Persists for entire encounter
+      },
+    ];
+  }
+}
+
+/**
+ * Create or update Enduring Focus buff (Doran's Shield passive)
+ * Heals 5% of damage taken over 3 turns
+ * Each damage instance creates a new stacking buff that expires independently
+ */
+export function applyEnduringFocusBuff(
+  buffs: CombatBuff[],
+  damageTaken: number,
+  buffIdPrefix: string = 'enduring_focus'
+): CombatBuff[] {
+  const healAmount = (damageTaken * 0.05) / 3; // 5% over 3 turns = 1.67% per turn
+  
+  // Always create a NEW buff instance - they stack additively
+  // Each instance has its own 3-turn duration and will expire independently
+  return [
+    ...buffs,
+    {
+      id: `${buffIdPrefix}_${Date.now()}`, // Unique ID for each damage instance
+      name: 'Enduring Focus',
+      stat: 'heal_over_time',
+      amount: healAmount,
+      duration: 3,
+      type: 'heal_over_time',
+    },
+  ];
 }

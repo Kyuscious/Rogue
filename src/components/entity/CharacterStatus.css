@@ -271,17 +271,17 @@
 
 .buff-icon {
   position: relative;
-  width: 20px;
-  height: 20px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(100, 200, 100, 0.15);
   border: 1px solid rgba(100, 200, 100, 0.5);
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 10px;
+  font-size: 18px;
 }
 
 .buff-icon:hover {
@@ -315,7 +315,7 @@
 }
 
 .buff-icon.total-slot .total-icon {
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 900;
   color: #4a9eff;
   text-shadow: 0 0 8px rgba(74, 158, 255, 0.8);
@@ -342,7 +342,7 @@
 }
 
 .buff-emoji {
-  font-size: 10px;
+  font-size: 18px;
 }
 
 .duration-badge {

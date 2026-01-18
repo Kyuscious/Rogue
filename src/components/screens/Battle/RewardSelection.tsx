@@ -55,7 +55,11 @@ export const RewardSelection: React.FC<RewardSelectionProps> = ({
                   </div>
 
                   <div className="reward-card-icon">
-                    {item.consumable ? '🧪' : '⚔️'}
+                    {item.imagePath ? (
+                      <img src={item.imagePath} alt={item.name} className="reward-card-image" />
+                    ) : (
+                      <span>{item.consumable ? '🧪' : '⚔️'}</span>
+                    )}
                   </div>
 
                   <div className="reward-card-stats">

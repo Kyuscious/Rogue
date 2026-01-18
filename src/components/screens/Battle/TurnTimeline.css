@@ -134,36 +134,36 @@
   }
 }
 
-/* Turn markers (T1, T2, T3...) */
-.turn-marker {
+/* Turn background sections - alternating colors */
+.turn-background {
   position: absolute;
   top: 0;
-  transform: translateX(-50%);
-  z-index: 2;
+  height: 60px;
+  z-index: 1;
+  pointer-events: none;
+  transition: all 0.4s ease-out;
 }
 
-.turn-marker-line {
-  width: 2px;
-  height: 60px;
-  background: rgba(255, 255, 255, 0.2);
-  margin: 0 auto;
-  position: relative;
-  z-index: 2;
+/* Turn markers (T1, T2, T3...) - positioned at midpoints */
+.turn-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
 }
 
 .turn-marker-label {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 11px;
-  font-weight: 600;
-  color: #aaa;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--label-color, #aaa);
   white-space: nowrap;
-  background: #1a1a1a;
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 2px solid var(--label-color, #aaa);
+  text-shadow: 0 0 8px var(--label-color, #aaa);
+  box-shadow: 0 0 10px var(--label-color, #aaa);
 }
 
 /* Action indicators on timeline */

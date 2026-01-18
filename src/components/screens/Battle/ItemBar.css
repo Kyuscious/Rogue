@@ -65,6 +65,30 @@
 
 .item-icon {
   font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.item-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.item-icon span {
+  font-size: 24px;
+}
+
+.item-bar-btn.disabled .item-icon img {
+  filter: grayscale(0.8) brightness(0.6) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.item-bar-btn:hover:not(.disabled) .item-icon img {
+  filter: drop-shadow(0 2px 4px rgba(74, 158, 255, 0.6));
 }
 
 .item-quantity {

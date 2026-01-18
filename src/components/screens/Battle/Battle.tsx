@@ -3,8 +3,9 @@ import { useGameStore } from '../../../game/store';
 import { CharacterStatus } from '../../entity/CharacterStatus';
 import { BattlefieldDisplay } from './BattlefieldDisplay';
 import { TurnTimeline } from './TurnTimeline';
-import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, calculateLifestealHealing, rollCriticalStrike, calculateCriticalDamage } from '../../../game/statsSystem';
+import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, rollCriticalStrike, calculateCriticalDamage } from '../../../game/statsSystem';
 import { getPassiveIdsFromInventory } from '../../../game/items';
+import { calculateOnHitEffects, applyOnHitEffects, formatOnHitEffects } from '../../../game/onHitEffects';
 import { 
   TurnEntity, 
   TurnAction, 
@@ -15,7 +16,10 @@ import {
   createBuffFromItem,
   getUsableItems,
   createHealthPotionBuff,
-  CombatBuff
+  CombatBuff,
+  applyLifeDrainingBuff,
+  applyDrainBuff,
+  applyEnduringFocusBuff
 } from '../../../game/itemSystem';
 import { 
   handleEnemyDefeat,
@@ -24,8 +28,9 @@ import {
 } from '../../../game/battleFlow';
 import { generateRewardOptions } from '../../../game/rewardPool';
 import { checkLevelUp } from '../../../game/experienceSystem';
+import { incrementEnemiesKilled } from '../../../game/profileSystem';
 import { ItemBar } from './ItemBar';
-import { RewardSelection } from './RewardSelection';
+import { BattleSummary } from './BattleSummary';
 import { InventoryItem } from '../../../game/types';
 import './Battle.css';
 
@@ -35,7 +40,7 @@ interface BattleProps {
 }
 
 export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
-  const { state, updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll } = useGameStore();
+  const { state, updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower } = useGameStore();
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
@@ -73,6 +78,12 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
 
   // Initialize/reset turn entities when enemy changes (new encounter)
   useEffect(() => {
+    console.log('🔄 NEW ENEMY LOADED:', {
+      enemyId: enemyChar.id,
+      enemyName: enemyChar.name,
+      enemyHp: enemyChar.hp,
+    });
+    
     // Recalculate scaled stats inside effect to ensure fresh values
     const freshPlayerStats = getScaledStats(playerChar.stats, playerChar.level, playerChar.class, playerPassiveIds);
     const freshEnemyStats = getScaledStats(enemyChar.stats, enemyChar.level, enemyChar.class);
@@ -116,18 +127,23 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     setTurnCounter(0);
     setSequenceIndex(0);
     setPlayerTurnDone(false); // Critical: Must reset to false for buttons to appear
+    console.log('📍 Calling setBattleEnded(false) for new enemy');
     setBattleEnded(false);     // Critical: Must reset to false for buttons to appear
-    // Don't reset battleResult if we're in reward selection mode
-    // (player leveling up triggers this effect but shouldn't interrupt rewards)
-    setBattleResult(prev => prev === 'reward_selection' ? prev : null);
+    // Don't reset battleResult here - it needs to persist for handleSummaryContinue
+    // handleSummaryContinue will reset it after processing victory/defeat
     setBattleLog([{ message: 'Battle started!' }, { message: '---' }]);
     setLastLoggedTurn(0);
     setItemModeActive(false); // Reset item mode for new encounter
     
+    console.log('🔧 Battle state reset complete - battleEnded should now be FALSE');
+    
+    // Don't reset combat stats or summary rewards here - they need to persist
+    // for the summary display. They'll be reset after the user dismisses the summary.
+    
     // Reset positions for new encounter
     setPlayerPosition(50);
     setEnemyPosition(-50);
-  }, [enemyChar.id, playerChar.level, playerChar.class]);
+  }, [enemyChar.id, playerChar.level, playerChar.class, state.currentFloor]);
 
   // Initialize battle log
   interface LogEntry {
@@ -144,11 +160,39 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   // Track which turn we've logged to avoid duplicate messages
   const [lastLoggedTurn, setLastLoggedTurn] = useState(0);
 
-  // Track active buffs on player
-  const [playerBuffs, setPlayerBuffs] = useState<CombatBuff[]>([]);
+  // Track active buffs on player (initialize with persistent buffs from store)
+  const [playerBuffs, setPlayerBuffs] = useState<CombatBuff[]>(() => {
+    // Get persistent buffs from store (e.g., elixirs)
+    const persistentBuffs = state.persistentBuffs || [];
+    return [...persistentBuffs];
+  });
 
   // Track item mode active state (when UseItem button is clicked)
   const [itemModeActive, setItemModeActive] = useState(false);
+  
+  // Track combat statistics for summary
+  const [combatStats, setCombatStats] = useState({
+    highestDamageDealt: 0,
+    highestDamageSource: 'attack' as 'attack' | 'spell',
+    highestDamageTaken: 0,
+    highestDamageTakenSource: 'attack' as 'attack' | 'spell',
+  });
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryRewards, setSummaryRewards] = useState<{
+    gold: number;
+    exp: number;
+    items: InventoryItem[];
+  } | null>(null);
+
+  // Log component render after all state is declared
+  console.log('⚙️ COMPONENT RENDER:', {
+    enemyId: enemyChar.id,
+    enemyName: enemyChar.name,
+    enemyHp: enemyChar.hp,
+    battleEnded,
+    showSummary,
+    enemyCount: state.enemyCharacters.length
+  });
 
   // Handler for simultaneous actions detected by timeline
   const handleSimultaneousAction = (playerAction: string, enemyAction: string, time: number) => {
@@ -177,7 +221,35 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       { message: `🎁 Reward selected: ${selectedItem.itemId}` },
     ]);
     
-    continueAfterReward();
+    // Hide summary and continue
+    setShowSummary(false);
+    
+    // Continue to next enemy if there are any
+    if (pendingBattleData && pendingBattleData.length > 0) {
+      setTimeout(() => {
+        // Reset battle state BEFORE calling startBattle
+        setBattleEnded(false);
+        setPlayerTurnDone(false);
+        setBattleResult(null);
+        
+        // Now start the next battle
+        startBattle(pendingBattleData);
+        setPendingBattleData(null);
+      }, 500);
+    } else {
+      // No more enemies - check if quest is complete
+      if (state.currentFloor >= 10) {
+        // Quest complete! Trigger region selection
+        if (onQuestComplete) {
+          onQuestComplete();
+        }
+      } else {
+        // Continue quest - show victory
+        setBattleEnded(true);
+        setBattleResult('victory');
+        setShowSummary(true);
+      }
+    }
   };
 
   const handleSkipReward = () => {
@@ -186,7 +258,35 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       { message: `⏭️ Reward skipped` },
     ]);
     
-    continueAfterReward();
+    // Hide summary and continue
+    setShowSummary(false);
+    
+    // Continue to next enemy if there are any
+    if (pendingBattleData && pendingBattleData.length > 0) {
+      setTimeout(() => {
+        // Reset battle state BEFORE calling startBattle
+        setBattleEnded(false);
+        setPlayerTurnDone(false);
+        setBattleResult(null);
+        
+        // Now start the next battle
+        startBattle(pendingBattleData);
+        setPendingBattleData(null);
+      }, 500);
+    } else {
+      // No more enemies - check if quest is complete
+      if (state.currentFloor >= 10) {
+        // Quest complete! Trigger region selection
+        if (onQuestComplete) {
+          onQuestComplete();
+        }
+      } else {
+        // Continue quest - show victory
+        setBattleEnded(true);
+        setBattleResult('victory');
+        setShowSummary(true);
+      }
+    }
   };
 
   const handleRerollRewards = () => {
@@ -201,40 +301,6 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       ...prev,
       { message: `🎲 Rerolled rewards! (${state.rerolls} rerolls left)` },
     ]);
-  };
-
-  const continueAfterReward = () => {
-    // Reset battle state
-    setBattleResult(null);
-    setBattleEnded(false);
-    setRewardOptions([]);
-    // Note: Rerolls are now global currency, no reset needed
-    
-    // Continue to next enemy if there are any
-    if (pendingBattleData && pendingBattleData.length > 0) {
-      setTimeout(() => {
-        // CRITICAL FIX: Reset battle state BEFORE calling startBattle
-        setBattleEnded(false);
-        setPlayerTurnDone(false);
-        setBattleResult(null);
-        
-        // Now start the next battle
-        startBattle(pendingBattleData);
-        setPendingBattleData(null);
-      }, 500);
-    } else {
-      // No more enemies - check if quest is complete (floor 10+)
-      if (state.currentFloor >= 10) {
-        // Quest complete! Trigger region selection
-        if (onQuestComplete) {
-          onQuestComplete();
-        }
-      } else {
-        // Continue quest - show victory
-        setBattleEnded(true);
-        setBattleResult('victory');
-      }
-    }
   };
 
   const handleAttack = () => {
@@ -274,11 +340,45 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     const newEnemyHp = Math.max(0, enemyChar.hp - finalDamage);
     updateEnemyHp(0, newEnemyHp);
     
-    // Apply lifesteal healing
-    const lifestealHealing = calculateLifestealHealing(
-      finalDamage,
-      playerScaledStats.lifeSteal || 0
-    );
+    // Track damage dealt for combat stats
+    if (finalDamage > combatStats.highestDamageDealt) {
+      setCombatStats(prev => ({
+        ...prev,
+        highestDamageDealt: Math.round(finalDamage),
+        highestDamageSource: 'attack',
+      }));
+    }
+    
+    // Calculate on-hit effects first (declare variables outside if block for logging)
+    let onHitResult = { bonusDamage: 0, healing: 0, effects: [] as any[] };
+    let totalHealing = 0;
+    
+    // INSTANT DEATH CHECK: If enemy HP is 0, they're dead - no on-hit effects applied
+    if (newEnemyHp > 0) {
+      // Calculate and apply on-hit effects (healing on hit, lifesteal, etc.)
+      onHitResult = calculateOnHitEffects(
+        playerChar,
+        enemyChar,
+        finalDamage,
+        playerScaledStats
+      );
+      
+      const healingResult = applyOnHitEffects(
+        playerChar,
+        enemyChar,
+        onHitResult
+      );
+      totalHealing = healingResult.totalHealing;
+      
+      // Apply healing from on-hit effects
+      if (totalHealing > 0) {
+        const newPlayerHp = Math.min(
+          playerChar.hp + totalHealing,
+          playerScaledStats.health
+        );
+        updatePlayerHp(newPlayerHp);
+      }
+    }
     
     // Build battle log messages
     const logMessages: Array<{ message: string }> = [];
@@ -289,13 +389,25 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       logMessages.push({ message: `${playerChar.name} attacks ${enemyChar.name} for ${finalDamage} damage!` });
     }
     
-    if (lifestealHealing > 0) {
-      const newPlayerHp = Math.min(
-        playerChar.hp + lifestealHealing,
-        playerScaledStats.health
-      );
-      updatePlayerHp(newPlayerHp);
-      logMessages.push({ message: `💚 Lifesteal healed ${lifestealHealing} HP!` });
+    // Add on-hit effects to log (only if enemy survived)
+    if (newEnemyHp > 0 && totalHealing > 0) {
+      const effectsText = formatOnHitEffects(onHitResult.effects);
+      logMessages.push({ message: `💚 Healed ${Math.round(totalHealing)} HP${effectsText}` });
+    }
+    
+    // Check for Life Draining passive (Doran's Blade)
+    if (playerPassiveIds.includes('life_draining')) {
+      const baseAD = playerChar.stats.attackDamage || 50; // Base AD without buffs
+      setPlayerBuffs((prev) => {
+        const updatedBuffs = applyLifeDrainingBuff(prev, baseAD);
+        // Check if buff was added/updated
+        const oldBuff = prev.find((b) => b.id.startsWith('life_draining'));
+        const newBuff = updatedBuffs.find((b) => b.id.startsWith('life_draining'));
+        if (!oldBuff || (newBuff && newBuff.amount !== oldBuff.amount)) {
+          logMessages.push({ message: `⚔️ Life Draining: +${Math.floor(baseAD * 0.01)} AD!` });
+        }
+        return updatedBuffs;
+      });
     }
     
     setBattleLog((prev) => [...prev, ...logMessages]);
@@ -342,10 +454,50 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     const newEnemyHp = Math.max(0, enemyChar.hp - finalDamage);
     updateEnemyHp(0, newEnemyHp);
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `${playerChar.name} casts a spell on ${enemyChar.name} for ${finalDamage} magic damage!` },
-    ]);
+    // Track damage dealt for combat stats
+    if (finalDamage > combatStats.highestDamageDealt) {
+      setCombatStats(prev => ({
+        ...prev,
+        highestDamageDealt: Math.round(finalDamage),
+        highestDamageSource: 'spell',
+      }));
+    }
+    
+    // Calculate omnivamp healing (only if enemy survived)
+    let omnivampHealing = 0;
+    if (newEnemyHp > 0 && playerScaledStats.omnivamp && playerScaledStats.omnivamp > 0) {
+      omnivampHealing = Math.max(1, Math.round(finalDamage * (playerScaledStats.omnivamp / 100)));
+      const newPlayerHp = Math.min(
+        playerChar.hp + omnivampHealing,
+        playerScaledStats.health
+      );
+      updatePlayerHp(newPlayerHp);
+    }
+    
+    const logMessages: Array<{ message: string }> = [];
+    logMessages.push({ message: `${playerChar.name} casts a spell on ${enemyChar.name} for ${finalDamage} magic damage!` });
+    
+    // Add omnivamp healing to log
+    if (omnivampHealing > 0) {
+      logMessages.push({ message: `💚 Healed ${omnivampHealing} HP [Omnivamp]` });
+    }
+    
+    // Check for Drain passive (Doran's Ring)
+    if (playerPassiveIds.includes('drain')) {
+      const baseAP = playerChar.stats.abilityPower || 30; // Base AP without buffs
+      setPlayerBuffs((prev) => {
+        const updatedBuffs = applyDrainBuff(prev, baseAP);
+        // Check if buff was added/updated
+        const oldBuff = prev.find((b) => b.id.startsWith('drain'));
+        const newBuff = updatedBuffs.find((b) => b.id.startsWith('drain'));
+        if (!oldBuff || (newBuff && newBuff.amount !== oldBuff.amount)) {
+          logMessages.push({ message: `✨ Drain: +${Math.floor(baseAP * 0.01)} AP!` });
+        }
+        return updatedBuffs;
+      });
+    }
+    
+    setBattleLog((prev) => [...prev, ...logMessages]);
     
     // Advance to next action
     setSequenceIndex((prev) => prev + 1);
@@ -565,15 +717,46 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       const newPlayerHp = Math.max(0, playerChar.hp - finalDamage);
       updatePlayerHp(newPlayerHp);
       
+      // Track damage taken for combat stats
+      if (finalDamage > combatStats.highestDamageTaken) {
+        setCombatStats(prev => ({
+          ...prev,
+          highestDamageTaken: Math.round(finalDamage),
+          highestDamageTakenSource: 'attack',
+        }));
+      }
+      
+      // IMMEDIATE DEATH CHECK: End battle instantly if player dies
+      if (newPlayerHp <= 0 && !battleEnded) {
+        setBattleEnded(true);
+        setBattleResult('defeat');
+        setShowSummary(true);
+        return; // Stop processing this turn
+      }
+      
+      // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
+      if (newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus')) {
+        setPlayerBuffs((prev) => {
+          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage);
+          return updatedBuffs;
+        });
+      }
+      
       if (isCrit) {
         setBattleLog((prev) => [
           ...prev,
           { message: `💥 CRITICAL HIT! ${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
+          ...(newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus') 
+            ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
+            : []),
         ]);
       } else {
         setBattleLog((prev) => [
           ...prev,
           { message: `${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
+          ...(newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus') 
+            ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
+            : []),
         ]);
       }
     } else if (currentAction.actionType === 'spell') {
@@ -605,9 +788,37 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       const newPlayerHp = Math.max(0, playerChar.hp - finalDamage);
       updatePlayerHp(newPlayerHp);
       
+      // Track damage taken for combat stats
+      if (finalDamage > combatStats.highestDamageTaken) {
+        setCombatStats(prev => ({
+          ...prev,
+          highestDamageTaken: Math.round(finalDamage),
+          highestDamageTakenSource: 'spell',
+        }));
+      }
+      
+      // IMMEDIATE DEATH CHECK: End battle instantly if player dies
+      if (newPlayerHp <= 0 && !battleEnded) {
+        setBattleEnded(true);
+        setBattleResult('defeat');
+        setShowSummary(true);
+        return; // Stop processing this turn
+      }
+      
+      // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
+      if (newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus')) {
+        setPlayerBuffs((prev) => {
+          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage);
+          return updatedBuffs;
+        });
+      }
+      
       setBattleLog((prev) => [
         ...prev,
         { message: `${enemyChar.name} casts a spell on ${playerChar.name} for ${finalDamage} magic damage!` },
+        ...(newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus') 
+          ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
+          : []),
       ]);
     }
     
@@ -637,6 +848,66 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // End player turn
     setPlayerTurnDone(true);
   };
+  
+  const handleSummaryContinue = () => {
+    console.log('🎯 handleSummaryContinue called!', {
+      battleResult,
+      hasPendingData: !!pendingBattleData,
+      pendingCount: pendingBattleData?.length,
+      currentFloor: state.currentFloor
+    });
+    
+    setShowSummary(false);
+    
+    // Reset combat stats and rewards after hiding summary
+    setCombatStats({
+      highestDamageDealt: 0,
+      highestDamageSource: 'attack',
+      highestDamageTaken: 0,
+      highestDamageTakenSource: 'attack',
+    });
+    setSummaryRewards(null);
+    
+    if (battleResult === 'defeat') {
+      console.log('💀 Handling defeat - reloading');
+      // Return to main menu on defeat
+      localStorage.removeItem('savedRun');
+      window.location.reload();
+    } else if (battleResult === 'victory') {
+      console.log('✅ Handling victory', { hasPendingData: !!pendingBattleData, count: pendingBattleData?.length });
+      // Continue to next enemy if there are any
+      if (pendingBattleData && pendingBattleData.length > 0) {
+        console.log('⏭️ Continuing to next enemy...');
+        // Continue to next enemy
+        setTimeout(() => {
+          console.log('🚀 Starting next battle with enemies:', pendingBattleData.map((e: any) => ({ id: e.id, name: e.name, hp: e.hp })));
+          // Reset battle state BEFORE calling startBattle
+          setBattleEnded(false);
+          setPlayerTurnDone(false);
+          setBattleResult(null);
+          
+          // Now start the next battle
+          startBattle(pendingBattleData);
+          setPendingBattleData(null);
+        }, 100);
+      } else {
+        console.log('🏁 No more enemies - quest complete or returning');
+        // All encounters complete
+        if (state.currentFloor >= 10) {
+          // Quest complete! Trigger region selection
+          if (onQuestComplete) {
+            onQuestComplete();
+          }
+        } else if (onBack) {
+          onBack();
+        } else {
+          window.location.reload();
+        }
+      }
+    }
+    // Note: If battleResult === 'reward_selection', this won't be called
+    // because the Continue button is hidden and reward selection handles its own flow
+  };
 
   // Auto-scroll battle log to bottom when new entries are added
   useEffect(() => {
@@ -663,10 +934,11 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       const newLogMessages: Array<{ message: string }> = [];
       newLogMessages.push({ message: `--- Turn ${currentTurn} ---` });
       
+      // INSTANT DEATH CHECK: Only apply healing if player is alive (HP > 0)
       // Apply player health regeneration from base stats
-      if (playerChar && playerScaledStats.health_regen > 0) {
+      if (playerChar && playerChar.hp > 0 && playerScaledStats.health_regen > 0) {
         const regenAmount = Math.floor(playerScaledStats.health_regen);
-        if (regenAmount > 0 && playerChar.hp > 0 && playerChar.hp < playerScaledStats.health) {
+        if (regenAmount > 0 && playerChar.hp < playerScaledStats.health) {
           const newPlayerHp = Math.min(playerChar.hp + regenAmount, playerScaledStats.health);
           const actualHealing = newPlayerHp - playerChar.hp;
           if (actualHealing > 0) {
@@ -676,12 +948,14 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         }
       }
       
-      // Apply heal-over-time buffs
-      if (playerBuffs.length > 0) {
+      // Apply heal-over-time buffs (only if player is alive)
+      if (playerBuffs.length > 0 && playerChar && playerChar.hp > 0) {
         const hotBuffs = playerBuffs.filter(b => b.type === 'heal_over_time');
-        if (hotBuffs.length > 0 && playerChar && playerChar.hp > 0 && playerChar.hp < playerScaledStats.health) {
+        if (hotBuffs.length > 0 && playerChar.hp < playerScaledStats.health) {
           const totalHealing = hotBuffs.reduce((sum, buff) => sum + buff.amount, 0);
-          const newPlayerHp = Math.min(playerChar.hp + totalHealing, playerScaledStats.health);
+          // Ensure minimum 1 HP healing per turn
+          const healingAmount = Math.max(1, Math.floor(totalHealing));
+          const newPlayerHp = Math.min(playerChar.hp + healingAmount, playerScaledStats.health);
           const actualHealing = newPlayerHp - playerChar.hp;
           if (actualHealing > 0) {
             updatePlayerHp(newPlayerHp);
@@ -749,16 +1023,106 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
 
   // Check for victory/defeat
   useEffect(() => {
-    if (enemyChar.hp <= 0 && !battleEnded) {
+    console.log('🔍 VICTORY CHECK:', {
+      enemyId: enemyChar.id,
+      enemyName: enemyChar.name,
+      enemyHp: enemyChar.hp,
+      battleEnded,
+      willTrigger: enemyChar.hp <= 0 && !battleEnded,
+      timestamp: Date.now()
+    });
+    
+    // Skip if already processing a battle end
+    if (battleEnded) {
+      console.log('⏹️ Skipping - battle already ended (battleEnded=true)');
+      return;
+    }
+    
+    if (enemyChar.hp <= 0) {
+      console.log('💀 ENEMY DEFEATED! Starting victory sequence...', { battleEnded });
       setBattleEnded(true);
+      console.log('📍 Called setBattleEnded(true)');
+      
+      // Track enemy kill in profile
+      incrementEnemiesKilled();
+      
+      // Check for Glory passive (Dark Seal / Mejai's Soulstealer)
+      // Grants stacking AP buff when defeating Champion or Legend tier enemies
+      if (enemyChar.tier === 'champion' || enemyChar.tier === 'legend') {
+        const hasGlory = playerPassiveIds.includes('glory');
+        const hasGloryUpgraded = playerPassiveIds.includes('glory_upgraded');
+        
+        if (hasGlory || hasGloryUpgraded) {
+          const apGain = hasGloryUpgraded ? 15 : 10;
+          const passiveName = hasGloryUpgraded ? "Glory (Upgraded)" : "Glory";
+          
+          // Add permanent AP buff
+          setPlayerBuffs((prev) => {
+            const existingGloryBuff = prev.find(b => b.id === 'glory_stacks');
+            
+            let newBuffs;
+            if (existingGloryBuff) {
+              // Stack the buff
+              newBuffs = prev.map(buff =>
+                buff.id === 'glory_stacks'
+                  ? { ...buff, name: passiveName + ' Stacks', amount: buff.amount + apGain, duration: 999 }
+                  : buff
+              );
+            } else {
+              // Create new permanent buff
+              newBuffs = [...prev, {
+                id: 'glory_stacks',
+                name: passiveName + ' Stacks',
+                stat: 'abilityPower',
+                amount: apGain,
+                duration: 999, // Effectively permanent (999 turns)
+              } as CombatBuff];
+            }
+            
+            // Calculate current total AP with new buff
+            const baseAP = playerChar.stats.abilityPower || 0;
+            const buffAP = newBuffs
+              .filter(b => b.stat === 'abilityPower')
+              .reduce((sum, b) => sum + (b.amount || 0), 0);
+            const totalAP = baseAP + buffAP;
+            
+            // Track max AP reached for unlock tracking
+            updateMaxAbilityPower(totalAP);
+            
+            return newBuffs;
+          });
+          
+          setBattleLog((prev) => [
+            ...prev,
+            { message: `✨ ${passiveName}: +${apGain} AP gained! (Champion/Legend defeated)` },
+          ]);
+        }
+      }
       
       // Use battleFlow system to handle victory
+      // Calculate player's magicFind and goldGain from inventory
+      const totalMagicFind = state.inventory.reduce((sum, invItem) => {
+        const item = getItemById(invItem.itemId);
+        return sum + (item?.stats.magicFind || 0);
+      }, 0);
+      
+      const totalGoldGain = state.inventory.reduce((sum, invItem) => {
+        const item = getItemById(invItem.itemId);
+        return sum + (item?.stats.goldGain || 0);
+      }, 0);
+      
+      // Check if player has reap passive (Cull's passive)
+      const hasReapPassive = playerPassiveIds.includes('reap');
+      
       const victoryResult = handleEnemyDefeat(
         enemyChar,
         state.enemyCharacters.slice(1),
         state.currentFloor,
         state.selectedRegion,
-        playerChar.level
+        playerChar.level,
+        totalMagicFind,
+        totalGoldGain,
+        hasReapPassive
       );
       
       // Apply rewards to game state
@@ -769,12 +1133,28 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         addExperience,
         updatePlayerHp,
         playerChar.hp,
-        playerScaledStats.health
+        playerScaledStats.health,
+        state.inventory
       );
       
       // Add victory messages to battle log
       const messages = getVictoryMessages(enemyChar.name, victoryResult);
       setBattleLog((prev) => [...prev, ...messages.map(msg => ({ message: msg }))]);
+      
+      // Prepare summary rewards including item drops
+      const itemDrops = victoryResult.loot
+        ?.filter(reward => reward.type === 'item' && reward.itemId)
+        .map(reward => ({ itemId: reward.itemId!, quantity: 1 })) || [];
+      
+      setSummaryRewards({
+        gold: victoryResult.goldReward,
+        exp: victoryResult.expReward,
+        items: itemDrops,
+      });
+      
+      // Show battle summary
+      setShowSummary(true);
+      console.log('✅ Victory sequence complete - summary should show');
       
       // Check for level up after applying experience
       const newPlayerExp = playerChar.experience + victoryResult.expReward;
@@ -784,52 +1164,45 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         setBattleLog((prev) => [
           ...prev,
           { message: `🎉 LEVEL UP! ${playerChar.name} reached level ${levelUpResult.newLevel}!` },
-          { message: `💪 Gained ${levelsGained} level${levelsGained > 1 ? 's' : ''}! All stats increased and HP restored!` },
+          { message: `💪 Gained ${levelsGained} level${levelsGained > 1 ? 's' : ''}! All stats increased!` },
         ]);
       }
       
-      // Handle next steps
+      // Handle next steps - store data for user-triggered progression
       if (victoryResult.shouldShowRewardSelection) {
-        // Generate reward options
+        // Generate reward options and integrate into summary
         const rewards = generateRewardOptions(state.selectedRegion, state.currentFloor, playerChar.class);
         setRewardOptions(rewards);
-        // Note: Rerolls are now global currency, no reset needed
         
         // Store next enemies for after reward selection
         setPendingBattleData(victoryResult.nextEnemies);
         
-        // Show reward selection screen
+        // Mark as reward selection mode (will be integrated in summary)
         setBattleResult('reward_selection');
+        console.log('🎁 Reward selection mode activated');
       } else if (victoryResult.hasMoreEnemies && victoryResult.nextEnemies) {
-        // Auto-load next enemy after 1.5 seconds
-        setTimeout(() => {
-          // CRITICAL FIX: Reset battle state BEFORE calling startBattle
-          // This prevents the button disappearance bug
-          setBattleEnded(false);
-          setPlayerTurnDone(false);
-          setBattleResult(null);
-          
-          // Now start the next battle
-          startBattle(victoryResult.nextEnemies!);
-        }, 1500);
+        // Store next enemies - user will click Continue to proceed
+        setPendingBattleData(victoryResult.nextEnemies);
+        setBattleResult('victory'); // Regular victory with more enemies pending
+        console.log('⏭️ More enemies pending:', victoryResult.nextEnemies.length);
       } else {
         // All enemies defeated - show quest complete
+        setPendingBattleData(null);
         setBattleResult('victory');
+        console.log('🏆 Quest complete - all enemies defeated');
       }
-    } else if (playerChar.hp <= 0 && !battleEnded) {
-      setBattleEnded(true);
-      setBattleResult('defeat');
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} has been defeated...` },
-      ]);
     }
-  }, [enemyChar.hp, battleEnded]);
+    // Note: Player defeat is now handled immediately when damage is dealt
+    // Note: battleEnded is NOT in dependencies to avoid circular triggers
+    // It's checked with early return instead
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enemyChar.hp, enemyChar.id]);
 
   // Get current turn info
   const currentAction = turnSequence[sequenceIndex];
   const currentActor = currentAction?.entityId === 'player' ? 'P' : 'E';
-  const isPlayerTurn = currentActor === 'P' && !playerTurnDone && !battleEnded;
+  // CRITICAL: Check battleEnded FIRST to prevent any actions on defeated enemies
+  const isPlayerTurn = !battleEnded && currentActor === 'P' && !playerTurnDone;
   const canAttack = isPlayerTurn && currentAction?.actionType === 'attack';
   const canSpell = isPlayerTurn && currentAction?.actionType === 'spell';
   // Can move on attack OR move turns (move is alternative to attack)
@@ -880,18 +1253,22 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         </div>
       </div>
 
-      {/* Turn Timeline */}
-      <TurnTimeline
-        turnSequence={turnSequence}
-        currentIndex={sequenceIndex}
-        playerName={playerChar.name}
-        enemyName={enemyChar.name}
-        isPlayerTurn={isPlayerTurn}
-        onSimultaneousAction={handleSimultaneousAction}
-      />
+      {/* Turn Timeline - key forces full remount on new enemy */}
+      {!showSummary && (
+        <TurnTimeline
+          key={enemyChar.id}
+          turnSequence={turnSequence}
+          currentIndex={sequenceIndex}
+          playerName={playerChar.name}
+          enemyName={enemyChar.name}
+          isPlayerTurn={isPlayerTurn}
+          onSimultaneousAction={handleSimultaneousAction}
+        />
+      )}
 
       {/* Action Buttons */}
-      <div className="battle-actions">
+      {!showSummary && (
+        <div className="battle-actions">
         {battleEnded && battleResult === 'victory' && (
           <div className="battle-result">
             <h2>✅ Quest Complete!</h2>
@@ -910,9 +1287,10 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         )}
         {battleEnded && battleResult === 'defeat' && (
           <div className="battle-result">
-            <h2>❌ Defeat!</h2>
+            <h2>💀 Run Ended!</h2>
+            <p>Your journey has come to an end...</p>
             <button className="action-btn" onClick={() => window.location.reload()}>
-              Return to Map
+              Return to Main Menu
             </button>
           </div>
         )}
@@ -1008,17 +1386,28 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             )}
           </>
         )}
-      </div>
+        </div>
+      )}
       
-      {/* Reward Selection Overlay */}
-      {battleResult === 'reward_selection' && rewardOptions.length > 0 && (
-        <RewardSelection
-          rewardOptions={rewardOptions}
-          onSelectReward={handleRewardSelection}
-          onSkip={handleSkipReward}
-          onReroll={handleRerollRewards}
-          rerollsRemaining={state.rerolls}
-          floor={state.currentFloor}
+      {/* Battle Summary Overlay */}
+      {showSummary && (
+        <BattleSummary
+          isVictory={battleResult !== 'defeat'}
+          combatStats={combatStats}
+          rewards={battleResult !== 'defeat' && battleResult !== 'reward_selection' ? summaryRewards || undefined : undefined}
+          rewardSelection={battleResult === 'reward_selection' && rewardOptions.length > 0 ? {
+            options: rewardOptions,
+            onSelect: handleRewardSelection,
+            onSkip: handleSkipReward,
+            onReroll: handleRerollRewards,
+            rerollsRemaining: state.rerolls,
+          } : undefined}
+          runStats={battleResult === 'defeat' ? {
+            itemsOwned: state.inventory.length,
+            encountersFaced: state.currentFloor,
+            unlocksEarned: [], // TODO: Track unlocks from this run
+          } : undefined}
+          onContinue={handleSummaryContinue}
         />
       )}
     </div>

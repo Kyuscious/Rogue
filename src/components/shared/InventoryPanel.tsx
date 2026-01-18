@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../game/store';
-import { getItemById } from '../../game/items';
+import { getItemById, getPassiveDescription } from '../../game/items';
 
 export const InventoryPanel: React.FC = () => {
   const { state } = useGameStore();
@@ -74,9 +74,9 @@ export const InventoryPanel: React.FC = () => {
                   <div className="tooltip-stat">💉 Lifesteal: +{getItemById(hoveredItemId)?.stats.lifeSteal}</div>
                 )}
               </div>
-              {getItemById(hoveredItemId)?.passive && (
+              {getItemById(hoveredItemId)?.passiveId && getPassiveDescription(getItemById(hoveredItemId)!.passiveId!) && (
                 <div className="tooltip-item-passive">
-                  <strong>Passive:</strong> {getItemById(hoveredItemId)?.passive}
+                  <strong>Passive:</strong> {getPassiveDescription(getItemById(hoveredItemId)!.passiveId!)}
                 </div>
               )}
             </div>

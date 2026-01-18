@@ -84,36 +84,6 @@ export const Disclaimer: React.FC<DisclaimerProps> = ({ onAccept }) => {
         <button onClick={handleSkip} className="btn-skip">
           Skip
         </button>
-
-        <div className="footer-boxes">
-          <div className="footer-box">
-            <h3>Socials</h3>
-            <div className="social-links">
-              <a
-                href="https://discord.gg/yourdiscord"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="social-icon discord"
-                title="Join our Discord"
-              >
-                <span>💬</span>
-              </a>
-            </div>
-          </div>
-
-          <div className="footer-box">
-            <h3>Creators</h3>
-            <div className="creator-info">
-              <a
-                href="mailto:contact@sorratec.inc"
-                className="contact-link"
-              >
-                ✉️ contact@sorratec.inc
-              </a>
-              <p className="company-name">© 2026 Sorratec Inc.</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
