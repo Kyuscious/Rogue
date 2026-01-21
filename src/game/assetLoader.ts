@@ -79,7 +79,7 @@ const REGION_ASSETS: Record<Region, RegionAssets> = {
     images: [],
     audio: [],
   },
-  marai: {
+  marai_territory: {
     images: [],
     audio: [],
   },

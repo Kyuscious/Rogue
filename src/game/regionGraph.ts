@@ -24,7 +24,7 @@ export function getRegionTier(region: Region): RegionTier {
   const standardRegions: Region[] = ['piltover', 'noxus', 'zaun', 'ixtal'];
   const advancedRegions: Region[] = ['bilgewater', 'bandle_city', 'freljord'];
   const hardRegions: Region[] = ['void', 'targon', 'shadow_isles'];
-  const travellingRegions: Region[] = ['ice_sea', 'marai', 'camavor'];
+  const travellingRegions: Region[] = ['ice_sea', 'marai_territory', 'camavor'];
   
   if (startingRegions.includes(region)) return 'starting';
   if (standardRegions.includes(region)) return 'standard';
@@ -58,13 +58,13 @@ export const REGION_GRAPH: Record<Region, Region[]> = {
   
   // Hard regions
   void: ['ice_sea'],
-  targon: ['marai'],
+  targon: ['marai_territory'],
   shadow_isles: ['camavor'],
   
   // Travelling regions
-  ice_sea: ['freljord', 'marai', 'ionia', 'demacia', 'camavor'],
-  camavor: ['ice_sea', 'ionia', 'bilgewater', 'shurima', 'marai'],
-  marai: ['ice_sea', 'shurima', 'bandle_city', 'demacia', 'camavor'],
+  ice_sea: ['freljord', 'marai_territory', 'ionia', 'demacia', 'camavor'],
+  camavor: ['ice_sea', 'ionia', 'bilgewater', 'shurima', 'marai_territory'],
+  marai_territory: ['ice_sea', 'shurima', 'bandle_city', 'demacia', 'camavor'],
 };
 
 /**
@@ -85,7 +85,7 @@ export function isEndGameRegion(region: Region): boolean {
  * Check if a region is a travelling region
  */
 export function isTravellingRegion(region: Region): boolean {
-  return region === 'camavor' || region === 'marai' || region === 'ice_sea';
+  return region === 'camavor' || region === 'marai_territory' || region === 'ice_sea';
 }
 
 /**
@@ -137,7 +137,7 @@ export function getRegionDisplayName(region: Region): string {
     targon: 'Mount Targon',
     camavor: 'Camavor',
     ice_sea: 'Ice Sea',
-    marai: 'Marai',
+    marai_territory_: 'Marai',
   };
   return names[region] || region;
 }
@@ -161,7 +161,7 @@ export function getRegionDescription(region: Region): string {
     void: 'An unknowable dimension of horror.',
     targon: 'A mystical mountain realm.',
     camavor: 'A cursed kingdom of ruin and shadow. Gateway to many lands.',
-    marai: 'The depths of the ocean. Connects distant shores.',
+    marai_territory: 'The depths of the ocean. Connects distant shores.',
     ice_sea: 'Frozen waters between continents. A treacherous passage.',
   };
   return descriptions[region] || '';

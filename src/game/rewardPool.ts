@@ -83,7 +83,7 @@ export const REGION_REWARD_POOLS: Record<Region, RewardPoolConfig> = {
     elite: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
     boss: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
   },
-  marai: {
+  marai_territory: {
     elite: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
     boss: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
   },
@@ -169,7 +169,7 @@ export const REGION_SHOP_POOLS: Record<Region, ShopPoolConfig> = {
     consumables: ['health_potion', 'stealth_ward'],
     legendary: ['warmogs_armor', 'infinity_edge', 'guardian_angel'],
   },
-  marai: {
+  marai_territory: {
     common: ['amplifying_tome', 'sapphire_crystal', 'ruby_crystal', 'boots'],
     consumables: ['health_potion', 'oracle_lens'],
     legendary: ['nashors_tooth', 'lich_bane', 'rabadons_deathcap'],
