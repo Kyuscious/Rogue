@@ -13,6 +13,8 @@ import { SHADOW_ISLES_QUEST_PATHS } from './regions/shadow_isles/quests';
 import { VOID_QUEST_PATHS } from './regions/void/quests';
 import { TARGON_QUEST_PATHS } from './regions/targon/quests';
 import { CAMAVOR_QUEST_PATHS } from './regions/camavor/quests';
+import { MARAI_QUEST_PATHS } from './regions/marai_territory/quests';
+import { ICE_SEA_QUEST_PATHS } from './regions/ice_sea/quests';
 
 export interface QuestPath {
   id: string;
@@ -105,6 +107,16 @@ const CAMAVOR_QUESTS: Quest[] = CAMAVOR_QUEST_PATHS.map(quest => ({
   region: 'camavor' as Region,
 }));
 
+const MARAI_QUESTS: Quest[] = MARAI_QUEST_PATHS.map(quest => ({
+  ...quest,
+  region: 'marai_territory' as Region,
+}));
+
+const ICE_SEA_QUESTS: Quest[] = ICE_SEA_QUEST_PATHS.map(quest => ({
+  ...quest,
+  region: 'ice_sea' as Region,
+}));
+
 export const QUESTS_BY_REGION: Record<Region, Quest[]> = {
   demacia: DEMACIA_QUESTS,
   ionia: IONIA_QUESTS,
@@ -120,6 +132,8 @@ export const QUESTS_BY_REGION: Record<Region, Quest[]> = {
   void: VOID_QUESTS,
   targon: TARGON_QUESTS,
   camavor: CAMAVOR_QUESTS,
+  ice_sea: ICE_SEA_QUESTS,
+  marai_territory: MARAI_QUESTS,
 };
 
 export function getRandomQuests(region: Region, count: number = 3): Quest[] {
