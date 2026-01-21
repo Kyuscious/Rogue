@@ -1,4 +1,4 @@
-import { ICE_SEA_MINIONS, ICE_SEA_ELITES, ICE_SEA_BOSSES } from './enemies';
+import { ICE_SEA_MINIONS, ICE_SEA_ELITES, ICE_SEA_BOSSES } from './enemies.js';
 
 export const ICE_SEA_QUEST_PATHS= [
 

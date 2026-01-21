@@ -1,4 +1,4 @@
-import { MARAI_MINIONS, MARAI_ELITES, MARAI_BOSSES } from './enemies';
+import { MARAI_MINIONS, MARAI_ELITES, MARAI_BOSSES } from './enemies.js';
 
 export const MARAI_QUEST_PATHS= [ 
 {
