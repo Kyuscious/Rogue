@@ -16,7 +16,7 @@ export type Region =
   | 'targon'
   | 'camavor'
   | 'ice_sea'
-  | 'marai';
+  | 'marai_territory';
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 
