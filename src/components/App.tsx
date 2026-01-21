@@ -19,13 +19,12 @@ import { getEnemyById } from '../game/regions/enemyResolver';
 import { getItemById } from '../game/items';
 import { CharacterStats } from '../game/statsSystem';
 import { Region } from '../game/types';
-import { isEndingRegion } from '../game/regionGraph';
 import { updatePlayTime, incrementBattlesWon, visitRegion } from '../game/profileSystem';
 import { loadRegionAssets, unloadRegionAssets } from '../game/assetLoader';
 import './App.css';
 import './ActComplete.css';
 
-type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'actComplete' | 'loading';
+type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'loading';
 
 interface ResetConfirmModalProps {
   isOpen: boolean;
@@ -144,7 +143,7 @@ const ContinueRunModal: React.FC<ContinueRunModalProps> = ({ isOpen, onContinue,
 };
 
 export const App: React.FC = () => {
-  const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, completeAct, saveRun, clearSavedRun, loadRun, setCurrentFloor } = useGameStore();
+  const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, saveRun, clearSavedRun, loadRun, setCurrentFloor } = useGameStore();
   
   // Check localStorage on mount to see if we should skip disclaimer
   const shouldSkipDisclaimer = typeof window !== 'undefined' && localStorage.getItem('skipDisclaimer') === 'true';
@@ -335,15 +334,8 @@ export const App: React.FC = () => {
   const handleQuestComplete = () => {
     if (!state.selectedRegion) return;
     
-    // Check if current region is an ending region
-    if (isEndingRegion(state.selectedRegion)) {
-      // Complete the current act
-      completeAct(state.selectedRegion);
-      setScene('actComplete');
-    } else {
-      // Go to region selection to choose next destination
-      setScene('regionSelection');
-    }
+    // Go to region selection to choose next destination
+    setScene('regionSelection');
   };
 
   // Handle selecting a new region to travel to
@@ -611,29 +603,6 @@ export const App: React.FC = () => {
           </button>
         </div>
         <RegionSelection onSelectRegion={handleSelectRegion} />
-        <ResetConfirmModal 
-          isOpen={showResetConfirm} 
-          onConfirm={handleResetConfirm} 
-          onCancel={handleResetCancel} 
-        />
-      </div>
-    );
-  }
-
-  if (scene === 'actComplete') {
-    return (
-      <div className="game-wrapper">
-        <div className="act-complete-screen">
-          <h1>Act {state.currentAct - 1} Complete!</h1>
-          <p>You have conquered {state.selectedRegion}!</p>
-          <p>Prepare for Act {state.currentAct}...</p>
-          <button 
-            className="btn-continue"
-            onClick={() => setScene('regionSelection')}
-          >
-            Choose Next Region
-          </button>
-        </div>
         <ResetConfirmModal 
           isOpen={showResetConfirm} 
           onConfirm={handleResetConfirm} 

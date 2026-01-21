@@ -63,6 +63,8 @@ const REGION_NAMES: Record<Region, string> = {
   void: 'The Void',
   targon: 'Mount Targon',
   camavor: 'Camavor',
+  ice_sea: 'Ice Sea',
+  marai: 'Marai',
 };
 
 export const Index: React.FC<IndexProps> = ({ onBack }) => {

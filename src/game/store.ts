@@ -1,11 +1,29 @@
 import { create } from 'zustand';
 import { Character, InventoryItem, Region } from './types';
 import { DEFAULT_STATS, getScaledStats } from './statsSystem';
-import { STARTING_ITEMS, ITEM_DATABASE, getRandomShopItemByAct } from './items';
+import { STARTING_ITEMS, ITEM_DATABASE, getRandomShopItemByAct, getRandomItemsForEnemy } from './items';
 import { checkLevelUp, getLevelUpStatBoosts, calculateEnemyLevel } from './experienceSystem';
 import { incrementBattlesWon, incrementRunsFailed, discoverItem, discoverConnection, getActiveProfileId, visitRegion, unlockItem } from './profileSystem';
 import { REGION_SHOP_POOLS } from './rewardPool';
 import { CombatBuff } from './itemSystem';
+import { getRegionTier } from './regionGraph';
+
+/**
+ * TODO: Implement Region Revisit Penalty System
+ * 
+ * When a region is visited multiple times in a run:
+ * - 2nd visit: +30% enemy stats, +2 levels, +1 item, 50% gold, 60% drops, 70% XP
+ * - 3rd visit: +60% enemy stats, +4 levels, +2 items, 25% gold, 30% drops, 40% XP
+ * - 4+ visits: +100% enemy stats, +6 levels, max items, 10% gold/drops, 20% XP
+ * 
+ * Implementation:
+ * 1. Count occurrences of current region in visitedRegionsThisRun
+ * 2. Apply stat multipliers in startBattle() based on visit count
+ * 3. Apply reward penalties in battle victory handlers
+ * 4. Show warning UI in RegionSelection for revisited regions
+ * 
+ * See DIFFICULTY_SCALING.md for full design document
+ */
 
 // Default player character
 const DEFAULT_PLAYER: Character = {
@@ -41,11 +59,8 @@ export interface GameStoreState {
     selectedQuest: { questId: string; pathId: string } | null;
     username: string;
     // Region traversal state
+    visitedRegionsThisRun: Region[]; // Track the path taken during this run (in order)
     originalStartingRegion: Region | null; // The very first region chosen at run start
-    currentAct: number; // 1, 2, or 3
-    usedPaths: string[]; // Array of "regionA→regionB" paths used in current act
-    piltoverVisits: number; // Total Piltover visits across all acts
-    completedActEndingRegions: Region[]; // Tracks which ending regions were used (can't revisit)
     // Shop state
     shopInventory: ShopSlot[];
     lastShopFloor: number; // Track when shop was last generated
@@ -54,6 +69,12 @@ export interface GameStoreState {
     // Persistent buff system
     persistentBuffs: CombatBuff[]; // Buffs that persist across encounters (e.g., elixirs)
     encountersCompleted: number; // Total encounters completed in current run
+    // Weapons & Spells System
+    weapons: string[]; // Up to 3 weapon IDs
+    spells: string[]; // Up to 5 spell IDs
+    equippedWeaponIndex: number; // Index of currently equipped weapon (0-2)
+    equippedSpellIndex: number; // Index of currently equipped spell (0-4)
+    spellCooldowns: Record<string, number>; // Spell ID -> turns remaining until usable
   };
   selectRegion: (region: Region) => void;
   selectStartingItem: (itemId: string) => void;
@@ -79,7 +100,6 @@ export interface GameStoreState {
   clearSavedRun: () => void; // Clear saved run from localStorage
   // Region traversal methods
   travelToRegion: (fromRegion: Region, toRegion: Region) => void;
-  completeAct: (endingRegion: Region) => void;
   // Shop methods
   generateShopInventory: () => void; // Generate shop items (only if needed)
   rerollShop: () => void; // Manually reroll shop
@@ -90,6 +110,13 @@ export interface GameStoreState {
   incrementEncounterCount: () => void; // Call after each battle ends
   applyElixirBuff: (elixirId: string) => void; // Apply encounter-based buff from elixir
   getPersistentBuffs: () => CombatBuff[]; // Get current persistent buffs
+  // Weapons & Spells management
+  equipWeapon: (index: number) => void; // Switch to weapon at index (0-2)
+  equipSpell: (index: number) => void; // Switch to spell at index (0-4)
+  addWeapon: (weaponId: string) => void; // Add weapon to collection (max 3)
+  addSpell: (spellId: string) => void; // Add spell to collection (max 5)
+  removeWeapon: (index: number) => void; // Remove weapon from collection
+  removeSpell: (index: number) => void; // Remove spell from collection
 }
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -105,11 +132,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
     selectedQuest: null,
     username: 'Summoner',
     // Region traversal initialization
+    visitedRegionsThisRun: [],
     originalStartingRegion: null,
-    currentAct: 1,
-    usedPaths: [],
-    piltoverVisits: 0,
-    completedActEndingRegions: [],
     // Shop initialization
     shopInventory: [],
     lastShopFloor: -1,
@@ -118,6 +142,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
     // Persistent buffs
     persistentBuffs: [],
     encountersCompleted: 0,
+    // Weapons & Spells System
+    weapons: ['test_weapon'], // Player starts test weapon
+    spells: ['test_spell'], // Start with TestSpell
+    equippedWeaponIndex: 0, // First weapon equipped
+    equippedSpellIndex: 0, // First spell equipped
+    spellCooldowns: {}, // Track spell cooldowns
   },
 
   setUsername: (username: string) =>
@@ -137,10 +167,16 @@ export const useGameStore = create<GameStoreState>((set) => ({
       // Track region visit for unlock progress
       visitRegion(region);
       
+      // Add to visited regions if not first visit
+      const newVisitedRegions = store.state.originalStartingRegion 
+        ? [...store.state.visitedRegionsThisRun, region]
+        : [region];
+      
       return {
         state: {
           ...store.state,
           selectedRegion: region,
+          visitedRegionsThisRun: newVisitedRegions,
           // Set originalStartingRegion if this is the first region selection
           originalStartingRegion: store.state.originalStartingRegion || region,
         },
@@ -240,20 +276,61 @@ export const useGameStore = create<GameStoreState>((set) => ({
         incrementBattlesWon();
       }
       
+      // Reduce spell cooldowns by 1 turn (time passes between encounters)
+      const updatedCooldowns: Record<string, number> = {};
+      for (const [spellId, cooldown] of Object.entries(store.state.spellCooldowns)) {
+        if (cooldown > 1) {
+          updatedCooldowns[spellId] = cooldown - 1;
+        }
+        // If cooldown is 1, it will be removed (spell is ready)
+      }
+      
       return {
         state: {
           ...store.state,
           currentFloor: newFloor,
+          spellCooldowns: updatedCooldowns,
           playerCharacter: store.state.playerCharacter,
           enemyCharacters: enemies.map((enemy) => {
             // Scale enemy level based on floor progression
             const enemyLevel = calculateEnemyLevel(newFloor, enemy.tier || 'minion');
-            const scaledStats = getScaledStats(enemy.stats, enemyLevel, enemy.class);
+            
+            // Determine region tier for item scaling
+            const currentRegion = store.state.selectedRegion || 'demacia';
+            const regionTier = getRegionTier(currentRegion);
+            
+            // Give enemies items based on their class, encounter count, and region tier
+            const enemyItems = getRandomItemsForEnemy(
+              enemy.class, 
+              store.state.encountersCompleted + 1,
+              regionTier
+            );
+            
+            // Apply item stats to enemy base stats
+            const statsWithItems = { ...enemy.stats };
+            enemyItems.forEach(item => {
+              Object.entries(item.stats).forEach(([stat, value]) => {
+                if (typeof value === 'number') {
+                  (statsWithItems as any)[stat] = ((statsWithItems as any)[stat] || 0) + value;
+                }
+              });
+            });
+            
+            // Scale stats with level
+            const scaledStats = getScaledStats(statsWithItems, enemyLevel, enemy.class);
+            
+            // Convert items to inventory format for display
+            const inventory = enemyItems.map(item => ({
+              itemId: item.id,
+              quantity: 1
+            }));
             
             return {
               ...enemy,
               level: enemyLevel,
               hp: scaledStats.health,
+              stats: scaledStats,
+              inventory, // Add items for visual display
             };
           }),
         },
@@ -523,12 +600,9 @@ export const useGameStore = create<GameStoreState>((set) => ({
           selectedQuest: null,
           username: 'Summoner',
           // Reset region traversal
+          visitedRegionsThisRun: [],
           originalStartingRegion: null,
-          currentAct: 1,
-        usedPaths: [],
-        piltoverVisits: 0,
-        completedActEndingRegions: [],
-        // Reset shop state
+          // Reset shop state
         shopInventory: [],
         lastShopFloor: -1,
         // Reset run stats
@@ -536,6 +610,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
         // Reset persistent buffs
         persistentBuffs: [],
         encountersCompleted: 0,
+        // Reset weapons & spells to starter equipment
+        weapons: [],
+        spells: ['test_spell', 'wish'],
+        equippedWeaponIndex: 0,
+        equippedSpellIndex: 0,
+        spellCooldowns: {},
       },
     };
   }),
@@ -543,10 +623,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
   // Travel from one region to another
   travelToRegion: (fromRegion: Region, toRegion: Region) =>
     set((store) => {
-      const pathKey = `${fromRegion}→${toRegion}`;
-      const newUsedPaths = [...store.state.usedPaths, pathKey];
-      const newPiltoverVisits = toRegion === 'piltover' ? store.state.piltoverVisits + 1 : store.state.piltoverVisits;
-      
       // Track this connection in the profile
       discoverConnection(fromRegion, toRegion);
       
@@ -554,23 +630,11 @@ export const useGameStore = create<GameStoreState>((set) => ({
         state: {
           ...store.state,
           selectedRegion: toRegion,
-          usedPaths: newUsedPaths,
-          piltoverVisits: newPiltoverVisits,
+          visitedRegionsThisRun: [...store.state.visitedRegionsThisRun, toRegion],
           // Don't reset currentFloor here - it resets when starting a new battle
         },
       };
     }),
-
-  // Complete an act by reaching an ending region
-  completeAct: (endingRegion: Region) =>
-    set((store) => ({
-      state: {
-        ...store.state,
-        currentAct: store.state.currentAct + 1,
-        usedPaths: [], // Reset used paths for new act
-        completedActEndingRegions: [...store.state.completedActEndingRegions, endingRegion],
-      },
-    })),
 
   // Generate shop inventory (only if needed)
   generateShopInventory: () =>
@@ -581,7 +645,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
       }
 
       const region = store.state.selectedRegion || 'demacia';
-      const currentAct = store.state.currentAct;
       const hasDarkSeal = store.state.inventory.some(i => i.itemId === 'dark_seal');
       
       // Calculate player's total magicFind stat
@@ -615,14 +678,17 @@ export const useGameStore = create<GameStoreState>((set) => ({
         return shuffled.slice(0, count);
       };
 
-      // Build shop inventory using act-based rarity system
-      // Generate 3 items based on act rarity pools + 2 consumables
+      // Build shop inventory using floor-based rarity system
+      // Generate 3 items based on floor rarity pools + 2 consumables
       const generatedItems: string[] = [];
       const excludedIds: string[] = [];
       
-      // Generate 3 main items using act-based rarity + magicFind
+      // Use floor as progression indicator (Acts removed)
+      const progressionTier = Math.floor(store.state.currentFloor / 10) + 1; // Floor 1-9 = Tier 1, 10-19 = Tier 2, etc.
+      
+      // Generate 3 main items using floor-based rarity + magicFind
       for (let i = 0; i < 3; i++) {
-        const item = getRandomShopItemByAct(currentAct, totalMagicFind, excludedIds);
+        const item = getRandomShopItemByAct(progressionTier, totalMagicFind, excludedIds);
         if (item) {
           generatedItems.push(item.id);
           excludedIds.push(item.id); // Avoid duplicates
@@ -667,7 +733,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
   rerollShop: () =>
     set((store) => {
       const region = store.state.selectedRegion || 'demacia';
-      const currentAct = store.state.currentAct;
       const hasDarkSeal = store.state.inventory.some(i => i.itemId === 'dark_seal');
       
       // Calculate player's total magicFind stat
@@ -701,13 +766,16 @@ export const useGameStore = create<GameStoreState>((set) => ({
         return shuffled.slice(0, count);
       };
 
-      // Build new shop inventory using act-based rarity system
+      // Build new shop inventory using floor-based rarity system
       const generatedItems: string[] = [];
       const excludedIds: string[] = [];
       
-      // Generate 3 main items using act-based rarity + magicFind
+      // Use floor as progression indicator (Acts removed)
+      const progressionTier = Math.floor(store.state.currentFloor / 10) + 1; // Floor 1-9 = Tier 1, 10-19 = Tier 2, etc.
+      
+      // Generate 3 main items using floor-based rarity + magicFind
       for (let i = 0; i < 3; i++) {
-        const item = getRandomShopItemByAct(currentAct, totalMagicFind, excludedIds);
+        const item = getRandomShopItemByAct(progressionTier, totalMagicFind, excludedIds);
         if (item) {
           generatedItems.push(item.id);
           excludedIds.push(item.id); // Avoid duplicates
@@ -960,4 +1028,100 @@ export const useGameStore = create<GameStoreState>((set) => ({
   getPersistentBuffs: (): CombatBuff[] => {
     return useGameStore.getState().state.persistentBuffs;
   },
+  // Weapons & Spells Management
+  equipWeapon: (index: number) =>
+    set((store) => {
+      if (index < 0 || index >= store.state.weapons.length) {
+        console.warn(`Invalid weapon index: ${index}`);
+        return store;
+      }
+      return {
+        state: {
+          ...store.state,
+          equippedWeaponIndex: index,
+        },
+      };
+    }),
+
+  equipSpell: (index: number) =>
+    set((store) => {
+      if (index < 0 || index >= store.state.spells.length) {
+        console.warn(`Invalid spell index: ${index}`);
+        return store;
+      }
+      return {
+        state: {
+          ...store.state,
+          equippedSpellIndex: index,
+        },
+      };
+    }),
+
+  addWeapon: (weaponId: string) =>
+    set((store) => {
+      if (store.state.weapons.length >= 3) {
+        console.warn('Cannot carry more than 3 weapons');
+        return store;
+      }
+      return {
+        state: {
+          ...store.state,
+          weapons: [...store.state.weapons, weaponId],
+        },
+      };
+    }),
+
+  addSpell: (spellId: string) =>
+    set((store) => {
+      if (store.state.spells.length >= 5) {
+        console.warn('Cannot carry more than 5 spells');
+        return store;
+      }
+      return {
+        state: {
+          ...store.state,
+          spells: [...store.state.spells, spellId],
+        },
+      };
+    }),
+
+  removeWeapon: (index: number) =>
+    set((store) => {
+      if (index < 0 || index >= store.state.weapons.length) {
+        console.warn(`Invalid weapon index: ${index}`);
+        return store;
+      }
+      const newWeapons = store.state.weapons.filter((_, i) => i !== index);
+      const newEquippedIndex = store.state.equippedWeaponIndex >= newWeapons.length 
+        ? Math.max(0, newWeapons.length - 1)
+        : store.state.equippedWeaponIndex;
+      
+      return {
+        state: {
+          ...store.state,
+          weapons: newWeapons,
+          equippedWeaponIndex: newEquippedIndex,
+        },
+      };
+    }),
+
+  removeSpell: (index: number) =>
+    set((store) => {
+      if (index < 0 || index >= store.state.spells.length) {
+        console.warn(`Invalid spell index: ${index}`);
+        return store;
+      }
+      const newSpells = store.state.spells.filter((_, i) => i !== index);
+      const newEquippedIndex = store.state.equippedSpellIndex >= newSpells.length 
+        ? Math.max(0, newSpells.length - 1)
+        : store.state.equippedSpellIndex;
+      
+      return {
+        state: {
+          ...store.state,
+          spells: newSpells,
+          equippedSpellIndex: newEquippedIndex,
+        },
+      };
+    }),
 }));

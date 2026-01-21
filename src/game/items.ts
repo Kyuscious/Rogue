@@ -12,6 +12,7 @@ export interface Item {
   rarity: ItemRarity;
   price: number; // Gold cost to purchase in shop
   imagePath?: string; // Path to item image asset
+  classes?: CharacterClass[]; // Classes that can use this item (undefined = all classes)
   stats: {
     // Survivability
     health?: number;
@@ -372,6 +373,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A basic sword for the journey ahead',
     rarity: 'common',
     price: 350,
+    classes: ['skirmisher', 'assassin', 'marksman', 'juggernaut'],
     stats: { attackDamage: 10 },
   },
   cloth_armor: {
@@ -380,6 +382,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Basic protection',
     rarity: 'common',
     price: 300,
+    classes: ['vanguard', 'warden', 'juggernaut'],
     imagePath: '/assets/global/images/item-cloth-armor.svg',
     stats: { armor: 15 },
   },
@@ -389,6 +392,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A simple book to enhance magical power',
     rarity: 'common',
     price: 350,
+    classes: ['mage', 'enchanter'],
     stats: { abilityPower: 15 },
   },
   kindlegem: {
@@ -397,6 +401,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A glowing gem of inner warmth',
     rarity: 'common',
     price: 400,
+    classes: ['vanguard', 'warden', 'juggernaut', 'enchanter'],
     stats: { health: 150 },
   },
   sapphire_crystal: {
@@ -421,6 +426,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A small blade for quick strikes',
     rarity: 'common',
     price: 250,
+    classes: ['assassin', 'skirmisher', 'marksman'],
     stats: { attackSpeed: 0.1 },
   },
   rejuvenation_bead: {
@@ -482,6 +488,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A powerful mining tool turned weapon',
     rarity: 'epic',
     price: 80,
+    classes: ['skirmisher', 'assassin', 'marksman', 'juggernaut'],
     stats: { attackDamage: 25 },
   },
   null_magic_mantle: {
@@ -490,6 +497,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Magical protection against spells',
     rarity: 'epic',
     price: 400,
+    classes: ['vanguard', 'warden', 'juggernaut', 'skirmisher'],
     stats: { magicResist: 25 },
   },
   
@@ -502,6 +510,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Upgraded Glory: Defeating Champion or Legend tier enemies grants +15 AP permanently (stacks endlessly). Carries over stacks from Dark Seal.',
     rarity: 'legendary',
     price: 1150,
+    classes: ['mage', 'enchanter'],
     stats: {
       health: 50,
       abilityPower: 20,
@@ -516,6 +525,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Attack damage and critical strike power',
     rarity: 'legendary',
     price: 200,
+    classes: ['marksman', 'assassin', 'skirmisher'],
     stats: { attackDamage: 70, lifeSteal: 10 },
   },
   abyssal_mask: {
@@ -524,6 +534,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Deep sea protection',
     rarity: 'legendary',
     price: 220,
+    classes: ['vanguard', 'warden', 'juggernaut'],
     stats: { health: 300, magicResist: 40, omnivamp: 10 },
   },
   nashor_tooth: {
@@ -532,6 +543,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: "The fang of Nasthor the beast",
     rarity: 'legendary',
     price: 210,
+    classes: ['mage'],
     stats: { abilityPower: 60, attackSpeed: 0.5, health: 200 },
   },
 
@@ -615,6 +627,125 @@ export function getItemById(id: string): Item | undefined {
 
 export function getItemsByRarity(rarity: ItemRarity): Item[] {
   return Object.values(ITEM_DATABASE).filter((item) => item.rarity === rarity);
+}
+
+/**
+ * Get items that match a specific character class
+ * @param characterClass - The class to filter by
+ * @param excludeConsumables - Whether to exclude consumable items
+ * @returns Array of items usable by the class
+ */
+export function getItemsByClass(characterClass: CharacterClass, excludeConsumables: boolean = true): Item[] {
+  return Object.values(ITEM_DATABASE).filter((item) => {
+    // Exclude consumables if requested
+    if (excludeConsumables && item.consumable) return false;
+    
+    // If item has no class restriction, it's usable by all
+    if (!item.classes || item.classes.length === 0) return true;
+    
+    // Check if the character's class is in the item's allowed classes
+    return item.classes.includes(characterClass);
+  });
+}
+
+/**
+ * Get allowed item rarities based on region tier and encounter progression
+ * This creates a progressive difficulty curve
+ * @param regionTier - The tier of the current region
+ * @param encounterCount - Total encounters completed in the run
+ * @returns Array of allowed rarities for enemy items
+ */
+export function getAllowedRaritiesForEnemies(
+  regionTier: 'starting' | 'standard' | 'advanced' | 'hard' | 'travelling',
+  encounterCount: number
+): ItemRarity[] {
+  // Base pools by region tier
+  const rarityPools: Record<string, ItemRarity[]> = {
+    // Starting regions: Common items, gradually add Epic
+    starting: encounterCount <= 3 ? ['common'] 
+            : encounterCount <= 6 ? ['common', 'epic']
+            : ['common', 'epic'],
+    
+    // Standard regions: Common to Epic, add Legendary later
+    standard: encounterCount <= 3 ? ['common', 'epic'] 
+            : encounterCount <= 6 ? ['common', 'epic', 'legendary']
+            : ['common', 'epic', 'legendary'],
+    
+    // Advanced regions: Epic to Legendary, add Mythic later
+    advanced: encounterCount <= 3 ? ['epic', 'legendary'] 
+            : encounterCount <= 6 ? ['epic', 'legendary', 'mythic']
+            : ['epic', 'legendary', 'mythic'],
+    
+    // Hard regions: Legendary to Ultimate
+    hard: encounterCount <= 3 ? ['legendary', 'mythic'] 
+        : encounterCount <= 6 ? ['legendary', 'mythic', 'ultimate']
+        : ['legendary', 'mythic', 'ultimate'],
+    
+    // Travelling regions: Mix of everything, scales with progression
+    travelling: encounterCount <= 3 ? ['epic', 'legendary'] 
+              : encounterCount <= 6 ? ['epic', 'legendary', 'mythic']
+              : ['legendary', 'mythic', 'ultimate'],
+  };
+  
+  return rarityPools[regionTier] || ['common'];
+}
+
+/**
+ * Get N random items for an enemy based on their class, encounter count, and region
+ * @param characterClass - The enemy's character class
+ * @param encounterCount - Current encounter number (determines item count and rarity)
+ * @param regionTier - The difficulty tier of the current region
+ * @returns Array of random items suitable for the enemy
+ */
+export function getRandomItemsForEnemy(
+  characterClass: CharacterClass, 
+  encounterCount: number,
+  regionTier: 'starting' | 'standard' | 'advanced' | 'hard' | 'travelling' = 'starting'
+): Item[] {
+  // Get all items matching the class
+  const classItems = getItemsByClass(characterClass, true);
+  
+  if (classItems.length === 0) return [];
+  
+  // Filter by allowed rarities based on progression
+  const allowedRarities = getAllowedRaritiesForEnemies(regionTier, encounterCount);
+  const availableItems = classItems.filter(item => allowedRarities.includes(item.rarity));
+  
+  // Fallback to class items if no items match the rarity filter
+  const itemPool = availableItems.length > 0 ? availableItems : classItems;
+  
+  // Determine number of items based on encounter count and region tier
+  let itemCount = 1;
+  
+  // Item count scales with both encounters and region tier
+  if (regionTier === 'starting') {
+    if (encounterCount >= 8) itemCount = 2;
+    else if (encounterCount >= 4) itemCount = 1;
+  } else if (regionTier === 'standard') {
+    if (encounterCount >= 7) itemCount = 3;
+    else if (encounterCount >= 4) itemCount = 2;
+    else itemCount = 1;
+  } else if (regionTier === 'advanced') {
+    if (encounterCount >= 6) itemCount = 3;
+    else if (encounterCount >= 3) itemCount = 2;
+    else itemCount = 1;
+  } else if (regionTier === 'hard' || regionTier === 'travelling') {
+    if (encounterCount >= 5) itemCount = 4;
+    else if (encounterCount >= 3) itemCount = 3;
+    else itemCount = 2;
+  }
+  
+  // Select random items without duplicates
+  const selectedItems: Item[] = [];
+  const poolCopy = [...itemPool];
+  
+  for (let i = 0; i < itemCount && poolCopy.length > 0; i++) {
+    const randomIndex = Math.floor(Math.random() * poolCopy.length);
+    selectedItems.push(poolCopy[randomIndex]);
+    poolCopy.splice(randomIndex, 1); // Remove to avoid duplicates
+  }
+  
+  return selectedItems;
 }
 
 export function getRandomItemByRarity(rarity: ItemRarity): Item {

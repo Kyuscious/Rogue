@@ -136,6 +136,8 @@ export function generateRewardOptions(
     void: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
     targon: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
     camavor: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
+    ice_sea: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
+    marai: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
   };
   
   // Default pool if no region selected

@@ -31,6 +31,10 @@ import { checkLevelUp } from '../../../game/experienceSystem';
 import { incrementEnemiesKilled } from '../../../game/profileSystem';
 import { ItemBar } from './ItemBar';
 import { BattleSummary } from './BattleSummary';
+import { WeaponSelector } from './WeaponSelector';
+import { SpellSelector } from './SpellSelector';
+import { getWeaponById } from '../../../game/weapons';
+import { getSpellById } from '../../../game/spells';
 import { InventoryItem } from '../../../game/types';
 import './Battle.css';
 
@@ -39,8 +43,69 @@ interface BattleProps {
   onQuestComplete?: () => void;
 }
 
+// Helper function to format weapon effect descriptions
+const formatWeaponEffects = (weapon: any) => {
+  if (!weapon || !weapon.effects) return [];
+  const descriptions: string[] = [];
+  
+  for (const effect of weapon.effects) {
+    if (effect.type === 'damage' && effect.damageScaling) {
+      const parts: string[] = [];
+      if (effect.damageScaling.attackDamage) parts.push(`${effect.damageScaling.attackDamage}%AD`);
+      if (effect.damageScaling.abilityPower) parts.push(`${effect.damageScaling.abilityPower}%AP`);
+      if (effect.damageScaling.health) parts.push(`${effect.damageScaling.health}%HP`);
+      if (effect.damageScaling.trueDamage) parts.push(`${effect.damageScaling.trueDamage} True`);
+      if (parts.length > 0) descriptions.push(`[${parts.join(' + ')}] Dmg`);
+    }
+    if (effect.type === 'movement' && effect.movementAmount) {
+      const dir = effect.movementAmount > 0 ? 'Forward' : 'Back';
+      descriptions.push(`[${Math.abs(effect.movementAmount)}] ${dir}`);
+    }
+  }
+  return descriptions;
+};
+
+// Helper function to format spell effect descriptions
+const formatSpellEffects = (spell: any) => {
+  if (!spell || !spell.effects) return [];
+  const descriptions: string[] = [];
+  
+  for (const effect of spell.effects) {
+    if (effect.type === 'damage' && effect.damageScaling) {
+      const parts: string[] = [];
+      if (effect.damageScaling.abilityPower) parts.push(`${effect.damageScaling.abilityPower}%AP`);
+      if (effect.damageScaling.attackDamage) parts.push(`${effect.damageScaling.attackDamage}%AD`);
+      if (effect.damageScaling.health) parts.push(`${effect.damageScaling.health}%HP`);
+      if (effect.damageScaling.trueDamage) parts.push(`${effect.damageScaling.trueDamage} True`);
+      if (parts.length > 0) descriptions.push(`[${parts.join(' + ')}] Dmg`);
+    }
+    if (effect.type === 'heal' && effect.healScaling) {
+      const parts: string[] = [];
+      if (effect.healScaling.flatAmount) parts.push(`${effect.healScaling.flatAmount}`);
+      if (effect.healScaling.abilityPower) parts.push(`${effect.healScaling.abilityPower}%AP`);
+      if (effect.healScaling.missingHealth) parts.push(`${effect.healScaling.missingHealth}%Missing HP`);
+      if (parts.length > 0) {
+        let healText = `[${parts.join(' + ')}] Heal`;
+        if (effect.healScaling.lowHealthBonus) {
+          healText += ` [<${effect.healScaling.lowHealthBonus.threshold}%HP: x${effect.healScaling.lowHealthBonus.multiplier}]`;
+        }
+        descriptions.push(healText);
+      }
+    }
+    if (effect.type === 'stun' && effect.duration) {
+      descriptions.push(`[${effect.duration} Turn${effect.duration > 1 ? 's' : ''}] Stun`);
+    }
+    if (effect.type === 'buff' && effect.description) {
+      descriptions.push(`[Buff] ${effect.description}`);
+    }
+  }
+  return descriptions;
+};
+
 export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
-  const { state, updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower } = useGameStore();
+  const store = useGameStore();
+  const state = store.state;
+  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower } = store;
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
@@ -134,6 +199,17 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     setBattleLog([{ message: 'Battle started!' }, { message: '---' }]);
     setLastLoggedTurn(0);
     setItemModeActive(false); // Reset item mode for new encounter
+    setEnemyDebuffs([]); // Reset enemy debuffs for new encounter
+    
+    // Log cooldown reductions from previous encounter
+    const activeCooldowns = Object.entries(state.spellCooldowns);
+    if (activeCooldowns.length > 0) {
+      const cooldownMessages = activeCooldowns.map(([spellId, cd]) => {
+        const spell = getSpellById(spellId);
+        return `⏳ ${spell?.name || 'Spell'}: ${cd} turn${cd > 1 ? 's' : ''} remaining`;
+      });
+      setBattleLog(prev => [...prev, ...cooldownMessages.map(msg => ({ message: msg }))]);
+    }
     
     console.log('🔧 Battle state reset complete - battleEnded should now be FALSE');
     
@@ -166,6 +242,9 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     const persistentBuffs = state.persistentBuffs || [];
     return [...persistentBuffs];
   });
+
+  // Track active debuffs on enemy (DoTs, armor reduction, etc.)
+  const [enemyDebuffs, setEnemyDebuffs] = useState<CombatBuff[]>([]);
 
   // Track item mode active state (when UseItem button is clicked)
   const [itemModeActive, setItemModeActive] = useState(false);
@@ -303,8 +382,44 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     ]);
   };
 
+  // Helper function to reduce spell cooldowns by 1 turn (called per timeline turn)
+  const reduceSpellCooldowns = () => {
+    useGameStore.setState((store) => {
+      const currentCooldowns = store.state.spellCooldowns;
+      const updatedCooldowns: Record<string, number> = {};
+      
+      for (const [spellId, cooldown] of Object.entries(currentCooldowns)) {
+        if ((cooldown as number) > 1) {
+          updatedCooldowns[spellId] = (cooldown as number) - 1;
+        }
+        // If cooldown is 1, it will be removed (spell is ready next turn)
+      }
+      
+      console.log('🔄 Reducing spell cooldowns (timeline turn):', { before: currentCooldowns, after: updatedCooldowns });
+      
+      return {
+        state: {
+          ...store.state,
+          spellCooldowns: updatedCooldowns,
+        },
+      };
+    });
+  };
+
   const handleAttack = () => {
     if (!playerEntity || !enemyEntity) return;
+    
+    // Get equipped weapon
+    const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
+    const equippedWeapon = equippedWeaponId ? getWeaponById(equippedWeaponId) : null;
+    
+    if (!equippedWeapon) {
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${playerChar.name} has no weapon equipped!` },
+      ]);
+      return;
+    }
     
     // Check if player is in range
     if (!canPlayerAttack) {
@@ -319,47 +434,121 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       return;
     }
     
-    // Use actual Attack Damage stat
-    let baseDamage = playerScaledStats.attackDamage;
-    let isCrit = false;
+    // Calculate damage based on weapon effects
+    let totalDamage = 0;
+    const logMessages: Array<{ message: string }> = [];
     
-    // Check for critical strike
-    if (rollCriticalStrike(playerScaledStats.criticalChance || 0)) {
-      baseDamage = calculateCriticalDamage(baseDamage, playerScaledStats.criticalDamage || 200);
-      isCrit = true;
+    for (const effect of equippedWeapon.effects) {
+      if (effect.type === 'damage' && effect.damageScaling) {
+        let baseDamage = 0;
+        
+        // Calculate base damage from scaling
+        if (effect.damageScaling.attackDamage) {
+          baseDamage += playerScaledStats.attackDamage * (effect.damageScaling.attackDamage / 100);
+        }
+        if (effect.damageScaling.abilityPower) {
+          baseDamage += playerScaledStats.abilityPower * (effect.damageScaling.abilityPower / 100);
+        }
+        if (effect.damageScaling.health) {
+          baseDamage += playerScaledStats.health * (effect.damageScaling.health / 100);
+        }
+        
+        // Check for critical strike
+        let isCrit = false;
+        if (rollCriticalStrike(playerScaledStats.criticalChance || 0)) {
+          baseDamage = calculateCriticalDamage(baseDamage, playerScaledStats.criticalDamage || 200);
+          isCrit = true;
+        }
+        
+        // Apply enemy armor mitigation for physical damage (AD scaling)
+        let finalDamage = baseDamage;
+        if (effect.damageScaling.attackDamage) {
+          finalDamage = calculatePhysicalDamage(
+            baseDamage,
+            enemyScaledStats.armor || 0,
+            playerScaledStats.lethality || 0
+          );
+        }
+        
+        // Add true damage (bypasses resistances)
+        if (effect.damageScaling.trueDamage) {
+          finalDamage += effect.damageScaling.trueDamage;
+        }
+        
+        totalDamage += finalDamage;
+        
+        if (isCrit) {
+          logMessages.push({ message: `💥 CRITICAL HIT! ${playerChar.name} attacks with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+        } else {
+          logMessages.push({ message: `${playerChar.name} attacks with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+        }
+      }
+      
+      // Handle movement effects
+      if (effect.type === 'movement' && effect.movementAmount) {
+        const direction = effect.movementAmount > 0 ? 'towards' : 'away';
+        const distance = Math.abs(effect.movementAmount);
+        const newPosition = direction === 'towards' 
+          ? playerPosition + distance
+          : playerPosition - distance;
+        setPlayerPosition(newPosition);
+        logMessages.push({ message: `${playerChar.name} moves ${direction} by ${distance} units!` });
+      }
     }
     
-    // Apply enemy armor mitigation with lethality
-    const finalDamage = calculatePhysicalDamage(
-      baseDamage,
-      enemyScaledStats.armor || 0,
-      playerScaledStats.lethality || 0
-    );
-    
     // Update enemy HP
-    const newEnemyHp = Math.max(0, enemyChar.hp - finalDamage);
+    const newEnemyHp = Math.max(0, enemyChar.hp - totalDamage);
     updateEnemyHp(0, newEnemyHp);
+
+    // Check for Hemorrhage debuff (Delverhold Greateaxe)
+    if (equippedWeaponId === 'delverhold_greateaxe' && newEnemyHp > 0) {
+      setEnemyDebuffs((prevDebuffs) => {
+        const hemorrhageDebuffs = prevDebuffs.filter(d => d.id.startsWith('hemorrhage'));
+        const stackCount = hemorrhageDebuffs.length;
+        
+        if (stackCount < 5) {
+          // Add new stack
+          const damagePerTurn = playerScaledStats.attackDamage * 0.30;
+          logMessages.push({ message: `🩸 Hemorrhage applied! (Stack ${stackCount + 1}/5) - ${Math.round(damagePerTurn)} damage/turn` });
+          return [
+            ...prevDebuffs,
+            {
+              id: `hemorrhage_${Date.now()}`,
+              name: 'Hemorrhage',
+              stat: 'attackDamage', // Using as damage source reference
+              amount: damagePerTurn,
+              duration: 6, // 5 turns + 1 for partial turn (Hybrid Timing Model)
+              type: 'instant',
+            } as CombatBuff,
+          ];
+        } else {
+          // At max stacks (5), refresh duration of all stacks
+          logMessages.push({ message: `🩸 Hemorrhage refreshed! (5/5 stacks) - ${Math.round(playerScaledStats.attackDamage * 1.50)} damage/turn` });
+          return prevDebuffs.map(d => 
+            d.id.startsWith('hemorrhage') 
+              ? { ...d, duration: 6 } // Refresh to 5 turns + 1 for partial turn
+              : d
+          );
+        }
+      });
+    }
     
     // Track damage dealt for combat stats
-    if (finalDamage > combatStats.highestDamageDealt) {
+    if (totalDamage > combatStats.highestDamageDealt) {
       setCombatStats(prev => ({
         ...prev,
-        highestDamageDealt: Math.round(finalDamage),
+        highestDamageDealt: Math.round(totalDamage),
         highestDamageSource: 'attack',
       }));
     }
     
-    // Calculate on-hit effects first (declare variables outside if block for logging)
-    let onHitResult = { bonusDamage: 0, healing: 0, effects: [] as any[] };
+    // Calculate on-hit effects (only if enemy survived)
     let totalHealing = 0;
-    
-    // INSTANT DEATH CHECK: If enemy HP is 0, they're dead - no on-hit effects applied
     if (newEnemyHp > 0) {
-      // Calculate and apply on-hit effects (healing on hit, lifesteal, etc.)
-      onHitResult = calculateOnHitEffects(
+      const onHitResult = calculateOnHitEffects(
         playerChar,
         enemyChar,
-        finalDamage,
+        totalDamage,
         playerScaledStats
       );
       
@@ -377,30 +566,16 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           playerScaledStats.health
         );
         updatePlayerHp(newPlayerHp);
+        const effectsText = formatOnHitEffects(onHitResult.effects);
+        logMessages.push({ message: `💚 Healed ${Math.round(totalHealing)} HP${effectsText}` });
       }
-    }
-    
-    // Build battle log messages
-    const logMessages: Array<{ message: string }> = [];
-    
-    if (isCrit) {
-      logMessages.push({ message: `💥 CRITICAL HIT! ${playerChar.name} attacks ${enemyChar.name} for ${finalDamage} damage!` });
-    } else {
-      logMessages.push({ message: `${playerChar.name} attacks ${enemyChar.name} for ${finalDamage} damage!` });
-    }
-    
-    // Add on-hit effects to log (only if enemy survived)
-    if (newEnemyHp > 0 && totalHealing > 0) {
-      const effectsText = formatOnHitEffects(onHitResult.effects);
-      logMessages.push({ message: `💚 Healed ${Math.round(totalHealing)} HP${effectsText}` });
     }
     
     // Check for Life Draining passive (Doran's Blade)
     if (playerPassiveIds.includes('life_draining')) {
-      const baseAD = playerChar.stats.attackDamage || 50; // Base AD without buffs
+      const baseAD = playerChar.stats.attackDamage || 50;
       setPlayerBuffs((prev) => {
         const updatedBuffs = applyLifeDrainingBuff(prev, baseAD);
-        // Check if buff was added/updated
         const oldBuff = prev.find((b) => b.id.startsWith('life_draining'));
         const newBuff = updatedBuffs.find((b) => b.id.startsWith('life_draining'));
         if (!oldBuff || (newBuff && newBuff.amount !== oldBuff.amount)) {
@@ -411,6 +586,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     }
     
     setBattleLog((prev) => [...prev, ...logMessages]);
+    
+    // Advance to next action in sequence
     
     // Advance to next action in sequence
     setSequenceIndex((prev) => prev + 1);
@@ -427,6 +604,36 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   const handleSpell = () => {
     if (!playerEntity || !enemyEntity) return;
     
+    // Get equipped spell
+    const equippedSpellId = state.spells[state.equippedSpellIndex];
+    const equippedSpell = equippedSpellId ? getSpellById(equippedSpellId) : null;
+    
+    console.log('🔮 Attempting to cast spell:', {
+      spellId: equippedSpellId,
+      spellName: equippedSpell?.name,
+      currentCooldowns: state.spellCooldowns,
+      cooldownRemaining: state.spellCooldowns[equippedSpellId || ''],
+    });
+    
+    if (!equippedSpell) {
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${playerChar.name} has no spell equipped!` },
+      ]);
+      return;
+    }
+    
+    // Check cooldown
+    const cooldownRemaining = state.spellCooldowns[equippedSpellId] || 0;
+    if (cooldownRemaining > 0) {
+      console.log('❌ Spell on cooldown, blocking cast');
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${equippedSpell.name} is on cooldown! (${cooldownRemaining} turn${cooldownRemaining > 1 ? 's' : ''} remaining)` },
+      ]);
+      return;
+    }
+    
     // Check if player is in range
     if (!canPlayerCastSpell) {
       setBattleLog((prev) => [
@@ -440,54 +647,109 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       return;
     }
     
-    // Use Ability Power stat for spell damage
-    const baseSpellDamage = playerScaledStats.abilityPower;
+    // Calculate damage/effects based on spell
+    let totalDamage = 0;
+    let totalHealing = 0;
+    const logMessages: Array<{ message: string }> = [];
     
-    // Apply enemy magic resist mitigation with magic penetration
-    const finalDamage = calculateMagicDamage(
-      baseSpellDamage,
-      enemyScaledStats.magicResist || 0,
-      playerScaledStats.magicPenetration || 0
-    );
-    
-    // Update enemy HP
-    const newEnemyHp = Math.max(0, enemyChar.hp - finalDamage);
-    updateEnemyHp(0, newEnemyHp);
-    
-    // Track damage dealt for combat stats
-    if (finalDamage > combatStats.highestDamageDealt) {
-      setCombatStats(prev => ({
-        ...prev,
-        highestDamageDealt: Math.round(finalDamage),
-        highestDamageSource: 'spell',
-      }));
+    for (const effect of equippedSpell.effects) {
+      if (effect.type === 'damage' && effect.damageScaling) {
+        let baseDamage = 0;
+        
+        // Calculate base damage from scaling
+        if (effect.damageScaling.abilityPower) {
+          baseDamage += playerScaledStats.abilityPower * (effect.damageScaling.abilityPower / 100);
+        }
+        if (effect.damageScaling.attackDamage) {
+          baseDamage += playerScaledStats.attackDamage * (effect.damageScaling.attackDamage / 100);
+        }
+        if (effect.damageScaling.health) {
+          baseDamage += playerScaledStats.health * (effect.damageScaling.health / 100);
+        }
+        
+        // Apply enemy magic resist mitigation for magic damage (AP scaling)
+        let finalDamage = baseDamage;
+        if (effect.damageScaling.abilityPower) {
+          finalDamage = calculateMagicDamage(
+            baseDamage,
+            enemyScaledStats.magicResist || 0,
+            playerScaledStats.magicPenetration || 0
+          );
+        }
+        
+        // Add true damage (bypasses resistances)
+        if (effect.damageScaling.trueDamage) {
+          finalDamage += effect.damageScaling.trueDamage;
+        }
+        
+        totalDamage += finalDamage;
+        logMessages.push({ message: `${playerChar.name} casts ${equippedSpell.name} for ${Math.round(finalDamage)} magic damage!` });
+      }
+      
+      if (effect.type === 'heal' && effect.healScaling) {
+        let healAmount = 0;
+        
+        if (effect.healScaling.flatAmount) {
+          healAmount += effect.healScaling.flatAmount;
+        }
+        if (effect.healScaling.abilityPower) {
+          healAmount += playerScaledStats.abilityPower * (effect.healScaling.abilityPower / 100);
+        }
+        if (effect.healScaling.missingHealth) {
+          const missingHp = playerScaledStats.health - playerChar.hp;
+          healAmount += missingHp * (effect.healScaling.missingHealth / 100);
+        }
+        
+        // Check for low health bonus
+        if (effect.healScaling.lowHealthBonus) {
+          const currentHpPercent = (playerChar.hp / playerScaledStats.health) * 100;
+          if (currentHpPercent < effect.healScaling.lowHealthBonus.threshold) {
+            healAmount *= effect.healScaling.lowHealthBonus.multiplier;
+            logMessages.push({ message: `✨ Low health bonus activated! (${currentHpPercent.toFixed(1)}% HP < ${effect.healScaling.lowHealthBonus.threshold}%)` });
+          }
+        }
+        
+        totalHealing += healAmount;
+        logMessages.push({ message: `💚 ${playerChar.name} heals for ${Math.round(healAmount)} HP!` });
+      }
     }
     
-    // Calculate omnivamp healing (only if enemy survived)
-    let omnivampHealing = 0;
-    if (newEnemyHp > 0 && playerScaledStats.omnivamp && playerScaledStats.omnivamp > 0) {
-      omnivampHealing = Math.max(1, Math.round(finalDamage * (playerScaledStats.omnivamp / 100)));
+    // Update enemy HP if damage was dealt
+    if (totalDamage > 0) {
+      const newEnemyHp = Math.max(0, enemyChar.hp - totalDamage);
+      updateEnemyHp(0, newEnemyHp);
+      
+      // Track damage dealt for combat stats
+      if (totalDamage > combatStats.highestDamageDealt) {
+        setCombatStats(prev => ({
+          ...prev,
+          highestDamageDealt: Math.round(totalDamage),
+          highestDamageSource: 'spell',
+        }));
+      }
+      
+      // Calculate omnivamp healing (only if enemy survived)
+      if (newEnemyHp > 0 && playerScaledStats.omnivamp && playerScaledStats.omnivamp > 0) {
+        const omnivampHealing = Math.max(1, Math.round(totalDamage * (playerScaledStats.omnivamp / 100)));
+        totalHealing += omnivampHealing;
+        logMessages.push({ message: `💚 Healed ${omnivampHealing} HP [Omnivamp]` });
+      }
+    }
+    
+    // Apply healing
+    if (totalHealing > 0) {
       const newPlayerHp = Math.min(
-        playerChar.hp + omnivampHealing,
+        playerChar.hp + totalHealing,
         playerScaledStats.health
       );
       updatePlayerHp(newPlayerHp);
     }
     
-    const logMessages: Array<{ message: string }> = [];
-    logMessages.push({ message: `${playerChar.name} casts a spell on ${enemyChar.name} for ${finalDamage} magic damage!` });
-    
-    // Add omnivamp healing to log
-    if (omnivampHealing > 0) {
-      logMessages.push({ message: `💚 Healed ${omnivampHealing} HP [Omnivamp]` });
-    }
-    
     // Check for Drain passive (Doran's Ring)
     if (playerPassiveIds.includes('drain')) {
-      const baseAP = playerChar.stats.abilityPower || 30; // Base AP without buffs
+      const baseAP = playerChar.stats.abilityPower || 30;
       setPlayerBuffs((prev) => {
         const updatedBuffs = applyDrainBuff(prev, baseAP);
-        // Check if buff was added/updated
         const oldBuff = prev.find((b) => b.id.startsWith('drain'));
         const newBuff = updatedBuffs.find((b) => b.id.startsWith('drain'));
         if (!oldBuff || (newBuff && newBuff.amount !== oldBuff.amount)) {
@@ -499,7 +761,35 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     
     setBattleLog((prev) => [...prev, ...logMessages]);
     
-    // Advance to next action
+    // Apply spell cooldown
+    // TIMING MODEL: Cooldowns snap to next integer turn
+    // Example: Cast at T1.65 with 5 CD → +1 for partial turn → 6 turns → Ready at T7.00
+    // This ensures cooldowns always count in full turn increments from next boundary
+    if (equippedSpell.cooldown && equippedSpell.cooldown > 0) {
+      const baseCooldown = equippedSpell.cooldown as number;
+      // Add 1 to account for the partial turn we're in (snap to next integer turn)
+      const adjustedCooldown = baseCooldown + 1;
+      
+      console.log('⏳ Setting spell cooldown:', {
+        spellId: equippedSpellId,
+        baseCooldown,
+        adjustedCooldown,
+        currentTime: currentAction?.time,
+        readyAt: `T${Math.ceil(currentAction?.time || 0) + baseCooldown}.00`,
+      });
+      
+      useGameStore.setState((store) => ({
+        state: {
+          ...store.state,
+          spellCooldowns: {
+            ...store.state.spellCooldowns,
+            [equippedSpellId]: adjustedCooldown,
+          },
+        },
+      }));
+    }
+    
+    // Advance to next action in sequence
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
@@ -927,6 +1217,10 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   }, [sequenceIndex, playerTurnDone, battleEnded, turnSequence]);
 
   // Apply turn-based effects every turn
+  // TIMING MODEL - Hybrid:
+  // - Instant effects (damage, healing): Apply immediately at action time
+  // - Duration effects (buffs, DoTs, cooldowns): Tick at integer turns only
+  // This ensures predictable countdowns while maintaining responsive instant effects
   useEffect(() => {
     const currentTurn = Math.ceil(turnCounter);
     if (turnCounter > 0 && currentTurn > lastLoggedTurn && turnCounter % 1 === 0) {
@@ -971,6 +1265,9 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         );
       }
       
+      // Reduce spell cooldowns once per timeline turn
+      reduceSpellCooldowns();
+      
       // Apply enemy health regeneration
       if (enemyChar && enemyScaledStats.health_regen > 0) {
         const regenAmount = Math.floor(enemyScaledStats.health_regen);
@@ -983,12 +1280,40 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           }
         }
       }
+
+      // Apply damage-over-time debuffs to enemy (e.g., Hemorrhage)
+      if (enemyDebuffs.length > 0 && enemyChar && enemyChar.hp > 0) {
+        // Calculate Hemorrhage damage (stacking DoT)
+        const hemorrhageDebuffs = enemyDebuffs.filter(d => d.id.startsWith('hemorrhage'));
+        if (hemorrhageDebuffs.length > 0) {
+          const totalDamage = hemorrhageDebuffs.reduce((sum, debuff) => sum + debuff.amount, 0);
+          const damageAmount = Math.max(1, Math.floor(totalDamage));
+          const newEnemyHp = Math.max(0, enemyChar.hp - damageAmount);
+          const actualDamage = enemyChar.hp - newEnemyHp;
+          if (actualDamage > 0) {
+            updateEnemyHp(0, newEnemyHp);
+            newLogMessages.push({ message: `🩸 ${enemyChar.name} takes ${actualDamage} damage from Hemorrhage (${hemorrhageDebuffs.length} stack${hemorrhageDebuffs.length > 1 ? 's' : ''})` });
+          }
+
+          // Check for immediate death from DoT
+          if (newEnemyHp <= 0 && !battleEnded) {
+            // Enemy died from bleeding - victory will be handled by the victory check useEffect
+          }
+        }
+
+        // Decay debuff durations
+        setEnemyDebuffs((prevDebuffs) => 
+          prevDebuffs
+            .map(debuff => ({ ...debuff, duration: debuff.duration - 1 }))
+            .filter(debuff => debuff.duration > 0)
+        );
+      }
       
       setBattleLog((prev) => [...prev, ...newLogMessages]);
       setLastLoggedTurn(currentTurn);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [turnCounter, lastLoggedTurn, playerBuffs]);
+  }, [turnCounter, lastLoggedTurn, playerBuffs, enemyDebuffs]);
 
   // Reset playerTurnDone when it becomes player's turn again
   useEffect(() => {
@@ -1231,7 +1556,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         />
         
         <div className="team-enemy">
-          <CharacterStatus characterId={enemyChar.id} />
+          <CharacterStatus characterId={enemyChar.id} combatDebuffs={enemyDebuffs} />
         </div>
       </div>
 
@@ -1296,79 +1621,158 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         )}
         {!battleEnded && (
           <>
-            <div className="action-buttons">
-              {/* Left Section - Move and Attack */}
-              <div className="button-section left">
-                {/* Move Container - Horizontal Layout */}
-                <div className="move-container">
+            <div className="battle-actions-container">
+              {/* Main Action Row */}
+              <div className="main-actions-row">
+                {/* Move Section */}
+                <div className="action-section move-section">
+                  <div className="section-label">Move</div>
+                  <div className="move-buttons-horizontal">
+                    <button 
+                      onClick={() => handlePlayerMove('towards')} 
+                      className={`move-btn forward ${!canMove ? 'disabled' : ''} ${canMove && !canPlayerAttack ? 'breathing-yellow' : ''}`}
+                      disabled={!canMove}
+                      title={canMove ? 'Move forward towards enemy' : 'Wait for your turn'}
+                    >
+                      <span className="arrow">↑</span>
+                      <span className="move-text">Forward</span>
+                      <span className="move-dist">{moveDistance}</span>
+                    </button>
+                    <button 
+                      onClick={() => handlePlayerMove('away')} 
+                      className={`move-btn backward ${!canMove ? 'disabled' : ''}`}
+                      disabled={!canMove}
+                      title={canMove ? 'Move back away from enemy' : 'Wait for your turn'}
+                    >
+                      <span className="arrow">↓</span>
+                      <span className="move-text">Back</span>
+                      <span className="move-dist">{moveDistance}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Attack Section */}
+                <div className="action-section attack-section">
+                  <div className="section-label">Attack</div>
                   <button 
-                    onClick={() => handlePlayerMove('towards')} 
-                    className={`move-arrow-btn up-btn ${!canMove ? 'disabled' : ''} ${canMove && !canPlayerAttack ? 'breathing-yellow' : ''}`}
-                    disabled={!canMove}
-                    title={canMove ? 'Move forward towards enemy' : 'Wait for your turn'}
+                    onClick={handleAttack} 
+                    className={`main-action-btn attack-btn ${!canAttack ? 'disabled' : ''} ${isPlayerTurn && !canPlayerAttack ? 'breathing-red' : ''}`}
+                    disabled={!canAttack}
+                    title={canAttack ? 'Attack with equipped weapon!' : 'Wait for your attack turn'}
                   >
-                    ↑
+                    <span className="action-icon">⚔️</span>
+                    <span className="action-text">
+                      {(() => {
+                        const weaponId = state.weapons[state.equippedWeaponIndex];
+                        const weapon = weaponId ? getWeaponById(weaponId) : null;
+                        return weapon ? `Attack with ${weapon.name}` : 'Attack';
+                      })()}
+                    </span>
+                    {(() => {
+                      const weaponId = state.weapons[state.equippedWeaponIndex];
+                      const weapon = weaponId ? getWeaponById(weaponId) : null;
+                      const effects = formatWeaponEffects(weapon);
+                      return effects.length > 0 ? (
+                        <span className="effect-preview">{effects.join(' + ')}</span>
+                      ) : null;
+                    })()}
                   </button>
-                  <div className="move-label">move {moveDistance}</div>
+                  <WeaponSelector />
+                </div>
+
+                {/* Skip Section */}
+                <div className="action-section skip-section">
+                  <div className="section-label">Skip</div>
                   <button 
-                    onClick={() => handlePlayerMove('away')} 
-                    className={`move-arrow-btn down-btn ${!canMove ? 'disabled' : ''}`}
-                    disabled={!canMove}
-                    title={canMove ? 'Move back away from enemy' : 'Wait for your turn'}
+                    onClick={handleSkip} 
+                    className={`main-action-btn skip-btn ${!isPlayerTurn ? 'disabled' : ''}`}
+                    disabled={!isPlayerTurn}
+                    title={isPlayerTurn ? 'Skip this turn' : 'Wait for your turn'}
                   >
-                    ↓
+                    <span className="action-icon">⏭️</span>
+                    <span className="action-text">Skip Turn</span>
                   </button>
                 </div>
 
-                <button 
-                  onClick={handleAttack} 
-                  className={`action-btn attack-btn ${!canAttack ? 'disabled' : ''} ${isPlayerTurn && !canPlayerAttack ? 'breathing-red' : ''}`}
-                  disabled={!canAttack}
-                  title={canAttack ? 'Attack!' : 'Wait for your attack turn'}
-                >
-                  ⚔️ Attack ({playerScaledStats.attackDamage.toFixed(0)} DMG)
-                </button>
-              </div>
+                {/* Spell Section */}
+                <div className="action-section spell-section">
+                  <div className="section-label">Cast</div>
+                  <button 
+                    onClick={handleSpell} 
+                    className={`main-action-btn spell-btn ${!canSpell ? 'disabled' : ''} ${(() => {
+                      const spellId = state.spells[state.equippedSpellIndex];
+                      const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
+                      return cooldown > 0 ? 'on-cooldown' : '';
+                    })()}`}
+                    disabled={!canSpell || (() => {
+                      const spellId = state.spells[state.equippedSpellIndex];
+                      return (state.spellCooldowns[spellId] || 0) > 0;
+                    })()}
+                    title={(() => {
+                      const spellId = state.spells[state.equippedSpellIndex];
+                      const cooldown = state.spellCooldowns[spellId] || 0;
+                      if (cooldown > 0) return `Spell on cooldown (${cooldown} turn${cooldown > 1 ? 's' : ''} remaining)`;
+                      if (!canSpell) return 'Wait for your spell turn';
+                      return 'Cast equipped spell!';
+                    })()}
+                  >
+                    <span className="action-icon">✨</span>
+                    <span className="action-text">
+                      {(() => {
+                        const spellId = state.spells[state.equippedSpellIndex];
+                        const spell = spellId ? getSpellById(spellId) : null;
+                        const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
+                        
+                        if (cooldown > 0) {
+                          return `${cooldown} Turn${cooldown > 1 ? 's' : ''} Cooldown`;
+                        }
+                        
+                        return spell ? `Cast ${spell.name}` : 'Cast Spell';
+                      })()}
+                    </span>
+                    {(() => {
+                      const spellId = state.spells[state.equippedSpellIndex];
+                      const spell = spellId ? getSpellById(spellId) : null;
+                      const effects = formatSpellEffects(spell);
+                      const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
+                      
+                      // Don't show effects if on cooldown
+                      if (cooldown > 0) return null;
+                      
+                      return effects.length > 0 ? (
+                        <span className="effect-preview">{effects.join(' + ')}</span>
+                      ) : null;
+                    })()}
+                  </button>
+                  <SpellSelector />
+                </div>
 
-              {/* Center Section - Skip */}
-              <div className="button-section center">
-                <button 
-                  onClick={handleSkip} 
-                  className={`action-btn skip-btn ${!isPlayerTurn ? 'disabled' : ''}`}
-                  disabled={!isPlayerTurn}
-                  title={isPlayerTurn ? 'Skip this turn' : 'Wait for your turn'}
-                >
-                  ⏭️ Skip
-                </button>
+                {/* Item Section */}
+                <div className="action-section item-section">
+                  <div className="section-label">Item</div>
+                  <button 
+                    onClick={() => setItemModeActive(!itemModeActive)} 
+                    className={`main-action-btn item-btn ${!canSpell ? 'disabled' : ''} ${itemModeActive ? 'active' : ''}`}
+                    disabled={!canSpell}
+                    title={canSpell ? 'Use a consumable item' : 'Wait for your spell turn'}
+                  >
+                    <span className="action-icon">🧪</span>
+                    <span className="action-text">{itemModeActive ? 'Close Items' : 'Use Item'}</span>
+                  </button>
+                </div>
               </div>
-
-              {/* Right Section - Spell & Use Item */}
-              <div className="button-section right">
-                <button 
-                  onClick={handleSpell} 
-                  className={`action-btn spell-btn ${!canSpell ? 'disabled' : ''}`}
-                  disabled={!canSpell}
-                  title={canSpell ? 'Cast spell!' : 'Wait for your spell turn'}
-                >
-                  ✨ Spell ({playerScaledStats.abilityPower.toFixed(0)} DMG)
-                </button>
-                <button 
-                  onClick={() => setItemModeActive(!itemModeActive)} 
-                  className={`action-btn item-btn ${!canSpell ? 'disabled' : ''}`}
-                  disabled={!canSpell}
-                  title={canSpell ? 'Use an item' : 'Wait for your spell turn'}
-                >
-                  🧪 Use Item
-                </button>
-              </div>
+              
+              {/* Item Bar - Shows usable items when active */}
+              {itemModeActive && (
+                <div className="item-bar-container">
+                  <ItemBar
+                    usableItems={getUsableItems(state.inventory)}
+                    onUseItem={handleUseItem}
+                    canUse={canSpell}
+                  />
+                </div>
+              )}
             </div>
-            
-            {/* Item Bar - Shows usable items below action buttons */}
-            <ItemBar
-              usableItems={getUsableItems(state.inventory)}
-              onUseItem={handleUseItem}
-              canUse={canSpell && itemModeActive}
-            />
             {playerChar.abilities.length > 0 && (
               <div className="ability-buttons">
                 {playerChar.abilities.map((ability: any, idx: number) => (

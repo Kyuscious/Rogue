@@ -8,7 +8,11 @@ import { StatsPanel } from './StatsPanel';
 import { CombatBuff } from '../../game/itemSystem';
 import './CharacterStatus.css';
 
-export const CharacterStatus: React.FC<{ characterId?: string; combatBuffs?: CombatBuff[] }> = ({ characterId, combatBuffs }) => {
+export const CharacterStatus: React.FC<{ 
+  characterId?: string; 
+  combatBuffs?: CombatBuff[];
+  combatDebuffs?: CombatBuff[];
+}> = ({ characterId, combatBuffs, combatDebuffs }) => {
   const { state } = useGameStore();
   const character = characterId
     ? state.enemyCharacters.find((c) => c.id === characterId)
@@ -22,7 +26,20 @@ export const CharacterStatus: React.FC<{ characterId?: string; combatBuffs?: Com
     value: Math.max(1, Math.round(buff.amount)), // Round to integer, minimum 1
     source: buff.name,
     duration: buff.duration,
+    isDebuff: false,
   })) || [];
+
+  // Convert CombatDebuffs to TemporaryStatModifiers for BuffsDisplay
+  const temporaryDebuffs = combatDebuffs?.map(debuff => ({
+    statName: debuff.stat,
+    value: Math.max(1, Math.round(debuff.amount)), // Round to integer, minimum 1
+    source: debuff.name,
+    duration: debuff.duration,
+    isDebuff: true,
+  })) || [];
+
+  // Combine buffs and debuffs
+  const allTemporaryStats = [...temporaryStats, ...temporaryDebuffs];
 
   return (
     <div className="character-status">
@@ -38,7 +55,7 @@ export const CharacterStatus: React.FC<{ characterId?: string; combatBuffs?: Com
       <LevelDisplay character={character} />
 
       {/* Always Visible: Active Effects (Buffs/Debuffs) */}
-      <BuffsDisplay character={character} temporaryStats={temporaryStats} />
+      <BuffsDisplay character={character} temporaryStats={allTemporaryStats} />
 
       {/* Toggleable: Stats Panel */}
       <StatsPanel character={character} />

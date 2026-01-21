@@ -75,6 +75,14 @@ const REGION_ASSETS: Record<Region, RegionAssets> = {
     images: [],
     audio: [],
   },
+  ice_sea: {
+    images: [],
+    audio: [],
+  },
+  marai: {
+    images: [],
+    audio: [],
+  },
 };
 
 // Global assets that are always loaded

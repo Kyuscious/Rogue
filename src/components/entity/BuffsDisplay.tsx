@@ -5,8 +5,9 @@ import { getClassStatBonuses } from '../../game/statsSystem';
 interface TemporaryStatModifier {
   statName: string;
   value: number;
-  source: string; // 'buff', 'debuff', 'item', etc
+  source: string; // buff name or debuff name
   duration?: number;
+  isDebuff?: boolean; // true for debuffs, false/undefined for buffs
 }
 
 interface BuffsDisplayProps {
@@ -116,24 +117,30 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporary
         </div>
 
         {/* Temporary buffs/debuffs as individual slots */}
-        {temporaryStats.map((mod, idx) => (
-          <div
-            key={idx}
-            className={`buff-icon ${mod.source}`}
-            onMouseEnter={(e) => {
-              setHoveredBuffIndex(idx);
-              const rect = e.currentTarget.getBoundingClientRect();
-              setTooltipPosition({
-                x: rect.left,
-                y: rect.bottom + 5,
-              });
-            }}
-            onMouseLeave={() => setHoveredBuffIndex(null)}
-          >
-            <span className="buff-emoji">{mod.source === 'buff' ? '✨' : '💀'}</span>
-            {mod.duration && <span className="duration-badge">{mod.duration}</span>}
-          </div>
-        ))}
+        {temporaryStats.map((mod, idx) => {
+          const isDebuff = mod.isDebuff === true;
+          const icon = isDebuff ? '🩸' : '✨'; // 🩸 for debuffs, ✨ for buffs
+          const slotClass = isDebuff ? 'debuff-slot' : 'buff-slot';
+          
+          return (
+            <div
+              key={idx}
+              className={`buff-icon ${slotClass}`}
+              onMouseEnter={(e) => {
+                setHoveredBuffIndex(idx);
+                const rect = e.currentTarget.getBoundingClientRect();
+                setTooltipPosition({
+                  x: rect.left,
+                  y: rect.bottom + 5,
+                });
+              }}
+              onMouseLeave={() => setHoveredBuffIndex(null)}
+            >
+              <span className="buff-emoji">{icon}</span>
+              {mod.duration && <span className="duration-badge">{mod.duration}</span>}
+            </div>
+          );
+        })}
       </div>
 
       {/* Total Stats Tooltip */}
@@ -169,7 +176,10 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporary
       {/* Individual Buff Tooltip */}
       {hoveredBuffIndex !== null && temporaryStats[hoveredBuffIndex] && (
         <div className="stat-bonus-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-          <div className="tooltip-title">{temporaryStats[hoveredBuffIndex].source}</div>
+          <div className="tooltip-title">
+            {temporaryStats[hoveredBuffIndex].isDebuff ? '🩸 ' : ''}
+            {temporaryStats[hoveredBuffIndex].source}
+          </div>
           <div className="tooltip-level">
             {temporaryStats[hoveredBuffIndex].duration && temporaryStats[hoveredBuffIndex].duration < 999 ? `${temporaryStats[hoveredBuffIndex].duration} turns remaining` : 'Permanent'}
           </div>

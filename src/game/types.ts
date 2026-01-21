@@ -14,7 +14,9 @@ export type Region =
   | 'shadow_isles' 
   | 'void' 
   | 'targon'
-  | 'camavor';
+  | 'camavor'
+  | 'ice_sea'
+  | 'marai';
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 
@@ -52,6 +54,7 @@ export interface ItemData {
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   stats: Record<string, number>;
   passive?: string;
+  classes?: CharacterClass[]; // Classes that can use this item (empty = all classes)
 }
 
 export interface InventoryItem {
@@ -63,6 +66,7 @@ export interface GameState {
   currentFloor: number;
   selectedRegion: Region | null;
   completedRegions: Region[];
+  visitedRegionsThisRun: Region[]; // Track path taken during this run (in order)
   currentTier: EnemyTier;
   playerCharacter: Character;
   enemyCharacters: Character[];
@@ -74,6 +78,12 @@ export interface GameState {
   selectedQuestId: string | null;
   selectedQuestPathId: string | null;
   startingItemSelected: boolean;
+  // Weapons & Spells System
+  weapons: string[]; // Up to 3 weapon IDs
+  spells: string[]; // Up to 5 spell IDs
+  equippedWeaponIndex: number; // Index of currently equipped weapon (0-2)
+  equippedSpellIndex: number; // Index of currently equipped spell (0-4)
+  spellCooldowns: Record<string, number>; // Spell ID -> turns remaining until usable
 }
 
 export interface Battle {

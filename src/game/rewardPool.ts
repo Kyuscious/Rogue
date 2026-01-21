@@ -79,6 +79,14 @@ export const REGION_REWARD_POOLS: Record<Region, RewardPoolConfig> = {
     elite: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
     boss: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
   },
+  ice_sea: {
+    elite: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
+    boss: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
+  },
+  marai: {
+    elite: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
+    boss: ['long_sword', 'cloth_armor', 'health_potion', 'amplifying_tome', 'pickaxe'],
+  },
 };
 
 /**
@@ -155,6 +163,16 @@ export const REGION_SHOP_POOLS: Record<Region, ShopPoolConfig> = {
     common: ['long_sword', 'cloth_armor', 'amplifying_tome', 'vampiric_scepter', 'boots'],
     consumables: ['health_potion', 'oracle_lens'],
     legendary: ['eclipse', 'blade_of_the_ruined_king', 'zhonyas_hourglass'],
+  },
+  ice_sea: {
+    common: ['long_sword', 'cloth_armor', 'ruby_crystal', 'boots'],
+    consumables: ['health_potion', 'stealth_ward'],
+    legendary: ['warmogs_armor', 'infinity_edge', 'guardian_angel'],
+  },
+  marai: {
+    common: ['amplifying_tome', 'sapphire_crystal', 'ruby_crystal', 'boots'],
+    consumables: ['health_potion', 'oracle_lens'],
+    legendary: ['nashors_tooth', 'lich_bane', 'rabadons_deathcap'],
   },
 };
 

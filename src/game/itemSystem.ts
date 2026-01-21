@@ -72,7 +72,8 @@ export function getPrimaryStatFromItem(itemId: string): { stat: keyof CombatBuff
 
 /**
  * Create a temporary buff from an item
- * Buffs last for 3 turns by default
+ * TIMING MODEL: Buffs last 3 full turns from next integer turn boundary
+ * Example: Applied at T2.34 → Ticks at T3, T4, T5 (duration starts at 4 to account for partial turn)
  */
 export function createBuffFromItem(itemId: string, buffId: string): CombatBuff | null {
   const item = getItemById(itemId);
@@ -86,7 +87,7 @@ export function createBuffFromItem(itemId: string, buffId: string): CombatBuff |
     name: `${item.name} Buff`,
     stat: primaryStat.stat,
     amount: primaryStat.amount,
-    duration: 3, // Buff lasts 3 turns
+    duration: 4, // 3 full turns + 1 for partial turn = ticks at T+1, T+2, T+3
   };
 }
 
@@ -142,6 +143,8 @@ export function getUsableItems(
 
 /**
  * Create a heal-over-time buff from health potion
+ * TIMING MODEL: HoT ticks 5 times from next integer turn boundary
+ * Example: Used at T1.65 → Ticks at T2, T3, T4, T5, T6 (duration=6 to account for partial turn)
  */
 export function createHealthPotionBuff(buffId: string): CombatBuff {
   return {
@@ -149,7 +152,7 @@ export function createHealthPotionBuff(buffId: string): CombatBuff {
     name: 'Health Potion',
     stat: 'heal_over_time',
     amount: 10, // 10 HP per turn
-    duration: 5, // 5 turns
+    duration: 6, // 5 full ticks + 1 for partial turn
     type: 'heal_over_time',
   };
 }
@@ -232,7 +235,8 @@ export function applyDrainBuff(
 /**
  * Create or update Enduring Focus buff (Doran's Shield passive)
  * Heals 5% of damage taken over 3 turns
- * Each damage instance creates a new stacking buff that expires independently
+ * TIMING MODEL: Each damage instance creates a buff that ticks 3 times from next integer turn
+ * Example: Damaged at T1.65 → Ticks at T2, T3, T4 (duration=4 to account for partial turn)
  */
 export function applyEnduringFocusBuff(
   buffs: CombatBuff[],
@@ -250,7 +254,7 @@ export function applyEnduringFocusBuff(
       name: 'Enduring Focus',
       stat: 'heal_over_time',
       amount: healAmount,
-      duration: 3,
+      duration: 4, // 3 full ticks + 1 for partial turn
       type: 'heal_over_time',
     },
   ];

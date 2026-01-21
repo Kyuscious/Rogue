@@ -341,6 +341,36 @@
   border-color: rgba(255, 0, 100, 0.9);
 }
 
+/* Buff and Debuff Slot Styling */
+.buff-icon.buff-slot {
+  border-color: rgba(100, 200, 255, 0.6);
+  background: rgba(100, 200, 255, 0.15);
+  box-shadow: 0 0 8px rgba(100, 200, 255, 0.2);
+}
+
+.buff-icon.buff-slot:hover {
+  background: rgba(100, 200, 255, 0.3);
+  border-color: rgba(100, 200, 255, 0.9);
+  box-shadow: 0 0 12px rgba(100, 200, 255, 0.4);
+}
+
+.buff-icon.debuff-slot {
+  border-color: rgba(220, 38, 38, 0.7);
+  background: rgba(220, 38, 38, 0.2);
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.3);
+}
+
+.buff-icon.debuff-slot:hover {
+  background: rgba(220, 38, 38, 0.35);
+  border-color: rgba(220, 38, 38, 1);
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.5);
+  transform: scale(1.15);
+}
+
+.buff-icon.debuff-slot .buff-emoji {
+  filter: brightness(1.2);
+}
+
 .buff-emoji {
   font-size: 18px;
 }
