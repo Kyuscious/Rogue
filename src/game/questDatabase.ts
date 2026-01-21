@@ -37,82 +37,82 @@ export interface Quest {
 }
 
 // Use the actual quest paths from regions
-const DEMACIA_QUESTS: Quest[] = DEMACIA_QUEST_PATHS.map(quest => ({
+const DEMACIA_QUESTS: Quest[] = DEMACIA_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'demacia' as Region,
 }));
 
-const IONIA_QUESTS: Quest[] = IONIA_QUEST_PATHS.map(quest => ({
+const IONIA_QUESTS: Quest[] = IONIA_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'ionia' as Region,
 }));
 
-const SHURIMA_QUESTS: Quest[] = SHURIMA_QUEST_PATHS.map(quest => ({
+const SHURIMA_QUESTS: Quest[] = SHURIMA_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'shurima' as Region,
 }));
 
-const NOXUS_QUESTS: Quest[] = NOXUS_QUEST_PATHS.map(quest => ({
+const NOXUS_QUESTS: Quest[] = NOXUS_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'noxus' as Region,
 }));
 
-const FRELJORD_QUESTS: Quest[] = FRELJORD_QUEST_PATHS.map(quest => ({
+const FRELJORD_QUESTS: Quest[] = FRELJORD_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'freljord' as Region,
 }));
 
-const ZAUN_QUESTS: Quest[] = ZAUN_QUEST_PATHS.map(quest => ({
+const ZAUN_QUESTS: Quest[] = ZAUN_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'zaun' as Region,
 }));
 
-const IXTAL_QUESTS: Quest[] = IXTAL_QUEST_PATHS.map(quest => ({
+const IXTAL_QUESTS: Quest[] = IXTAL_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'ixtal' as Region,
 }));
 
-const BANDLE_CITY_QUESTS: Quest[] = BANDLE_CITY_QUEST_PATHS.map(quest => ({
+const BANDLE_CITY_QUESTS: Quest[] = BANDLE_CITY_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'bandle_city' as Region,
 }));
 
-const BILGEWATER_QUESTS: Quest[] = BILGEWATER_QUEST_PATHS.map(quest => ({
+const BILGEWATER_QUESTS: Quest[] = BILGEWATER_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'bilgewater' as Region,
 }));
 
-const PILTOVER_QUESTS: Quest[] = PILTOVER_QUEST_PATHS.map(quest => ({
+const PILTOVER_QUESTS: Quest[] = PILTOVER_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'piltover' as Region,
 }));
 
-const SHADOW_ISLES_QUESTS: Quest[] = SHADOW_ISLES_QUEST_PATHS.map(quest => ({
+const SHADOW_ISLES_QUESTS: Quest[] = SHADOW_ISLES_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'shadow_isles' as Region,
 }));
 
-const VOID_QUESTS: Quest[] = VOID_QUEST_PATHS.map(quest => ({
+const VOID_QUESTS: Quest[] = VOID_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'void' as Region,
 }));
 
-const TARGON_QUESTS: Quest[] = TARGON_QUEST_PATHS.map(quest => ({
+const TARGON_QUESTS: Quest[] = TARGON_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'targon' as Region,
 }));
 
-const CAMAVOR_QUESTS: Quest[] = CAMAVOR_QUEST_PATHS.map(quest => ({
+const CAMAVOR_QUESTS: Quest[] = CAMAVOR_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'camavor' as Region,
 }));
 
-const MARAI_QUESTS: Quest[] = MARAI_QUEST_PATHS.map(quest => ({
+const MARAI_QUESTS: Quest[] = MARAI_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'marai_territory' as Region,
 }));
 
-const ICE_SEA_QUESTS: Quest[] = ICE_SEA_QUEST_PATHS.map(quest => ({
+const ICE_SEA_QUESTS: Quest[] = ICE_SEA_QUEST_PATHS.map((quest): Quest => ({
   ...quest,
   region: 'ice_sea' as Region,
 }));
