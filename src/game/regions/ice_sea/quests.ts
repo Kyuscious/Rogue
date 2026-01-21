@@ -1,12 +1,7 @@
 import { ICE_SEA_MINIONS, ICE_SEA_ELITES, ICE_SEA_BOSSES } from './enemies';
-import type { QuestPath } from '../../questDatabase';
 
-export const ICE_SEA_QUEST_PATHS: Array<{
-  id: string;
-  name: string;
-  flavor: string;
-  paths: QuestPath[];
-}> = [
+export const ICE_SEA_QUEST_PATHS= [
+
   {
     id: 'ice_sea_path_1',
     name: 'Frozen Wastes',

@@ -137,7 +137,7 @@ export function getRegionDisplayName(region: Region): string {
     targon: 'Mount Targon',
     camavor: 'Camavor',
     ice_sea: 'Ice Sea',
-    marai_territory: 'Marai',
+    marai_territory: 'Marai Territory',
   };
   return names[region] || region;
 }

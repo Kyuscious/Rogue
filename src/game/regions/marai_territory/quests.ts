@@ -1,13 +1,7 @@
 import { MARAI_MINIONS, MARAI_ELITES, MARAI_BOSSES } from './enemies';
-import type { QuestPath } from '../../questDatabase';
 
-export const MARAI_QUEST_PATHS: Array<{
-  id: string;
-  name: string;
-  flavor: string;
-  paths: QuestPath[];
-}> = [
-  {
+export const MARAI_QUEST_PATHS= [ 
+{
     id: 'marai_path_1',
     name: 'Depths of Marai',
     flavor: 'Venture into the mysterious underwater realm of Marai',
