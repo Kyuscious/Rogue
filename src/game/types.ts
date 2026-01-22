@@ -20,6 +20,15 @@ export type Region =
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 
+export interface StatusEffect {
+  id: string;
+  name: string;
+  type: 'buff' | 'debuff';
+  duration: number; // turns remaining
+  description: string;
+  modifiers?: Partial<CharacterStats>;
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -35,6 +44,8 @@ export interface Character {
   experience: number;
   stats: CharacterStats;
   inventory?: InventoryItem[]; // Optional inventory for displaying equipped items
+  effects?: StatusEffect[]; // Active buffs and debuffs
+  gold?: number; // Gold earned/available
 }
 
 export interface Ability {
