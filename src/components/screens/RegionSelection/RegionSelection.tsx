@@ -232,7 +232,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
           <button
             className="proceed-button"
             onClick={handleProceed}
-            disabled={selectedDestination === null || (state.completedRegion && selectedAction === null)}
+            disabled={selectedDestination === null || (!!state.completedRegion && selectedAction === null)}
           >
             {state.completedRegion 
               ? `Proceed to ${selectedDestination ? getRegionDisplayName(selectedDestination) : '...'}`
