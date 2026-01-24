@@ -61,6 +61,11 @@ export function getRandomEventForRegion(region: Region): RegionEvent | undefined
   return events[Math.floor(Math.random() * events.length)];
 }
 
+export function hasRegionEvents(region: Region): boolean {
+  const events = REGION_EVENTS[region] || [];
+  return events.length > 0;
+}
+
 export function registerRegionEvents(region: Region, events: RegionEvent[]): void {
   REGION_EVENTS[region] = events;
 }

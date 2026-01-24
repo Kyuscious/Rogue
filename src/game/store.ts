@@ -15,9 +15,9 @@ import { AudioSettings, audioManager } from './audioManager';
  * TODO: Implement Region Revisit Penalty System
  * 
  * When a region is visited multiple times in a run:
- * - 2nd visit: +30% enemy stats, +2 levels, +1 item, 50% gold, 60% drops, 70% XP
- * - 3rd visit: +60% enemy stats, +4 levels, +2 items, 25% gold, 30% drops, 40% XP
- * - 4+ visits: +100% enemy stats, +6 levels, max items, 10% gold/drops, 20% XP
+ * - 2nd visit: +2 levels, +1 item, 50% gold, 60% drops, 70% XP
+ * - 3rd visit: +4 levels, +2 items, 25% gold, 30% drops, 40% XP
+ * - 4+ visits: +6 - 8 - 10 levels, max items, 10% gold/drops, 20% XP
  * 
  * Implementation:
  * 1. Count occurrences of current region in visitedRegionsThisRun
@@ -82,6 +82,7 @@ export interface GameStoreState {
     // Post-Region Choice System
     showPostRegionChoice: boolean; // Show post-region choice UI after completing region
     completedRegion: Region | null; // Region just completed (for random events)
+    postRegionChoiceComplete: boolean; // Flag set to true when user makes a choice, App.tsx watches this
     // Language/Settings
     currentLanguage: Language; // Current selected language
     showSettings: boolean; // Show settings modal
@@ -129,6 +130,11 @@ export interface GameStoreState {
   removeWeapon: (index: number) => void; // Remove weapon from collection
   removeSpell: (index: number) => void; // Remove spell from collection
   // Post-Region Choice methods
+  setCompletedRegion: (region: Region) => void; // Set completed region for travel actions
+  showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
+  hidePostRegionChoiceScreen: () => void; // Hide post-region choice UI
+  applyRestChoice: () => void; // Rest and heal to full HP
+  clearPostRegionCompletion: () => void; // Clear completion flag after navigation
   // Language/Settings methods
   setLanguage: (language: Language) => void; // Change language
   toggleSettings: () => void; // Show/hide settings modal
@@ -141,9 +147,6 @@ export interface GameStoreState {
   toggleMusicVolume: () => void;
   setVoiceVolume: (volume: number) => void;
   toggleVoiceVolume: () => void;
-  showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
-  hidePostRegionChoiceScreen: () => void; // Hide post-region choice UI
-  applyRestChoice: () => void; // Rest and heal to full HP
 }
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -192,6 +195,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     // Post-Region Choice System
     showPostRegionChoice: false,
     completedRegion: null,
+    postRegionChoiceComplete: false,
   },
 
   setUsername: (username: string) =>
@@ -562,12 +566,13 @@ export const useGameStore = create<GameStoreState>((set) => ({
           maxAbilityPowerReached: 0,
           persistentBuffs: [],
           encountersCompleted: 0,
-          weapons: [],
-          spells: ['test_spell', 'wish'],
+          weapons: ['test_weapon'], // Reset to default starter weapon
+          spells: ['test_spell'], // Reset to default starter spells
           equippedWeaponIndex: 0,
           equippedSpellIndex: 0,
           spellCooldowns: {},
           showPostRegionChoice: false,
+          postRegionChoiceComplete: false,
           completedRegion: null,
           currentLanguage: store.state.currentLanguage, // Persist language
           showSettings: false,
@@ -1082,6 +1087,14 @@ export const useGameStore = create<GameStoreState>((set) => ({
     }),
 
   // Post-Region Choice Methods
+  setCompletedRegion: (region: Region) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        completedRegion: region,
+      },
+    })),
+
   showPostRegionChoiceScreen: (region: Region) =>
     set((store) => ({
       state: {
@@ -1096,6 +1109,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
       state: {
         ...store.state,
         showPostRegionChoice: false,
+        postRegionChoiceComplete: true, // Signal that user made a choice
         completedRegion: null,
       },
     })),
@@ -1110,11 +1124,20 @@ export const useGameStore = create<GameStoreState>((set) => ({
             ...store.state.playerCharacter,
             hp: maxHp,
           },
+          postRegionChoiceComplete: true, // Signal that user made a choice
           showPostRegionChoice: false,
-          completedRegion: null,
+          // Don't clear completedRegion - let it persist until region selection is complete
         },
       };
     }),
+
+  clearPostRegionCompletion: () =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        postRegionChoiceComplete: false,
+      },
+    })),
 
   // Language/Settings methods
   setLanguage: (language: Language) =>

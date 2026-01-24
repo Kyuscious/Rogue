@@ -105,7 +105,7 @@ const formatSpellEffects = (spell: any) => {
 export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   const store = useGameStore();
   const state = store.state;
-  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, showPostRegionChoiceScreen } = store;
+  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion } = store;
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
@@ -319,8 +319,19 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       }, 500);
     } else {
       // No more enemies - check if quest is complete
-      if (state.currentFloor >= 10) {
-        // Quest complete! Trigger region selection
+      if (state.currentFloor >= 10 && state.selectedRegion) {
+        // Region complete! Mark it and navigate to region selection with actions
+        console.log('🎉 Region complete (after reward) - setting completedRegion to:', state.selectedRegion);
+        setCompletedRegion(state.selectedRegion); // Mark region as completed
+        // Use setTimeout to ensure state update propagates before navigation
+        if (onQuestComplete) {
+          setTimeout(() => {
+            console.log('🚀 Navigating to region selection after state update (from reward)');
+            onQuestComplete();
+          }, 50);
+        }
+      } else if (state.currentFloor >= 10) {
+        // Quest complete but no region (shouldn't happen) - just navigate
         if (onQuestComplete) {
           onQuestComplete();
         }
@@ -1186,13 +1197,19 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         console.log('🏁 No more enemies - quest complete or returning');
         // All encounters complete - check if we should show post-region choice
         if (state.currentFloor >= 10 && state.selectedRegion) {
-          // Region complete! Show post-region choice
-          console.log('🎉 Region complete - showing post-region choice');
-          showPostRegionChoiceScreen(state.selectedRegion);
-          // Quest completion will be triggered after post-region choice
+          // Region complete! Mark it and navigate to region selection with actions
+          console.log('🎉 Region complete - setting completedRegion to:', state.selectedRegion);
+          setCompletedRegion(state.selectedRegion); // Mark region as completed
+          // Use setTimeout to ensure state update propagates before navigation
           if (onQuestComplete) {
-            onQuestComplete();
+            setTimeout(() => {
+              console.log('🚀 Navigating to region selection after state update');
+              onQuestComplete(); // This will navigate to regionSelection via App.tsx
+            }, 50);
           }
+        } else if (onQuestComplete) {
+          // Normal quest completion (less than 10 floors)
+          onQuestComplete();
         } else if (onBack) {
           onBack();
         } else {

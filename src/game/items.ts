@@ -707,12 +707,16 @@ export function getRandomItemsForEnemy(
   
   if (classItems.length === 0) return [];
   
+  // Exclude starter items (dorans items, cull, world_atlas, dark_seal) from enemy loot
+  const starterItemIds = ['dorans_blade', 'dorans_shield', 'dorans_ring', 'cull', 'world_atlas', 'dark_seal'];
+  const nonStarterItems = classItems.filter(item => !starterItemIds.includes(item.id));
+  
   // Filter by allowed rarities based on progression
   const allowedRarities = getAllowedRaritiesForEnemies(regionTier, encounterCount);
-  const availableItems = classItems.filter(item => allowedRarities.includes(item.rarity));
+  const availableItems = nonStarterItems.filter(item => allowedRarities.includes(item.rarity));
   
-  // Fallback to class items if no items match the rarity filter
-  const itemPool = availableItems.length > 0 ? availableItems : classItems;
+  // Fallback to non-starter items if no items match the rarity filter
+  const itemPool = availableItems.length > 0 ? availableItems : nonStarterItems;
   
   // Determine number of items based on encounter count and region tier
   let itemCount = 1;
