@@ -87,7 +87,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
 
     // Clear completedRegion flag now that we're proceeding
     if (state.completedRegion) {
-      store.setCompletedRegion(null as any);
+      store.setCompletedRegion(null);
     }
 
     // Then navigate to selected destination

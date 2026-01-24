@@ -130,7 +130,7 @@ export interface GameStoreState {
   removeWeapon: (index: number) => void; // Remove weapon from collection
   removeSpell: (index: number) => void; // Remove spell from collection
   // Post-Region Choice methods
-  setCompletedRegion: (region: Region) => void; // Set completed region for travel actions
+  setCompletedRegion: (region: Region | null) => void; // Set completed region for travel actions
   showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
   hidePostRegionChoiceScreen: () => void; // Hide post-region choice UI
   applyRestChoice: () => void; // Rest and heal to full HP
@@ -1087,7 +1087,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     }),
 
   // Post-Region Choice Methods
-  setCompletedRegion: (region: Region) =>
+  setCompletedRegion: (region: Region | null) =>
     set((store) => ({
       state: {
         ...store.state,
