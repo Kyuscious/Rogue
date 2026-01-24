@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import { Character, InventoryItem, Region } from './types';
-import { DEFAULT_STATS, getScaledStats } from './statsSystem';
-import { STARTING_ITEMS, ITEM_DATABASE, getRandomShopItemByAct, getRandomItemsForEnemy } from './items';
-import { checkLevelUp, getLevelUpStatBoosts, calculateEnemyLevel } from './experienceSystem';
+import { DEFAULT_STATS } from './statsSystem';
+import { STARTING_ITEMS, ITEM_DATABASE, getRandomShopItemByAct } from './items';
+import { checkLevelUp, getLevelUpStatBoosts } from './experienceSystem';
 import { incrementBattlesWon, incrementRunsFailed, discoverItem, discoverConnection, getActiveProfileId, visitRegion, unlockItem } from './profileSystem';
 import { REGION_SHOP_POOLS } from './rewardPool';
 import { CombatBuff } from './itemSystem';
-import { getRegionTier } from './regionGraph';
+import { spawnEnemies, deepCopyEnemies } from './battle/enemySpawning';
+import { calculatePlayerMaxHp, applyItemToPlayer, removeItemFromPlayer, applyLevelUp } from './battle/playerStats';
+import { Language } from '../i18n';
+import { AudioSettings, audioManager } from './audioManager';
 
 /**
  * TODO: Implement Region Revisit Penalty System
@@ -50,6 +53,7 @@ export interface GameStoreState {
   state: {
     playerCharacter: Character;
     enemyCharacters: Character[];
+    originalEnemyQueue: Character[]; // Unprocessed original enemies for future encounters
     inventory: InventoryItem[];
     gold: number;
     rerolls: number; // Global reroll currency for the entire run
@@ -75,6 +79,13 @@ export interface GameStoreState {
     equippedWeaponIndex: number; // Index of currently equipped weapon (0-2)
     equippedSpellIndex: number; // Index of currently equipped spell (0-4)
     spellCooldowns: Record<string, number>; // Spell ID -> turns remaining until usable
+    // Post-Region Choice System
+    showPostRegionChoice: boolean; // Show post-region choice UI after completing region
+    completedRegion: Region | null; // Region just completed (for random events)
+    // Language/Settings
+    currentLanguage: Language; // Current selected language
+    showSettings: boolean; // Show settings modal
+    audioSettings: AudioSettings; // Audio volume settings
   };
   selectRegion: (region: Region) => void;
   selectStartingItem: (itemId: string) => void;
@@ -117,12 +128,29 @@ export interface GameStoreState {
   addSpell: (spellId: string) => void; // Add spell to collection (max 5)
   removeWeapon: (index: number) => void; // Remove weapon from collection
   removeSpell: (index: number) => void; // Remove spell from collection
+  // Post-Region Choice methods
+  // Language/Settings methods
+  setLanguage: (language: Language) => void; // Change language
+  toggleSettings: () => void; // Show/hide settings modal
+  // Audio methods
+  setMasterVolume: (volume: number) => void;
+  toggleMasterVolume: () => void;
+  setSfxVolume: (volume: number) => void;
+  toggleSfxVolume: () => void;
+  setMusicVolume: (volume: number) => void;
+  toggleMusicVolume: () => void;
+  setVoiceVolume: (volume: number) => void;
+  toggleVoiceVolume: () => void;
+  showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
+  hidePostRegionChoiceScreen: () => void; // Hide post-region choice UI
+  applyRestChoice: () => void; // Rest and heal to full HP
 }
 
 export const useGameStore = create<GameStoreState>((set) => ({
   state: {
     playerCharacter: DEFAULT_PLAYER,
     enemyCharacters: [],
+    originalEnemyQueue: [],
     inventory: [],
     gold: 0,
     rerolls: 5, // Start with 5 rerolls per run
@@ -148,6 +176,22 @@ export const useGameStore = create<GameStoreState>((set) => ({
     equippedWeaponIndex: 0, // First weapon equipped
     equippedSpellIndex: 0, // First spell equipped
     spellCooldowns: {}, // Track spell cooldowns
+    // Language/Settings
+    currentLanguage: 'en',
+    showSettings: false,
+    audioSettings: {
+      masterVolume: 70,
+      masterEnabled: true,
+      sfxVolume: 80,
+      sfxEnabled: true,
+      musicVolume: 60,
+      musicEnabled: true,
+      voiceVolume: 75,
+      voiceEnabled: true,
+    },
+    // Post-Region Choice System
+    showPostRegionChoice: false,
+    completedRegion: null,
   },
 
   setUsername: (username: string) =>
@@ -196,30 +240,22 @@ export const useGameStore = create<GameStoreState>((set) => ({
       if (item.id === 'dorans_ring') characterClass = 'mage';
       if (item.id === 'dorans_shield') characterClass = 'vanguard';
       if (item.id === 'dorans_blade') characterClass = 'juggernaut';
-      if (item.id === 'world_atlas') characterClass = 'juggernaut'; // Default class for atlas
+      if (item.id === 'world_atlas') characterClass = 'juggernaut';
 
       // Set rerolls: 10 for world_atlas, 5 for others
       const initialRerolls = item.id === 'world_atlas' ? 10 : 5;
 
-      // Create new stats with item bonuses applied - apply ALL item stats dynamically
-      const newStats = { ...store.state.playerCharacter.stats };
-      (Object.keys(item.stats) as Array<keyof typeof item.stats>).forEach(stat => {
-        const itemValue = item.stats[stat];
-        if (itemValue && typeof itemValue === 'number') {
-          (newStats[stat] as number) = ((newStats[stat] as number) || 0) + itemValue;
-        }
-      });
-
-      // Apply item stats to player character
-      const updatedCharacter = {
+      // Update character class
+      let updatedCharacter: Character = {
         ...store.state.playerCharacter,
         class: characterClass,
-        stats: newStats,
       };
       
-      // Set current hp to the new max hp (base + item bonuses + class bonuses)
-      const scaledStats = getScaledStats(newStats, 1, characterClass);
-      const currentMaxHp = scaledStats.health;
+      // Apply starting item stats
+      updatedCharacter = applyItemToPlayer(updatedCharacter, itemId);
+      
+      // Calculate max HP with class bonuses (no level multiplier)
+      const currentMaxHp = calculatePlayerMaxHp(updatedCharacter);
 
       return {
         state: {
@@ -282,8 +318,16 @@ export const useGameStore = create<GameStoreState>((set) => ({
         if (cooldown > 1) {
           updatedCooldowns[spellId] = cooldown - 1;
         }
-        // If cooldown is 1, it will be removed (spell is ready)
       }
+      
+      // Use battle system to spawn and scale enemies
+      const currentRegion = store.state.selectedRegion || 'demacia';
+      const spawnedEnemies = spawnEnemies(
+        enemies,
+        newFloor,
+        store.state.encountersCompleted,
+        currentRegion
+      );
       
       return {
         state: {
@@ -291,48 +335,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
           currentFloor: newFloor,
           spellCooldowns: updatedCooldowns,
           playerCharacter: store.state.playerCharacter,
-          enemyCharacters: enemies.map((enemy) => {
-            // Scale enemy level based on floor progression
-            const enemyLevel = calculateEnemyLevel(newFloor, enemy.tier || 'minion');
-            
-            // Determine region tier for item scaling
-            const currentRegion = store.state.selectedRegion || 'demacia';
-            const regionTier = getRegionTier(currentRegion);
-            
-            // Give enemies items based on their class, encounter count, and region tier
-            const enemyItems = getRandomItemsForEnemy(
-              enemy.class, 
-              store.state.encountersCompleted + 1,
-              regionTier
-            );
-            
-            // Apply item stats to enemy base stats
-            const statsWithItems = { ...enemy.stats };
-            enemyItems.forEach(item => {
-              Object.entries(item.stats).forEach(([stat, value]) => {
-                if (typeof value === 'number') {
-                  (statsWithItems as any)[stat] = ((statsWithItems as any)[stat] || 0) + value;
-                }
-              });
-            });
-            
-            // Scale stats with level
-            const scaledStats = getScaledStats(statsWithItems, enemyLevel, enemy.class);
-            
-            // Convert items to inventory format for display
-            const inventory = enemyItems.map(item => ({
-              itemId: item.id,
-              quantity: 1
-            }));
-            
-            return {
-              ...enemy,
-              level: enemyLevel,
-              hp: scaledStats.health,
-              stats: scaledStats,
-              inventory, // Add items for visual display
-            };
-          }),
+          originalEnemyQueue: deepCopyEnemies(enemies),
+          enemyCharacters: spawnedEnemies,
         },
       };
     }),
@@ -397,25 +401,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
         discoverItem(item.itemId);
       }
       
-      // Apply item stats to player character - apply ALL item stats dynamically
-      const updatedStats = { ...store.state.playerCharacter.stats };
-      (Object.keys(itemData.stats) as Array<keyof typeof itemData.stats>).forEach(stat => {
-        const itemValue = itemData.stats[stat];
-        if (itemValue && typeof itemValue === 'number') {
-          (updatedStats[stat] as number) = ((updatedStats[stat] as number) || 0) + itemValue;
-        }
-      });
-
-      const updatedCharacter = {
-        ...store.state.playerCharacter,
-        stats: updatedStats,
-      };
-
-      // Preserve current HP when adding items - don't reset to max
-      const newPlayerCharacter = {
-        ...updatedCharacter,
-        hp: store.state.playerCharacter.hp,
-      };
+      // Apply item using battle system
+      const updatedCharacter = applyItemToPlayer(store.state.playerCharacter, item.itemId);
 
       const updatedInventory = existing
         ? store.state.inventory.map((i) =>
@@ -426,7 +413,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
       return {
         state: {
           ...store.state,
-          playerCharacter: newPlayerCharacter,
+          playerCharacter: updatedCharacter,
           inventory: updatedInventory,
         },
       };
@@ -438,22 +425,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
       if (!itemData) return store;
 
       const existing = store.state.inventory.find((i) => i.itemId === itemId);
-      if (!existing) return store; // Item not in inventory
+      if (!existing) return store;
 
-      // Remove item stats from player character
-      const updatedStats = { ...store.state.playerCharacter.stats };
-      (Object.keys(itemData.stats) as Array<keyof typeof itemData.stats>).forEach(stat => {
-        const itemValue = itemData.stats[stat];
-        if (itemValue && typeof itemValue === 'number') {
-          (updatedStats[stat] as number) = Math.max(0, ((updatedStats[stat] as number) || 0) - itemValue);
-        }
-      });
-
-      const updatedCharacter = {
-        ...store.state.playerCharacter,
-        stats: updatedStats,
-        hp: store.state.playerCharacter.hp, // Preserve current HP
-      };
+      // Remove item using battle system
+      const updatedCharacter = removeItemFromPlayer(store.state.playerCharacter, itemId);
 
       // Remove item from inventory
       const updatedInventory = store.state.inventory.filter((i) => i.itemId !== itemId);
@@ -497,41 +472,22 @@ export const useGameStore = create<GameStoreState>((set) => ({
       const levelUpResult = checkLevelUp(currentExp, currentLevel);
       
       if (levelUpResult) {
-        // Player leveled up!
         const { newLevel, remainingExp } = levelUpResult;
-        const levelsGained = newLevel - currentLevel;
-        
-        // Get stat boosts per level
         const statBoosts = getLevelUpStatBoosts();
         
-        // Apply stat increases for each level gained
-        const newStats = {
-          ...store.state.playerCharacter.stats,
-          health: store.state.playerCharacter.stats.health + (statBoosts.health * levelsGained),
-          attackDamage: store.state.playerCharacter.stats.attackDamage + (statBoosts.attackDamage * levelsGained),
-          abilityPower: store.state.playerCharacter.stats.abilityPower + (statBoosts.abilityPower * levelsGained),
-          armor: store.state.playerCharacter.stats.armor + (statBoosts.armor * levelsGained),
-          magicResist: store.state.playerCharacter.stats.magicResist + (statBoosts.magicResist * levelsGained),
-        };
-        
-        // Calculate new max HP with class bonuses
-        const oldMaxHp = getScaledStats(store.state.playerCharacter.stats, currentLevel, store.state.playerCharacter.class, []).health;
-        const scaledStats = getScaledStats(newStats, newLevel, store.state.playerCharacter.class, []);
-        const newMaxHp = scaledStats.health;
-        
-        // Calculate HP difference from stat/level increases
-        const hpIncrease = newMaxHp - oldMaxHp;
-        const newHp = Math.min(store.state.playerCharacter.hp + hpIncrease, newMaxHp);
+        // Apply level up using battle system (no 5% multiplier, only class bonuses)
+        const updatedCharacter = applyLevelUp(
+          store.state.playerCharacter,
+          newLevel,
+          statBoosts
+        );
         
         return {
           state: {
             ...store.state,
             playerCharacter: {
-              ...store.state.playerCharacter,
-              level: newLevel,
+              ...updatedCharacter,
               experience: remainingExp,
-              stats: newStats,
-              hp: newHp, // Only heal by the HP increase amount
             },
           },
         };
@@ -551,8 +507,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   updatePlayerHp: (newHp: number) =>
     set((store) => {
-      const scaledStats = getScaledStats(store.state.playerCharacter.stats, store.state.playerCharacter.level, store.state.playerCharacter.class);
-      const maxHp = scaledStats.health;
+      const maxHp = calculatePlayerMaxHp(store.state.playerCharacter);
       return {
         state: {
           ...store.state,
@@ -591,34 +546,35 @@ export const useGameStore = create<GameStoreState>((set) => ({
         state: {
           playerCharacter: DEFAULT_PLAYER,
           enemyCharacters: [],
+          originalEnemyQueue: [],
           inventory: [],
           gold: 0,
-          rerolls: 5, // Start each run with 5 rerolls
+          rerolls: 5,
           selectedRegion: null,
           currentFloor: 0,
           selectedStartingItem: null,
           selectedQuest: null,
           username: 'Summoner',
-          // Reset region traversal
           visitedRegionsThisRun: [],
           originalStartingRegion: null,
-          // Reset shop state
-        shopInventory: [],
-        lastShopFloor: -1,
-        // Reset run stats
-        maxAbilityPowerReached: 0,
-        // Reset persistent buffs
-        persistentBuffs: [],
-        encountersCompleted: 0,
-        // Reset weapons & spells to starter equipment
-        weapons: [],
-        spells: ['test_spell', 'wish'],
-        equippedWeaponIndex: 0,
-        equippedSpellIndex: 0,
-        spellCooldowns: {},
-      },
-    };
-  }),
+          shopInventory: [],
+          lastShopFloor: -1,
+          maxAbilityPowerReached: 0,
+          persistentBuffs: [],
+          encountersCompleted: 0,
+          weapons: [],
+          spells: ['test_spell', 'wish'],
+          equippedWeaponIndex: 0,
+          equippedSpellIndex: 0,
+          spellCooldowns: {},
+          showPostRegionChoice: false,
+          completedRegion: null,
+          currentLanguage: store.state.currentLanguage, // Persist language
+          showSettings: false,
+          audioSettings: store.state.audioSettings, // Persist audio settings
+        },
+      };
+    }),
 
   // Travel from one region to another
   travelToRegion: (fromRegion: Region, toRegion: Region) =>
@@ -1121,6 +1077,155 @@ export const useGameStore = create<GameStoreState>((set) => ({
           ...store.state,
           spells: newSpells,
           equippedSpellIndex: newEquippedIndex,
+        },
+      };
+    }),
+
+  // Post-Region Choice Methods
+  showPostRegionChoiceScreen: (region: Region) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        showPostRegionChoice: true,
+        completedRegion: region,
+      },
+    })),
+
+  hidePostRegionChoiceScreen: () =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        showPostRegionChoice: false,
+        completedRegion: null,
+      },
+    })),
+
+  applyRestChoice: () =>
+    set((store) => {
+      const maxHp = calculatePlayerMaxHp(store.state.playerCharacter);
+      return {
+        state: {
+          ...store.state,
+          playerCharacter: {
+            ...store.state.playerCharacter,
+            hp: maxHp,
+          },
+          showPostRegionChoice: false,
+          completedRegion: null,
+        },
+      };
+    }),
+
+  // Language/Settings methods
+  setLanguage: (language: Language) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        currentLanguage: language,
+      },
+    })),
+
+  toggleSettings: () =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        showSettings: !store.state.showSettings,
+      },
+    })),
+
+  // Audio methods
+  setMasterVolume: (volume: number) =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, masterVolume: volume };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
+        },
+      };
+    }),
+
+  toggleMasterVolume: () =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, masterEnabled: !store.state.audioSettings.masterEnabled };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
+        },
+      };
+    }),
+
+  setSfxVolume: (volume: number) =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, sfxVolume: volume };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
+        },
+      };
+    }),
+
+  toggleSfxVolume: () =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, sfxEnabled: !store.state.audioSettings.sfxEnabled };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
+        },
+      };
+    }),
+
+  setMusicVolume: (volume: number) =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, musicVolume: volume };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
+        },
+      };
+    }),
+
+  toggleMusicVolume: () =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, musicEnabled: !store.state.audioSettings.musicEnabled };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
+        },
+      };
+    }),
+
+  setVoiceVolume: (volume: number) =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, voiceVolume: volume };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
+        },
+      };
+    }),
+
+  toggleVoiceVolume: () =>
+    set((store) => {
+      const newSettings = { ...store.state.audioSettings, voiceEnabled: !store.state.audioSettings.voiceEnabled };
+      audioManager.updateSettings(newSettings);
+      return {
+        state: {
+          ...store.state,
+          audioSettings: newSettings,
         },
       };
     }),

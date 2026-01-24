@@ -19,8 +19,11 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character }) => {
     ? getPassiveIdsFromInventory(state.inventory)
     : [];
 
-  // Get scaled stats with class bonuses and passives applied
-  const scaledStats = getScaledStats(character.stats, character.level, character.class, passiveIds);
+  // For enemies, stats are already fully scaled at spawn (includes items + class bonuses)
+  // For players, we need to calculate scaled stats with class bonuses and passives
+  const scaledStats = character.role === 'enemy'
+    ? character.stats
+    : getScaledStats(character.stats, character.level, character.class, passiveIds);
   const stats = scaledStats as Partial<CharacterStats> | undefined;
 
   // Survivability stats

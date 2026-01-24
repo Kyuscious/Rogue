@@ -206,6 +206,7 @@ export function getClassStatBonuses(
 /**
  * Get scaled stats for a character based on level and class
  * Now includes passive item effects
+ * NOTE: Does NOT apply 5% per level multiplier - only class bonuses scale with level
  */
 export function getScaledStats(
   baseStats: CharacterStats,
@@ -217,18 +218,10 @@ export function getScaledStats(
   const decimalStats = ['attackSpeed', 'lifeSteal', 'spellVamp', 'omnivamp', 'tenacity', 'goldGain', 'xpGain', 'criticalChance', 'criticalDamage', 'abilityHaste', 'health_regen', 'heal_shield_power', 'magicFind'];
   const classBonuses = getClassStatBonuses(characterClass, level);
   
-  // Apply level scaling (each level adds ~5% to most stats)
-  const levelMultiplier = 1 + (level - 1) * 0.05;
+  // NO LONGER APPLY 5% LEVEL MULTIPLIER - This was causing exponential stat growth
+  // Stats now scale ONLY through class bonuses (e.g., Marksman gets +1.7 AD per level)
   
-  // First apply level scaling to all base stats
-  (Object.keys(baseStats) as Array<keyof CharacterStats>).forEach((stat) => {
-    const scaledValue = baseStats[stat] * levelMultiplier;
-    scaledStats[stat as keyof CharacterStats] = decimalStats.includes(stat) 
-      ? parseFloat(scaledValue.toFixed(2)) 
-      : Math.round(scaledValue);
-  });
-  
-  // Then add class bonuses on top
+  // Add class bonuses directly to base stats
   (Object.keys(classBonuses) as Array<keyof CharacterStats>).forEach((stat) => {
     const bonus = classBonuses[stat] || 0;
     const currentValue = scaledStats[stat as keyof CharacterStats] || 0;

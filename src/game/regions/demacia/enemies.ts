@@ -20,6 +20,7 @@ export const DEMACIA_MINIONS: Character[] = [
       ...DEFAULT_STATS,
       health: 55,
       attackDamage: 8,
+      abilityPower: 6,
       armor: 5,
       attackSpeed: 0.6,
     },
@@ -44,6 +45,7 @@ export const DEMACIA_MINIONS: Character[] = [
       ...DEFAULT_STATS,
       health: 45,
       attackDamage: 10,
+      abilityPower: 4,
       movementSpeed: 150,
       attackSpeed: 0.8,
     },
@@ -63,6 +65,7 @@ export const DEMACIA_MINIONS: Character[] = [
     stats: {
       ...DEFAULT_STATS,
       health: 75,
+      abilityPower: 10,
       attackDamage: 10,
       armor: 10,
       magicResist: 5,
@@ -260,7 +263,16 @@ export const DEMACIA_LEGENDS: Character[] = [
 
 export function getDemaciaEnemyById(id: string): Character | undefined {
   const allEnemies = [...DEMACIA_MINIONS, ...DEMACIA_ELITES, ...DEMACIA_CHAMPIONS, ...DEMACIA_BOSSES];
-  return allEnemies.find((enemy) => enemy.id === id);
+  const enemy = allEnemies.find((e) => e.id === id);
+  
+  // Return a deep copy to prevent mutation of the original enemy object
+  if (!enemy) return undefined;
+  return {
+    ...enemy,
+    stats: { ...enemy.stats },
+    abilities: [...enemy.abilities],
+    inventory: enemy.inventory ? [...enemy.inventory] : undefined,
+  };
 }
 
 export function getRandomDemaciaEnemy(tier: 'minion' | 'elite' | 'boss' | 'champion' | 'legend' ): Character {

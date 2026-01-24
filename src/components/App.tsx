@@ -13,6 +13,8 @@ import { QuestSelect } from './screens/QuestSelect/QuestSelect';
 import { Shop } from './screens/Shop/Shop';
 import { RegionSelection } from './screens/RegionSelection/RegionSelection';
 import { LoadingScreen } from './screens/LoadingScreen/LoadingScreen';
+import { PostRegionChoiceScreen } from './screens/PostRegionChoice/PostRegionChoice';
+import { SettingsScreen } from './screens/Settings/Settings';
 import { getQuestById } from '../game/questDatabase';
 import { resolveDemaciaEnemyId } from '../game/regions/demacia';
 import { getEnemyById } from '../game/regions/enemyResolver';
@@ -145,18 +147,6 @@ const ContinueRunModal: React.FC<ContinueRunModalProps> = ({ isOpen, onContinue,
 export const App: React.FC = () => {
   const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, saveRun, clearSavedRun, loadRun, setCurrentFloor } = useGameStore();
   
-  // Check if device is mobile
-  const [isMobile, setIsMobile] = useState(false);
-  
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(/iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-  
   // Check localStorage on mount to see if we should skip disclaimer
   const shouldSkipDisclaimer = typeof window !== 'undefined' && localStorage.getItem('skipDisclaimer') === 'true';
   const [scene, setScene] = useState<GameScene>(shouldSkipDisclaimer ? 'login' : 'disclaimer');
@@ -250,8 +240,7 @@ export const App: React.FC = () => {
   };
 
   const handleMainMenuOptions = () => {
-    // TODO: Implement options feature
-    console.log('Options feature coming soon!');
+    useGameStore.getState().toggleSettings();
   };
 
   const handlePreGameSetup = (region: string, itemId: string) => {
@@ -415,34 +404,6 @@ export const App: React.FC = () => {
     return <Disclaimer onAccept={handleDisclaimerAccept} />;
   }
 
-  if (isMobile) {
-    return (
-      <div className="game-wrapper" style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        backgroundColor: '#1a1a2e',
-        color: '#fff'
-      }}>
-        <div style={{
-          textAlign: 'center',
-          padding: '2rem',
-          maxWidth: '500px'
-        }}>
-          <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📱 Mobile Version Not Ready</h1>
-          <p style={{ fontSize: '1.2rem', lineHeight: '1.6' }}>
-            This game is currently optimized for <strong>desktop</strong> and <strong>tablet</strong> only.
-          </p>
-          <p style={{ fontSize: '1rem', marginTop: '2rem', opacity: 0.8 }}>
-            Please access Runeterrogue from a larger screen to enjoy the full experience!
-          </p>
-          <div style={{ marginTop: '2rem', fontSize: '3rem' }}>🖥️</div>
-        </div>
-      </div>
-    );
-  }
-
   if (scene === 'login') {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
@@ -466,6 +427,9 @@ export const App: React.FC = () => {
           onNewRun={handleStartNewRun}
           savedRunData={savedRunData}
         />
+        
+        {/* Settings Modal */}
+        <SettingsScreen />
       </div>
     );
   }
@@ -474,6 +438,7 @@ export const App: React.FC = () => {
     return (
       <div className="game-wrapper">
         <Profiles onBack={() => setScene('mainMenu')} />
+        <SettingsScreen />
       </div>
     );
   }
@@ -481,6 +446,7 @@ export const App: React.FC = () => {
     return (
       <div className="game-wrapper">
         <Index onBack={() => setScene('mainMenu')} />
+        <SettingsScreen />
       </div>
     );
   }
@@ -492,12 +458,18 @@ export const App: React.FC = () => {
           onTestMode={handleTestMode}
           onBack={() => setScene('mainMenu')}
         />
+        <SettingsScreen />
       </div>
     );
   }
 
   if (scene === 'preTestSetup') {
-    return <PreTestSetup onStartTestBattle={handleStartTestBattle} onBack={() => setScene('pregame')} />;
+    return (
+      <>
+        <PreTestSetup onStartTestBattle={handleStartTestBattle} onBack={() => setScene('pregame')} />
+        <SettingsScreen />
+      </>
+    );
   }
 
   if (scene === 'quest' && state.selectedRegion) {
@@ -523,9 +495,14 @@ export const App: React.FC = () => {
             <span>Gold: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
-          <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-            🔄 Reset
-          </button>
+          <div className="header-actions">
+            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+              ⚙️
+            </button>
+            <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
+              🔄 Reset
+            </button>
+          </div>
         </div>
 
         <div className="explore-screen quest-screen">
@@ -562,6 +539,9 @@ export const App: React.FC = () => {
           onConfirm={handleResetConfirm} 
           onCancel={handleResetCancel} 
         />
+        
+        {/* Settings Modal */}
+        <SettingsScreen />
       </div>
     );
   }
@@ -582,9 +562,14 @@ export const App: React.FC = () => {
             <span>Gold: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
-          <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-            🔄 Reset
-          </button>
+          <div className="header-actions">
+            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+              ⚙️
+            </button>
+            <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
+              🔄 Reset
+            </button>
+          </div>
         </div>
 
         <Shop onBack={() => setScene('quest')} region={state.selectedRegion} />
@@ -594,6 +579,9 @@ export const App: React.FC = () => {
           onConfirm={handleResetConfirm} 
           onCancel={handleResetCancel} 
         />
+        
+        {/* Settings Modal */}
+        <SettingsScreen />
       </div>
     );
   }
@@ -611,9 +599,14 @@ export const App: React.FC = () => {
             <span>Gold: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
-          <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-            🔄 Reset
-          </button>
+          <div className="header-actions">
+            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+              ⚙️
+            </button>
+            <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
+              🔄 Reset
+            </button>
+          </div>
         </div>
         <Battle onBack={() => setScene('pregame')} onQuestComplete={handleQuestComplete} />
         <ResetConfirmModal 
@@ -621,6 +614,9 @@ export const App: React.FC = () => {
           onConfirm={handleResetConfirm} 
           onCancel={handleResetCancel} 
         />
+        
+        {/* Settings Modal */}
+        <SettingsScreen />
       </div>
     );
   }
@@ -638,9 +634,14 @@ export const App: React.FC = () => {
             <span>Gold: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
-          <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-            🔄 Reset
-          </button>
+          <div className="header-actions">
+            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+              ⚙️
+            </button>
+            <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
+              🔄 Reset
+            </button>
+          </div>
         </div>
         <RegionSelection onSelectRegion={handleSelectRegion} />
         <ResetConfirmModal 
@@ -648,17 +649,23 @@ export const App: React.FC = () => {
           onConfirm={handleResetConfirm} 
           onCancel={handleResetCancel} 
         />
+        
+        {/* Settings Modal */}
+        <SettingsScreen />
       </div>
     );
   }
 
   if (scene === 'loading' && loadingRegion) {
     return (
-      <LoadingScreen 
-        regionName={loadingRegion.charAt(0).toUpperCase() + loadingRegion.slice(1)}
-        progress={loadingProgress}
-        message={loadingMessage}
-      />
+      <>
+        <LoadingScreen 
+          regionName={loadingRegion.charAt(0).toUpperCase() + loadingRegion.slice(1)}
+          progress={loadingProgress}
+          message={loadingMessage}
+        />
+        <SettingsScreen />
+      </>
     );
   }
 
@@ -674,9 +681,14 @@ export const App: React.FC = () => {
           <span>Encounter: {state.currentFloor}</span>
           <span>Gold: {state.gold}</span>
         </div>
-        <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-          🔄 Reset
-        </button>
+        <div className="header-actions">
+          <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+            ⚙️
+          </button>
+          <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
+            🔄 Reset
+          </button>
+        </div>
       </div>
 
       <div className="explore-screen">
@@ -697,6 +709,12 @@ export const App: React.FC = () => {
         onNewRun={handleStartNewRun}
         savedRunData={savedRunData}
       />
+      
+      {/* Post-Region Choice Overlay */}
+      <PostRegionChoiceScreen />
+      
+      {/* Settings Modal */}
+      <SettingsScreen />
     </div>
   );
 };

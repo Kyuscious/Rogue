@@ -105,7 +105,7 @@ const formatSpellEffects = (spell: any) => {
 export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   const store = useGameStore();
   const state = store.state;
-  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower } = store;
+  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, showPostRegionChoiceScreen } = store;
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
@@ -136,7 +136,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
 
   // Get scaled stats for both characters (with class bonuses and passives)
   const playerScaledStats = getScaledStats(playerChar.stats, playerChar.level, playerChar.class, playerPassiveIds);
-  const enemyScaledStats = getScaledStats(enemyChar.stats, enemyChar.level, enemyChar.class);
+  // Enemy stats are already scaled at spawn in store.ts, don't recalculate
+  const enemyScaledStats = enemyChar.stats;
 
   // Ref for auto-scrolling battle log
   const logEntriesRef = useRef<HTMLDivElement>(null);
@@ -151,7 +152,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     
     // Recalculate scaled stats inside effect to ensure fresh values
     const freshPlayerStats = getScaledStats(playerChar.stats, playerChar.level, playerChar.class, playerPassiveIds);
-    const freshEnemyStats = getScaledStats(enemyChar.stats, enemyChar.level, enemyChar.class);
+    // Enemy stats are already scaled at spawn in store.ts, don't recalculate
+    const freshEnemyStats = enemyChar.stats;
     
     const pEntity: TurnEntity = {
       id: 'player',
@@ -1182,9 +1184,12 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         }, 100);
       } else {
         console.log('🏁 No more enemies - quest complete or returning');
-        // All encounters complete
-        if (state.currentFloor >= 10) {
-          // Quest complete! Trigger region selection
+        // All encounters complete - check if we should show post-region choice
+        if (state.currentFloor >= 10 && state.selectedRegion) {
+          // Region complete! Show post-region choice
+          console.log('🎉 Region complete - showing post-region choice');
+          showPostRegionChoiceScreen(state.selectedRegion);
+          // Quest completion will be triggered after post-region choice
           if (onQuestComplete) {
             onQuestComplete();
           }
@@ -1441,7 +1446,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       
       const victoryResult = handleEnemyDefeat(
         enemyChar,
-        state.enemyCharacters.slice(1),
+        state.originalEnemyQueue.slice(1), // Use original unprocessed enemies
         state.currentFloor,
         state.selectedRegion,
         playerChar.level,

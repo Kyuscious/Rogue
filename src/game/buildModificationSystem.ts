@@ -24,7 +24,7 @@ export interface BuildModification {
  * 7. Synergy bonuses for specific item combinations
  */
 
-export function canModifyBuild(character: Character): boolean {
+export function canModifyBuild(_character: Character): boolean {
   // Placeholder: Always allow for now
   return true;
 }
@@ -34,7 +34,7 @@ export function getAvailableClasses(): string[] {
   return ['fighter', 'mage', 'marksman', 'assassin', 'juggernaut', 'support'];
 }
 
-export function changeCharacterClass(character: Character, newClass: string): boolean {
+export function changeCharacterClass(_character: Character, newClass: string): boolean {
   // TODO: Implement class change logic
   // Should:
   // - Validate new class is available
@@ -45,7 +45,7 @@ export function changeCharacterClass(character: Character, newClass: string): bo
   return false;
 }
 
-export function modifyStatPoints(character: Character, modifications: {
+export function modifyStatPoints(_character: Character, _modifications: {
   health?: number;
   attackDamage?: number;
   abilityPower?: number;
@@ -72,7 +72,7 @@ export function discardItem(character: Character, itemIndex: number): boolean {
   return false;
 }
 
-export function removeCurse(character: Character, itemIndex: number, goldCost: number = 100): boolean {
+export function removeCurse(_character: Character, _itemIndex: number, goldCost: number = 100): boolean {
   // TODO: Implement curse removal logic
   // Should:
   // - Check if player has enough gold

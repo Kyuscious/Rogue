@@ -62,7 +62,6 @@ export const ICE_SEA_EVENTS: RegionEvent[] = [
     rewardType: 'buff',
     statModifiers: {
       attackDamage: 12,
-      attackSpeed: 0.15,
     },
     successText: 'You are infused with the blizzard\'s savage power.',
   },

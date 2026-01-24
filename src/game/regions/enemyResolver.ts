@@ -74,18 +74,20 @@ export const PLACEHOLDER_BOSS: Character = {
 /**
  * Universal enemy resolver that works across all regions
  * Falls back to placeholder enemies for unimplemented regions
+ * IMPORTANT: Always returns a copy to prevent mutation of database objects
  */
 export function getEnemyById(id: string): Character | undefined {
   // Try Demacia first (only implemented region)
+  // getDemaciaEnemyById already returns a copy
   const demaciaEnemy = getDemaciaEnemyById(id);
   if (demaciaEnemy) return demaciaEnemy;
 
-  // Fall back to placeholders
-  if (id === 'placeholder_minion') return PLACEHOLDER_MINION;
-  if (id === 'placeholder_elite') return PLACEHOLDER_ELITE;
-  if (id === 'placeholder_boss') return PLACEHOLDER_BOSS;
+  // Fall back to placeholders - return copies to prevent mutation
+  if (id === 'placeholder_minion') return { ...PLACEHOLDER_MINION, stats: { ...PLACEHOLDER_MINION.stats }, abilities: [...PLACEHOLDER_MINION.abilities] };
+  if (id === 'placeholder_elite') return { ...PLACEHOLDER_ELITE, stats: { ...PLACEHOLDER_ELITE.stats }, abilities: [...PLACEHOLDER_ELITE.abilities] };
+  if (id === 'placeholder_boss') return { ...PLACEHOLDER_BOSS, stats: { ...PLACEHOLDER_BOSS.stats }, abilities: [...PLACEHOLDER_BOSS.abilities] };
 
   // Default fallback
   console.warn(`Enemy "${id}" not found, using placeholder minion`);
-  return PLACEHOLDER_MINION;
+  return { ...PLACEHOLDER_MINION, stats: { ...PLACEHOLDER_MINION.stats }, abilities: [...PLACEHOLDER_MINION.abilities] };
 }

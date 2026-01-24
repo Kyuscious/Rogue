@@ -7,9 +7,11 @@ interface HealthDisplayProps {
 }
 
 export const HealthDisplay: React.FC<HealthDisplayProps> = ({ character }) => {
-  // Get scaled stats with class bonuses applied
-  const scaledStats = getScaledStats(character.stats, character.level, character.class);
-  const maxHp = scaledStats.health;
+  // For enemies, stats are already fully scaled at spawn (includes items + class bonuses)
+  // For players, we need to calculate scaled stats with class bonuses and passives
+  const maxHp = character.role === 'enemy' 
+    ? character.stats.health 
+    : getScaledStats(character.stats, character.level, character.class).health;
   const hpPercentage = character.hp > 0 ? (character.hp / maxHp) * 100 : 0;
 
   return (

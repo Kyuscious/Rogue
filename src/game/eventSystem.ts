@@ -36,7 +36,24 @@ export interface EventOutcome {
   statsModified: boolean;
 }
 
-export const REGION_EVENTS: Record<Region, RegionEvent[]> = {};
+export const REGION_EVENTS: Record<Region, RegionEvent[]> = {
+  demacia: [],
+  ionia: [],
+  shurima: [],
+  noxus: [],
+  freljord: [],
+  zaun: [],
+  ixtal: [],
+  bandle_city: [],
+  bilgewater: [],
+  piltover: [],
+  shadow_isles: [],
+  void: [],
+  targon: [],
+  camavor: [],
+  ice_sea: [],
+  marai_territory: [],
+};
 
 export function getRandomEventForRegion(region: Region): RegionEvent | undefined {
   const events = REGION_EVENTS[region] || [];

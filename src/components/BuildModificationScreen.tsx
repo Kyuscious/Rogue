@@ -67,7 +67,7 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                 <div
                   key={cls}
                   className={`class-option ${selectedClass === cls ? 'selected' : ''}`}
-                  onClick={() => setSelectedClass(cls)}
+                  onClick={() => setSelectedClass(cls as any)}
                 >
                   <div className="class-name">{cls.charAt(0).toUpperCase() + cls.slice(1)}</div>
                   <div className="class-description">

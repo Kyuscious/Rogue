@@ -22,7 +22,7 @@ The game's difficulty scales based on multiple interconnected systems:
 
 2. **Encounter Progression**
    - Encounter count tracks total battles in the run
-   - Item count increases: 1 → 2 → 3 → 4 items based on region and encounters
+   - Item count increases: 1 → 2 → 3 → 4 items based on region and encounters (or floors)
    - Item rarities unlock progressively based on encounters + region tier
 
 3. **Enemy Level Scaling**
