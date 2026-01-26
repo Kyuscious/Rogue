@@ -60,6 +60,8 @@
 .battlefield-canvas {
   display: block;
   background-color: transparent;
+  min-height: clamp(45px, 6vh, 60px);
+  max-height: clamp(6vh, 60px);
   border-radius: 4px;
   border: none;
 }

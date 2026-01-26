@@ -13,6 +13,34 @@ import { Language } from '../i18n';
 import { AudioSettings, audioManager } from './audioManager';
 
 /**
+ * Detect browser language and return supported language code
+ * Checks localStorage first for saved preference
+ */
+function getInitialLanguage(): Language {
+  // Check if user has manually set a language preference
+  const savedLanguage = localStorage.getItem('userLanguagePreference');
+  if (savedLanguage && ['en', 'fr', 'es', 'de', 'pt', 'zh', 'ja', 'ko', 'ru'].includes(savedLanguage)) {
+    return savedLanguage as Language;
+  }
+
+  // Detect browser language
+  const browserLang = navigator.language.toLowerCase();
+  
+  // Map browser languages to supported languages
+  if (browserLang.startsWith('fr')) return 'fr';
+  if (browserLang.startsWith('es')) return 'es';
+  if (browserLang.startsWith('de')) return 'de';
+  if (browserLang.startsWith('pt')) return 'pt';
+  if (browserLang.startsWith('zh')) return 'zh';
+  if (browserLang.startsWith('ja')) return 'ja';
+  if (browserLang.startsWith('ko')) return 'ko';
+  if (browserLang.startsWith('ru')) return 'ru';
+  
+  // Default to English
+  return 'en';
+}
+
+/**
  * TODO: Implement Region Revisit Penalty System
  * 
  * When a region is visited multiple times in a run:
@@ -182,7 +210,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     equippedSpellIndex: 0, // First spell equipped
     spellCooldowns: {}, // Track spell cooldowns
     // Language/Settings
-    currentLanguage: 'en',
+    currentLanguage: getInitialLanguage(),
     showSettings: false,
     audioSettings: {
       masterVolume: 70,
@@ -851,6 +879,14 @@ export const useGameStore = create<GameStoreState>((set) => ({
       const savedRun = localStorage.getItem('savedRun');
       if (savedRun) {
         const loadedState = JSON.parse(savedRun);
+        
+        // Clean up any legacy flashbomb_trap items from old saves
+        if (loadedState.inventory) {
+          loadedState.inventory = loadedState.inventory.filter(
+            (item: InventoryItem) => item.itemId !== 'flashbomb_trap'
+          );
+        }
+        
         set({ state: loadedState });
         console.log('Run loaded successfully');
         return true;
@@ -1167,13 +1203,17 @@ export const useGameStore = create<GameStoreState>((set) => ({
     })),
 
   // Language/Settings methods
-  setLanguage: (language: Language) =>
-    set((store) => ({
+  setLanguage: (language: Language) => {
+    // Save user preference to localStorage
+    localStorage.setItem('userLanguagePreference', language);
+    
+    return set((store) => ({
       state: {
         ...store.state,
         currentLanguage: language,
       },
-    })),
+    }));
+  },
 
   toggleSettings: () =>
     set((store) => ({

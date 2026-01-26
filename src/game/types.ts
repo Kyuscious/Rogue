@@ -16,7 +16,8 @@ export type Region =
   | 'targon'
   | 'camavor'
   | 'ice_sea'
-  | 'marai_territory';
+  | 'marai_territory'
+  | 'runeterra';
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
 
@@ -31,7 +32,7 @@ export interface StatusEffect {
 
 export interface Character {
   id: string;
-  name: string;
+  name?: string; // Deprecated: Use getEnemyTranslation(id) from i18n/helpers instead (for enemies)
   region?: Region;
   role: 'enemy' | 'player';
   class: CharacterClass;

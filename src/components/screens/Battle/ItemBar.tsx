@@ -3,11 +3,12 @@ import './ItemBar.css';
 
 interface ItemBarProps {
   usableItems: Array<{ itemId: string; item: any; quantity: number }>;
-  onUseItem: (itemId: string) => void;
+  onSelectItem: (itemId: string) => void;
+  selectedItemId: string | null;
   canUse: boolean;
 }
 
-export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse }) => {
+export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, selectedItemId, canUse }) => {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('top');
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -33,17 +34,33 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse
     }
   }, [hoveredItem]);
 
-  if (usableItems.length === 0) {
-    return null;
-  }
+  // Always show 6 item slots (max inventory)
+  const MAX_ITEM_SLOTS = 6;
+  const itemSlots = Array.from({ length: MAX_ITEM_SLOTS }, (_, index) => {
+    return usableItems[index] || null;
+  });
 
   return (
     <div className="item-bar">
       <div className="item-bar-title">Usable Items</div>
       <div className="item-bar-items">
-        {usableItems.map((usableItem) => {
+        {itemSlots.map((usableItem, index) => {
+          if (!usableItem) {
+            // Empty slot
+            return (
+              <div key={`empty-${index}`} className="item-bar-slot">
+                <button className="item-bar-btn empty-slot" disabled>
+                  <div className="item-icon">
+                    <span>-</span>
+                  </div>
+                </button>
+              </div>
+            );
+          }
+
           const item = usableItem.item;
           const isHovered = hoveredItem === item.id;
+          const isSelected = selectedItemId === item.id;
 
           return (
             <div
@@ -60,9 +77,8 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse
               onMouseLeave={() => setHoveredItem(null)}
             >
               <button
-                className={`item-bar-btn ${!canUse ? 'disabled' : ''} rarity-${item.rarity}`}
-                onClick={() => canUse && onUseItem(item.id)}
-                disabled={!canUse}
+                className={`item-bar-btn ${!canUse ? 'disabled' : ''} ${isSelected ? 'selected' : ''} rarity-${item.rarity}`}
+                onClick={() => onSelectItem(item.id)}
               >
                 <div className="item-icon">
                   {item.imagePath ? (
@@ -93,7 +109,7 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse
                     </div>
                   )}
                   <div className="item-tooltip-hint">
-                    Click to use (consumes 1)
+                    Click to select
                   </div>
                 </div>
               )}

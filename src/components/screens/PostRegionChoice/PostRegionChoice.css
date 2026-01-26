@@ -10,34 +10,39 @@
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.3s ease-in;
+  padding: clamp(0.5rem, 2vh, 1rem);
+  overflow-y: auto;
 }
 
 .post-region-container {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border: 2px solid #c9a55a;
-  border-radius: 16px;
-  padding: 40px;
-  max-width: 800px;
-  width: 90%;
+  border-radius: clamp(8px, 1.5vw, 16px);
+  padding: clamp(1rem, 4vh, 2.5rem);
+  max-width: min(800px, 95vw);
+  width: 100%;
   box-shadow: 0 10px 40px rgba(201, 165, 90, 0.3);
+  max-height: 95vh;
+  overflow-y: auto;
+  margin: auto;
 }
 
 .post-region-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: clamp(1rem, 3vh, 1.875rem);
 }
 
 .post-region-header h2 {
   color: #c9a55a;
-  font-size: 32px;
-  margin: 0 0 10px 0;
+  font-size: clamp(1.25rem, 4vw, 2rem);
+  margin: 0 0 clamp(0.5rem, 1vh, 0.625rem) 0;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: clamp(1px, 0.15vw, 2px);
 }
 
 .region-name {
   color: #fff;
-  font-size: 24px;
+  font-size: clamp(1rem, 3vw, 1.5rem);
   margin: 5px 0;
   text-transform: capitalize;
   font-weight: bold;
@@ -45,29 +50,30 @@
 
 .post-region-subtitle {
   color: #999;
-  font-size: 14px;
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
   margin: 10px 0 0 0;
 }
 
 .post-region-choices {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  margin-bottom: 30px;
+  gap: clamp(0.75rem, 2vh, 0.9375rem);
+  margin-bottom: clamp(1rem, 3vh, 1.875rem);
 }
 
 .post-region-choice-btn {
   background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
   border: 2px solid #c9a55a;
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: clamp(8px, 1vw, 12px);
+  padding: clamp(0.75rem, 2vh, 1.25rem);
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
   cursor: pointer;
   transition: all 0.3s ease;
   color: #fff;
   text-align: left;
+  min-height: clamp(60px, 10vh, 100px);
 }
 
 .post-region-choice-btn:hover:not(.disabled) {
@@ -84,31 +90,33 @@
 }
 
 .choice-icon {
-  font-size: 48px;
+  font-size: clamp(2rem, 6vw, 3rem);
   flex-shrink: 0;
 }
 
 .choice-content {
   flex: 1;
+  min-width: 0;
 }
 
 .choice-content h3 {
-  margin: 0 0 8px 0;
-  font-size: 20px;
+  margin: 0 0 clamp(0.25rem, 1vh, 0.5rem) 0;
+  font-size: clamp(0.9rem, 2.5vw, 1.25rem);
   color: #c9a55a;
 }
 
 .choice-content p {
   margin: 0;
   color: #ccc;
-  font-size: 14px;
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
   line-height: 1.5;
+  word-wrap: break-word;
 }
 
 .disabled-text {
   display: block;
   color: #f44;
-  font-size: 12px;
+  font-size: clamp(0.7rem, 1.8vw, 0.75rem);
   margin-top: 5px;
   font-style: italic;
 }
@@ -116,29 +124,82 @@
 .post-region-stats {
   display: flex;
   justify-content: space-around;
-  padding: 20px;
+  flex-wrap: wrap;
+  padding: clamp(0.75rem, 2vh, 1.25rem);
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 8px;
+  border-radius: clamp(6px, 0.8vw, 8px);
   border: 1px solid rgba(201, 165, 90, 0.3);
+  gap: clamp(0.5rem, 2vw, 1rem);
 }
 
 .stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: clamp(3px, 0.5vh, 5px);
+  min-width: clamp(60px, 15vw, 100px);
 }
 
 .stat-label {
   color: #999;
-  font-size: 12px;
+  font-size: clamp(0.65rem, 1.8vw, 0.75rem);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .stat-value {
   color: #c9a55a;
-  font-size: 18px;
+  font-size: clamp(0.9rem, 2.5vw, 1.125rem);
   font-weight: bold;
+}
+
+/* Mobile optimizations */
+@media (max-width: 600px) {
+  .post-region-choice-btn {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .choice-icon {
+    font-size: 2.5rem;
+  }
+  
+  .post-region-stats {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .stat-item {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 601px) and (max-width: 900px) {
+  .post-region-container {
+    max-width: 90vw;
+  }
+}
+
+/* Ensure scrollbar styling */
+.post-region-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.post-region-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.post-region-container::-webkit-scrollbar-thumb {
+  background: #c9a55a;
+  border-radius: 4px;
+}
+
+.post-region-container::-webkit-scrollbar-thumb:hover {
+  background: #f4d47f;
 }
 
 @keyframes fadeIn {
@@ -148,4 +209,5 @@
   to {
     opacity: 1;
   }
+}
 }

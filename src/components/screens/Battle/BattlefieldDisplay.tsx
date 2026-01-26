@@ -6,7 +6,8 @@ export interface AoEIndicator {
   position: number;
   size: number;
   color: string;
-  label?: string;
+  label?: string; // Display name shown on battlefield
+  id?: string; // Unique identifier for tracking/removal
   targetPosition?: number; // For rectangle, the target position to extend towards
 }
 

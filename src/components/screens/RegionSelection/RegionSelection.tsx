@@ -12,9 +12,6 @@ import {
 import { discoverConnection } from '../../../game/profileSystem';
 import { POST_REGION_CHOICES, PostRegionChoice, hasRegionEvents } from '../../../game/postRegionChoice';
 import { getRandomEventForRegion } from '../../../game/eventSystem';
-import { getStarterEquipment, hasStarterEquipment } from '../../../game/starterEquipment';
-import { getWeaponById } from '../../../game/weapons';
-import { getSpellById } from '../../../game/spells';
 import './RegionSelection.css';
 
 interface RegionSelectionProps {
@@ -27,8 +24,6 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
   const [showPathTooltip, setShowPathTooltip] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<Region | null>(null);
   const [selectedAction, setSelectedAction] = useState<PostRegionChoice | null>(null);
-  const [hoveredRegion, setHoveredRegion] = useState<Region | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   
   // Debug logging
   console.log('🔍 RegionSelection - completedRegion:', state.completedRegion);
@@ -215,15 +210,6 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
                 key={region}
                 className={cardClass}
                 onClick={() => handleRegionClick(region)}
-                onMouseEnter={(e) => {
-                  setHoveredRegion(region);
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setTooltipPosition({
-                    x: rect.left + rect.width / 2,
-                    y: rect.top - 10,
-                  });
-                }}
-                onMouseLeave={() => setHoveredRegion(null)}
               >
                 <div className="region-card-header">
                   <h3>{getRegionDisplayName(region)}</h3>
@@ -256,63 +242,6 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
           {selectedDestination && state.completedRegion && !selectedAction && (
             <p className="proceed-hint">⚠️ Select a travel action to proceed</p>
           )}
-        </div>
-      )}
-      
-      {/* Starter Equipment Tooltip */}
-      {hoveredRegion && hasStarterEquipment(hoveredRegion) && (
-        <div 
-          className="starter-equipment-tooltip"
-          style={{
-            left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y}px`,
-          }}
-        >
-          <h4>Starter Equipment</h4>
-          {(() => {
-            const equipment = getStarterEquipment(hoveredRegion);
-            const weapon = equipment.weapon ? getWeaponById(equipment.weapon) : null;
-            const spell = equipment.spell ? getSpellById(equipment.spell) : null;
-            
-            return (
-              <>
-                {weapon && (
-                  <div className="equipment-item">
-                    <div className="equipment-name">⚔️ {weapon.name}</div>
-                    <div className="equipment-description">{weapon.description}</div>
-                    {weapon.stats && Object.keys(weapon.stats).length > 0 && (
-                      <div className="equipment-stats">
-                        {weapon.stats.attackDamage && <span>+{weapon.stats.attackDamage} AD</span>}
-                        {weapon.stats.abilityPower && <span>+{weapon.stats.abilityPower} AP</span>}
-                        {weapon.stats.attackSpeed && <span>+{weapon.stats.attackSpeed} AS</span>}
-                        {weapon.stats.attackRange && <span>+{weapon.stats.attackRange} Range</span>}
-                        {weapon.stats.movementSpeed && <span>+{weapon.stats.movementSpeed} MS</span>}
-                        {weapon.stats.armor && <span>+{weapon.stats.armor} Armor</span>}
-                        {weapon.stats.magicResist && <span>+{weapon.stats.magicResist} MR</span>}
-                        {weapon.stats.health && <span>+{weapon.stats.health} HP</span>}
-                      </div>
-                    )}
-                    <div className="equipment-effects">
-                      {weapon.effects.map((effect, idx) => (
-                        <div key={idx} className="effect-line">{effect.description}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {spell && (
-                  <div className="equipment-item">
-                    <div className="equipment-name">✨ {spell.name}</div>
-                    <div className="equipment-description">{spell.description}</div>
-                    <div className="equipment-effects">
-                      {spell.effects.map((effect, idx) => (
-                        <div key={idx} className="effect-line">{effect.description}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
         </div>
       )}
     </div>

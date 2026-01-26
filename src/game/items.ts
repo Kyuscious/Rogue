@@ -7,8 +7,8 @@ export type LootType = 'attackDamage' | 'abilityPower' | 'tankDefense' | 'mobili
 
 export interface Item {
   id: string;
-  name: string;
-  description: string;
+  name?: string; // Deprecated: Use getItemTranslation(id) from i18n/helpers instead
+  description?: string; // Deprecated: Use getItemTranslation(id) from i18n/helpers instead
   rarity: ItemRarity;
   price: number; // Gold cost to purchase in shop
   imagePath?: string; // Path to item image asset
@@ -347,25 +347,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
   },
   
   // ACTIVE ITEMS - Combat Abilities
-  shield_of_daybreak_old: {
-    id: 'shield_of_daybreak_old',
-    name: 'Shield of Daybreak (Active)',
-    description: 'A radiant shield that can stun enemies on activation',
-    rarity: 'epic',
-    price: 350,
-    classes: ['vanguard', 'warden'],
-    stats: {
-      armor: 20,
-      health: 100,
-    },
-    active: {
-      name: 'Daybreak',
-      description: 'Stuns the enemy for 1.0 turn. Must be in attack range.',
-      cooldown: 3,
-      stunDuration: 1.0,
-      requiresEnemyInRange: true,
-    },
-  },
+
   
   // CONSUMABLE - Trap Item
   flashbomb_trap: {
@@ -421,19 +403,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
   },
 
   // Common Items
-  shield_of_daybreak: {
-    id: 'shield_of_daybreak',
-    name: 'Shield of Daybreak',
-    description: 'A radiant shield that stuns enemies with each strike. Deals 30% AD damage and stuns for 1.0 turn on attack.',
-    rarity: 'epic',
-    price: 400,
-    classes: ['vanguard', 'warden'],
-    stats: {
-      armor: 20,
-      health: 100,
-      attackDamage: 15,
-    },
-  },
+  
   long_sword: {
     id: 'long_sword',
     name: 'Long Sword',
@@ -547,7 +517,6 @@ export const ITEM_DATABASE: Record<string, Item> = {
     onUseEffect: 'Gain +30 Attack Damage and +12% Lifesteal for 15 encounters (persists across acts/regions)',
   },
 
-  // <<  Elixirs here ! 
   // Epic Items
   pickaxe: {
     id: 'pickaxe',

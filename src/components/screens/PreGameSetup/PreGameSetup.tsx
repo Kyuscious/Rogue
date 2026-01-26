@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Region } from '../../../game/types';
 import { ITEM_DATABASE, getPassiveDescription } from '../../../game/items';
 import { getStarterItemsWithUnlockStatus } from '../../../game/profileUnlocks';
+import { getStarterEquipment, hasStarterEquipment } from '../../../game/starterEquipment';
+import { getWeaponById } from '../../../game/weapons';
+import { getSpellById } from '../../../game/spells';
+import { getWeaponTranslation, getSpellTranslation } from '../../../i18n/helpers';
 import './PreGameSetup.css';
 
 interface PreGameSetupProps {
@@ -21,6 +25,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [starterItems, setStarterItems] = useState<any[]>([]);
 
@@ -87,7 +92,17 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                 key={region.id}
                 className={`selection-item ${selectedRegion === region.id ? 'selected' : ''} ${!region.unlocked ? 'locked' : ''}`}
                 onClick={() => handleRegionClick(region.id, region.unlocked)}
-                title={region.unlocked ? region.description : 'Locked - Complete runs to unlock more regions'}
+                onMouseMove={(e) => {
+                  if (hasStarterEquipment(region.id as Region)) {
+                    setHoveredRegionId(region.id);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTooltipPosition({
+                      x: rect.right + 10,
+                      y: rect.top,
+                    });
+                  }
+                }}
+                onMouseLeave={() => setHoveredRegionId(null)}
               >
                 {!region.unlocked && <div className="lock-icon">🔒</div>}
                 <div className="item-name">{region.name}</div>
@@ -107,7 +122,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                   key={item.id}
                   className={`selection-item ${selectedItem === item.id ? 'selected' : ''} ${!item.unlocked ? 'locked' : ''}`}
                   onClick={() => handleItemClick(item.id, item.unlocked)}
-                  onMouseEnter={(e) => {
+                  onMouseMove={(e) => {
                     setHoveredItemId(item.id);
                     const rect = e.currentTarget.getBoundingClientRect();
                     setTooltipPosition({
@@ -130,6 +145,59 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
           </div>
         </div>
       </div>
+
+      {/* Region Starter Equipment Tooltip */}
+      {hoveredRegionId && hasStarterEquipment(hoveredRegionId as Region) && (
+        <div className="item-hover-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
+          {(() => {
+            const equipment = getStarterEquipment(hoveredRegionId as Region);
+            const weapon = getWeaponById(equipment.weapon);
+            const spell = getSpellById(equipment.spell);
+            const weaponTranslation = weapon ? getWeaponTranslation(weapon.id) : null;
+            const spellTranslation = spell ? getSpellTranslation(spell.id) : null;
+
+            return (
+              <>
+                <h4 className="tooltip-item-name">Starting Equipment</h4>
+                <p className="tooltip-item-description">You will start with these items in this region.</p>
+                
+                {weapon && weaponTranslation && (
+                  <div className="tooltip-starter-item">
+                    <h5 className="tooltip-starter-item-name">⚔️ {weaponTranslation.name}</h5>
+                    <p className="tooltip-starter-item-desc">{weaponTranslation.description}</p>
+                    {weapon.stats && (
+                      <div className="tooltip-item-stats">
+                        {weapon.stats.attackDamage && (
+                          <div className="tooltip-stat">⚔️ AD: +{weapon.stats.attackDamage}</div>
+                        )}
+                        {weapon.stats.attackSpeed && (
+                          <div className="tooltip-stat">⚡ AS: +{weapon.stats.attackSpeed}</div>
+                        )}
+                        {weapon.stats.attackRange && (
+                          <div className="tooltip-stat">📏 Range: +{weapon.stats.attackRange}</div>
+                        )}
+                        {weapon.stats.magicResist && (
+                          <div className="tooltip-stat">🔮 MR: +{weapon.stats.magicResist}</div>
+                        )}
+                        {weapon.stats.movementSpeed && (
+                          <div className="tooltip-stat">👟 Move Speed: +{weapon.stats.movementSpeed}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {spell && spellTranslation && (
+                  <div className="tooltip-starter-item">
+                    <h5 className="tooltip-starter-item-name">✨ {spellTranslation.name}</h5>
+                    <p className="tooltip-starter-item-desc">{spellTranslation.description}</p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Item Tooltip - Show for both unlocked items and locked items with progress */}
       {hoveredItemId && (

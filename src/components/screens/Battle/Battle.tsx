@@ -13,8 +13,9 @@ import {
   generateTurnSequence,
   applyStunDelay
 } from '../../../game/turnSystemV2';
-import { StatusEffect, createStunEffect } from '../../../game/statusEffects';
+import { StatusEffect, createStunEffect, createSlowEffect, getSlowModifier } from '../../../game/statusEffects';
 import { calculateAoEDirection } from '../../../game/aoeUtils';
+import { getCharacterName } from '../../../i18n/helpers';
 import { 
   getItemById,
   createBuffFromItem,
@@ -151,10 +152,37 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   // Get passive IDs from inventory
   const playerPassiveIds = getPassiveIdsFromInventory(state.inventory);
 
-  // Get scaled stats for both characters (with class bonuses and passives)
-  const playerScaledStats = getScaledStats(playerChar.stats, playerChar.level, playerChar.class, playerPassiveIds);
+  // Get equipped weapon and merge its stats with character stats
+  const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
+  const equippedWeapon = equippedWeaponId ? getWeaponById(equippedWeaponId) : null;
+  
+  // Create a copy of player stats and apply weapon bonuses
+  const playerStatsWithWeapon = { ...playerChar.stats };
+  if (equippedWeapon?.stats) {
+    // Merge weapon stats into character stats
+    (Object.keys(equippedWeapon.stats) as Array<keyof typeof equippedWeapon.stats>).forEach((statKey) => {
+      const weaponStatValue = equippedWeapon.stats?.[statKey];
+      if (weaponStatValue !== undefined && weaponStatValue !== null) {
+        const currentValue = playerStatsWithWeapon[statKey as keyof typeof playerStatsWithWeapon] || 0;
+        playerStatsWithWeapon[statKey as keyof typeof playerStatsWithWeapon] = (currentValue + weaponStatValue) as any;
+      }
+    });
+  }
+
+  // Get scaled stats for both characters (with class bonuses, weapon stats, and passives)
+  const playerScaledStats = getScaledStats(playerStatsWithWeapon, playerChar.level, playerChar.class, playerPassiveIds);
   // Enemy stats are already scaled at spawn in store.ts, don't recalculate
   const enemyScaledStats = enemyChar.stats;
+
+  // DEBUG: Log weapon stats merge
+  console.log('🔫 WEAPON STATS MERGE DEBUG:', {
+    equippedWeaponId,
+    equippedWeaponName: equippedWeapon?.name,
+    equippedWeaponStats: equippedWeapon?.stats,
+    playerBaseAD: playerChar.stats.attackDamage,
+    playerStatsWithWeaponAD: playerStatsWithWeapon.attackDamage,
+    playerScaledAD: playerScaledStats.attackDamage,
+  });
 
   // Ref for auto-scrolling battle log
   const logEntriesRef = useRef<HTMLDivElement>(null);
@@ -174,14 +202,14 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     
     const pEntity: TurnEntity = {
       id: 'player',
-      name: playerChar.name,
+      name: getCharacterName(playerChar),
       attackSpeed: freshPlayerStats.attackSpeed,
       abilityHaste: freshPlayerStats.abilityHaste,
     };
 
     const eEntity: TurnEntity = {
       id: 'enemy',
-      name: enemyChar.name,
+      name: getCharacterName(enemyChar),
       attackSpeed: freshEnemyStats.attackSpeed,
       abilityHaste: freshEnemyStats.abilityHaste,
     };
@@ -217,7 +245,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // handleSummaryContinue will reset it after processing victory/defeat
     setBattleLog([{ message: 'Battle started!' }, { message: '---' }]);
     setLastLoggedTurn(0);
-    setItemModeActive(false); // Reset item mode for new encounter
+    setSelectedItemId(null); // Reset selected item for new encounter
     setEnemyDebuffs([]); // Reset enemy debuffs for new encounter
     
     // Log cooldown reductions from previous encounter
@@ -265,8 +293,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   // Track active debuffs on enemy (DoTs, armor reduction, etc.)
   const [enemyDebuffs, setEnemyDebuffs] = useState<CombatBuff[]>([]);
 
-  // Track item mode active state (when UseItem button is clicked)
-  const [itemModeActive, setItemModeActive] = useState(false);
+  // Track selected item for use
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
   // Track combat statistics for summary
   const [combatStats, setCombatStats] = useState({
@@ -455,6 +483,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
     const equippedWeapon = equippedWeaponId ? getWeaponById(equippedWeaponId) : null;
     
+    console.log('🔍 FULL WEAPON OBJECT:', equippedWeapon);
+    
     if (!equippedWeapon) {
       setBattleLog((prev) => [
         ...prev,
@@ -506,6 +536,16 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           baseDamage += playerScaledStats.health * (effect.damageScaling.health / 100);
         }
         
+        // Log damage calculation debug info
+        console.log('💥 DAMAGE CALCULATION DEBUG:', {
+          weaponName: equippedWeapon.name,
+          playerScaledAD: playerScaledStats.attackDamage,
+          playerScaledAP: playerScaledStats.abilityPower,
+          damageScaling: effect.damageScaling,
+          baseDamageBeforeReductions: baseDamage,
+          enemyArmor: enemyScaledStats.armor,
+        });
+        
         // Check for critical strike
         let isCrit = false;
         if (rollCriticalStrike(playerScaledStats.criticalChance || 0)) {
@@ -521,6 +561,11 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             enemyScaledStats.armor || 0,
             playerScaledStats.lethality || 0
           );
+          console.log('🛡️ ARMOR MITIGATION:', {
+            baseDamage,
+            enemyArmor: enemyScaledStats.armor,
+            finalDamageAfterArmor: finalDamage,
+          });
         }
         
         // Add true damage (bypasses resistances)
@@ -650,7 +695,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             console.log(`🔵 STUN WEAPON: Adding stun period from ${stunStartTime.toFixed(2)} to ${stunEndTime.toFixed(2)} (duration: ${effectiveDuration})`);
             setStunPeriods(prev => [...prev, {
               entityId: 'enemy',
-              entityName: enemyChar.name,
+              entityName: getCharacterName(enemyChar),
               startTime: stunStartTime,
               endTime: stunEndTime,
             }]);
@@ -877,20 +922,21 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
               aoe.size
             );
             
-            const aoeLabel = `${equippedSpell.name}_${Date.now()}`;
+            const aoeId = `${equippedSpell.name}_${Date.now()}`;
             setAoeIndicators(prev => [...prev, {
               type: aoe.type,
               position: aoeCalc.sourcePosition,
               size: aoe.size,
               color: '#4A90E2',
-              label: aoeLabel,
+              label: equippedSpell.name, // Display the spell name
+              id: aoeId, // Unique ID for tracking
               targetPosition: aoeCalc.targetPosition,
             }]);
             
             // Track when to remove AoE indicator (at cast completion time)
             const removalTime = currentTime + castTime;
             console.log(`🎯 AoE indicator for ${equippedSpell.name} will be removed at T${removalTime.toFixed(2)}`);
-            setAoeRemovalTimes(prev => [...prev, { label: aoeLabel, removalTime }]);
+            setAoeRemovalTimes(prev => [...prev, { label: aoeId, removalTime }]);
           }
           
           // Schedule stun application
@@ -912,6 +958,40 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         }
         } else {
           logMessages.push({ message: `🛡️ ${enemyChar.name}'s tenacity (${enemyTenacity}) negates the stun!` });
+        }
+      }
+      
+      // Handle slow debuff effects
+      if (effect.type === 'debuff' && effect.slowPercent && effect.slowDuration) {
+        const currentTime = turnSequence[sequenceIndex]?.time || 0;
+        const slowPercent = effect.slowPercent;
+        const slowDuration = effect.slowDuration;
+        const spellRange = equippedSpell.range || 500;
+        
+        // Check if enemy is in range
+        if (currentDistance <= spellRange) {
+          // Create StatusEffect for internal tracking
+          const slowEffect = createSlowEffect('enemy', slowDuration, slowPercent, currentTime, 'player');
+          setStatusEffects(prev => [...prev, slowEffect]);
+          
+          // Calculate flat movement speed reduction based on enemy's base movement speed
+          const enemyBaseMovement = enemyScaledStats.movementSpeed || 350;
+          const flatReduction = Math.round(enemyBaseMovement * (slowPercent / 100));
+          
+          // Also add as CombatBuff for display and stat modification
+          const slowDebuff: CombatBuff = {
+            id: `slow_${Date.now()}`,
+            name: `Slowed (${slowPercent}%)`,
+            stat: 'movementSpeed',
+            amount: -flatReduction, // Negative flat amount for debuff
+            duration: slowDuration,
+            durationType: 'turns',
+          };
+          setEnemyDebuffs(prev => [...prev, slowDebuff]);
+          
+          logMessages.push({ message: `🐌 ${enemyChar.name} is slowed by ${slowPercent}% for ${slowDuration} turn(s)!` });
+        } else {
+          logMessages.push({ message: `❌ Target out of range for ${equippedSpell.name}!` });
         }
       }
     }
@@ -1048,10 +1128,15 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     }
   };
 
-  const handleUseItem = (itemId: string) => {
+  const handleSelectItem = (itemId: string) => {
+    setSelectedItemId(itemId);
+  };
+
+  const handleUseSelectedItem = () => {
+    if (!selectedItemId) return;
     if (!playerEntity || !enemyEntity) return;
     
-    const item = getItemById(itemId);
+    const item = getItemById(selectedItemId);
     if (!item) return;
     
     // Check if item is consumable
@@ -1064,7 +1149,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     }
     
     // Handle specific item effects
-    if (itemId === 'health_potion') {
+    if (selectedItemId === 'health_potion') {
       const newBuff = createHealthPotionBuff(`buff-${Date.now()}`);
       setPlayerBuffs((prev) => [...prev, newBuff]);
       
@@ -1074,10 +1159,68 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       ]);
       
       // Consume the item from inventory
-      consumeInventoryItem(itemId);
+      consumeInventoryItem(selectedItemId);
+    } else if (selectedItemId === 'flashbomb_trap' && item.active) {
+      // Handle flashbomb trap placement
+      const trapRange = item.active.range || 500;
+      const setupTime = item.active.setupTime || 0.5;
+      const stunDuration = item.active.stunDuration || 0.5;
+      const effectRadius = item.active.effectRadius || 50;
+      const currentTime = turnSequence[sequenceIndex]?.time || 0;
+      
+      // Check if enemy is in range
+      if (currentDistance > trapRange) {
+        setBattleLog((prev) => [
+          ...prev,
+          { message: `❌ Enemy is out of range! (${currentDistance} > ${trapRange})` },
+        ]);
+        return;
+      }
+      
+      // Place trap at enemy's current position
+      const trapPosition = enemyPosition;
+      const trapId = `flashbomb_${Date.now()}`;
+      const activationTime = currentTime + setupTime;
+      const stunEndTime = activationTime + stunDuration;
+      
+      // Show trap indicator (red during setup, yellow when active)
+      setAoeIndicators(prev => [...prev, {
+        type: 'circle',
+        position: trapPosition,
+        size: effectRadius,
+        color: '#ff4444', // Red during setup
+        label: 'Flashbomb', // Display name
+        id: trapId, // Unique ID for tracking
+      }]);
+      
+      // Schedule trap activation (color change)
+      setAoeRemovalTimes(prev => [...prev, { 
+        label: trapId, 
+        removalTime: activationTime 
+      }]);
+      
+      // Create stun effect that activates after setup time
+      const stunEffect = createStunEffect('enemy', stunDuration, activationTime, 'player', setupTime);
+      setStatusEffects(prev => [...prev, stunEffect]);
+      
+      // Add stun period tracking
+      setStunPeriods(prev => [...prev, {
+        entityId: 'enemy',
+        entityName: getCharacterName(enemyChar),
+        startTime: activationTime,
+        endTime: stunEndTime,
+      }]);
+      
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `💣 ${playerChar.name} placed a Flashbomb Trap! It will activate in ${setupTime} turn(s).` },
+      ]);
+      
+      // Consume the item from inventory
+      consumeInventoryItem(selectedItemId);
     } else {
       // Fallback for other items
-      const newBuff = createBuffFromItem(itemId, `buff-${Date.now()}`);
+      const newBuff = createBuffFromItem(selectedItemId, `buff-${Date.now()}`);
       if (!newBuff) {
         setBattleLog((prev) => [
           ...prev,
@@ -1093,11 +1236,11 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       ]);
       
       // Consume the item from inventory
-      consumeInventoryItem(itemId);
+      consumeInventoryItem(selectedItemId);
     }
     
-    // Reset item mode after using an item
-    setItemModeActive(false);
+    // Clear selected item after using
+    setSelectedItemId(null);
     
     // Advance to next action in sequence (using item counts as an action)
     setSequenceIndex((prev) => prev + 1);
@@ -1123,8 +1266,13 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       return; // Will let normal attack/spell handle it
     }
     
+    // Calculate enemy movement speed with debuffs
+    const baseEnemyMovement = Math.floor((enemyScaledStats.movementSpeed || 350) / 10);
+    const slowModifier = getSlowModifier(_statusEffects, 'enemy', turnSequence[sequenceIndex]?.time || 0);
+    const enemyMoveDistance = Math.max(1, Math.floor(baseEnemyMovement * slowModifier));
+    
     // Out of range, so move towards player
-    let newPosition = enemyPosition + MOVE_DISTANCE;
+    let newPosition = enemyPosition + enemyMoveDistance;
     
     // Check if enemy would escape
     if (newPosition > 2500 || newPosition < -2500) {
@@ -1142,7 +1290,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     
     setBattleLog((prev) => [
       ...prev,
-      { message: `${enemyChar.name} moved towards by ${MOVE_DISTANCE} units. Distance: ${newDistance}` },
+      { message: `${enemyChar.name} moved towards by ${enemyMoveDistance} units. Distance: ${newDistance}` },
     ]);
   };
 
@@ -1420,13 +1568,38 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     if (indicatorsToRemove.length > 0) {
       indicatorsToRemove.forEach(item => {
         console.log(`🎯 Removing AoE indicator "${item.label}" at T${currentTime.toFixed(2)}`);
-        setAoeIndicators(prev => prev.filter(a => a.label !== item.label));
+        
+        // Check if this is a flashbomb trap activating
+        if (item.label.startsWith('flashbomb_')) {
+          // Change trap color to yellow (active) and add activation message
+          setAoeIndicators(prev => prev.map(indicator => 
+            indicator.id === item.label 
+              ? { ...indicator, color: '#ffcc00' } // Change to yellow
+              : indicator
+          ));
+          
+          setBattleLog(prev => [
+            ...prev,
+            { message: `💥 Flashbomb Trap activated! ${enemyChar.name} is stunned!` }
+          ]);
+          
+          // Schedule actual removal after stun ends (another 0.5 turns)
+          const aoeIndicator = aoeIndicators.find(a => a.id === item.label);
+          if (aoeIndicator) {
+            setTimeout(() => {
+              setAoeIndicators(prev => prev.filter(a => a.id !== item.label));
+            }, 500); // Remove after a brief delay
+          }
+        } else {
+          // Normal AoE removal (use id if available, fallback to label)
+          setAoeIndicators(prev => prev.filter(a => (a.id || a.label) !== item.label));
+        }
       });
       
       // Remove from tracking list
       setAoeRemovalTimes(prev => prev.filter(item => currentTime < item.removalTime));
     }
-  }, [sequenceIndex, turnSequence, aoeRemovalTimes]);
+  }, [sequenceIndex, turnSequence, aoeRemovalTimes, aoeIndicators, enemyChar]);
 
   // Process pending stuns when timeline advances past their cast time
   useEffect(() => {
@@ -1444,7 +1617,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         console.log(`🔵 STUN SPELL: Adding stun period from ${currentTime.toFixed(2)} to ${(currentTime + stun.duration).toFixed(2)} (duration: ${stun.duration})`);
         setStunPeriods(prev => [...prev, {
           entityId: stun.targetId,
-          entityName: stun.targetId === 'player' ? playerChar.name : enemyChar.name,
+          entityName: stun.targetId === 'player' ? getCharacterName(playerChar) : getCharacterName(enemyChar),
           startTime: currentTime,
           endTime: currentTime + stun.duration,
         }]);
@@ -1726,7 +1899,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       );
       
       // Add victory messages to battle log
-      const messages = getVictoryMessages(enemyChar.name, victoryResult);
+      const messages = getVictoryMessages(getCharacterName(enemyChar), victoryResult);
       setBattleLog((prev) => [...prev, ...messages.map(msg => ({ message: msg }))]);
       
       // Prepare summary rewards including item drops
@@ -1810,8 +1983,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         <BattlefieldDisplay
           playerPosition={playerPosition}
           enemyPosition={enemyPosition}
-          playerName={playerChar.name}
-          enemyName={enemyChar.name}
+          playerName={getCharacterName(playerChar)}
+          enemyName={getCharacterName(enemyChar)}
           playerAttackRange={playerScaledStats.attackRange || 125}
           enemyAttackRange={enemyScaledStats.attackRange || 125}
           distance={currentDistance}
@@ -1848,8 +2021,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           key={enemyChar.id}
           turnSequence={turnSequence}
           currentIndex={sequenceIndex}
-          playerName={playerChar.name}
-          enemyName={enemyChar.name}
+          playerName={getCharacterName(playerChar)}
+          enemyName={getCharacterName(enemyChar)}
           isPlayerTurn={isPlayerTurn}
           stunPeriods={stunPeriods}
           onSimultaneousAction={handleSimultaneousAction}
@@ -1892,7 +2065,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                 {/* Move Section */}
                 <div className="action-section move-section">
                   <div className="section-label">Move</div>
-                  <div className="move-buttons-horizontal">
+                  <div className="move-buttons-vertical">
                     <button 
                       onClick={() => handlePlayerMove('towards')} 
                       className={`move-btn forward ${!canMove ? 'disabled' : ''} ${canMove && !canPlayerAttack ? 'breathing-yellow' : ''}`}
@@ -2016,27 +2189,25 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                 <div className="action-section item-section">
                   <div className="section-label">Item</div>
                   <button 
-                    onClick={() => setItemModeActive(!itemModeActive)} 
-                    className={`main-action-btn item-btn ${!canSpell ? 'disabled' : ''} ${itemModeActive ? 'active' : ''}`}
-                    disabled={!canSpell}
-                    title={canSpell ? 'Use a consumable item' : 'Wait for your spell turn'}
+                    onClick={handleUseSelectedItem} 
+                    className={`main-action-btn item-btn ${!canSpell || !selectedItemId ? 'disabled' : ''}`}
+                    disabled={!canSpell || !selectedItemId}
+                    title={!canSpell ? 'Wait for your spell turn' : !selectedItemId ? 'Select an item first' : 'Use selected item'}
                   >
                     <span className="action-icon">🧪</span>
-                    <span className="action-text">{itemModeActive ? 'Close Items' : 'Use Item'}</span>
+                    <span className="action-text">Use Item</span>
                   </button>
-                </div>
-              </div>
-              
-              {/* Item Bar - Shows usable items when active */}
-              {itemModeActive && (
-                <div className="item-bar-container">
+                  {/* Item Bar - Always visible */}
                   <ItemBar
                     usableItems={getUsableItems(state.inventory)}
-                    onUseItem={handleUseItem}
+                    onSelectItem={handleSelectItem}
+                    selectedItemId={selectedItemId}
                     canUse={canSpell}
                   />
                 </div>
-              )}
+              </div>
+              
+              {/* Removed separate item-bar-container - now inside item-section */}
             </div>
             {playerChar.abilities.length > 0 && (
               <div className="ability-buttons">

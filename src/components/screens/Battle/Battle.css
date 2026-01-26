@@ -1,11 +1,11 @@
 .battle-screen {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(0.25rem, 1vh, 0.5rem);
   height: 100vh;
   max-height: 100vh;
   background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
-  padding: 10px;
+  padding: clamp(0.25rem, 1vh, 0.625rem);
   color: #fff;
   overflow: hidden;
 }
@@ -15,16 +15,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: clamp(0.5rem, 1.5vh, 1rem) clamp(0.75rem, 2vw, 1rem);
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(74, 158, 255, 0.3);
-  border-radius: 8px;
+  border-radius: clamp(4px, 1vh, 8px);
   flex-shrink: 0;
 }
 
 .battle-header h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
   background: linear-gradient(90deg, #4a9eff 0%, #ff6b6b 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -33,16 +33,16 @@
 
 .battle-stats {
   display: flex;
-  gap: 20px;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
   align-items: center;
-  font-size: 14px;
+  font-size: clamp(0.75rem, 1.5vw, 0.875rem);
   font-weight: 600;
 }
 
 .region-badge {
   background: rgba(212, 175, 55, 0.2);
   border: 1px solid rgba(212, 175, 55, 0.5);
-  padding: 6px 12px;
+  padding: clamp(0.25rem, 1vh, 0.375rem) clamp(0.5rem, 1.5vw, 0.75rem);
   border-radius: 4px;
   color: #d4af37;
 }
@@ -50,15 +50,15 @@
 /* Turn Order Display */
 .turn-order {
   display: flex;
-  gap: 12px;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
   align-items: flex-start;
-  padding: 12px 16px;
+  padding: clamp(0.5rem, 1.5vh, 0.75rem) clamp(0.75rem, 2vw, 1rem);
   background: rgba(74, 158, 255, 0.1);
   border: 1px solid rgba(74, 158, 255, 0.3);
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: clamp(4px, 1vh, 6px);
+  font-size: clamp(0.65rem, 1.5vw, 0.75rem);
   flex-shrink: 0;
-  min-height: 80px;
+  min-height: clamp(60px, 8vh, 80px);
 }
 
 .turn-label {
@@ -75,11 +75,11 @@
   display: flex;
   justify-content: space-between;
   align-items: stretch;
-  gap: 15px;
-  flex: 0 1 auto;
+  gap: clamp(0.5rem, 2vw, 1rem);
+  flex: 0 0 auto;
+  height: clamp(180px, 28vh, 280px);
   min-height: 0;
-  max-height: 35vh;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .team-player {
@@ -87,6 +87,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .team-enemy {
@@ -95,6 +97,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .team-enemy .stats-panel {
@@ -120,12 +124,13 @@
 .battle-log {
   background: rgba(0, 0, 0, 0.5);
   border: 1px solid #4a9eff;
-  border-radius: 8px;
-  padding: 12px;
-  flex: 0 1 auto;
-  min-height: 80px;
-  max-height: 15vh;
+  border-radius: clamp(4px, 1vh, 8px);
+  padding: clamp(0.5rem, 1.5vh, 0.75rem);
+  flex: 0 0 auto;
+  height: clamp(60px, 10vh, 100px);
+  min-height: 60px;
   display: flex;
+  overflow: hidden;
 }
 
 .log-entries {
@@ -240,82 +245,92 @@
 .battle-actions-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: clamp(0.5rem, 1vh, 0.75rem);
+  flex: 0 0 auto;
   width: 100%;
   padding: 0;
+  max-height: clamp(140px, 22vh, 200px);
 }
 
 .main-actions-row {
   display: flex;
-  gap: 12px;
+  gap: clamp(0.5rem, 1vw, 0.75rem);
   width: 100%;
-  align-items: flex-start;
+  align-items: stretch;
+  height: clamp(140px, 22vh, 200px);
 }
 
 .action-section {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(0.375rem, 1vh, 0.5rem);
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(74, 158, 255, 0.2);
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: clamp(4px, 1vh, 8px);
+  padding: clamp(0.375rem, 1.5vh, 0.625rem);
   min-width: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .section-label {
-  font-size: 11px;
+  font-size: clamp(0.625rem, 1.5vw, 0.6875rem);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   color: rgba(255, 255, 255, 0.5);
   text-align: center;
-  margin-bottom: 4px;
+  margin-bottom: clamp(0.125rem, 0.5vh, 0.25rem);
+  flex-shrink: 0;
 }
 
 /* Move Section */
 .move-section {
   border-color: rgba(255, 215, 0, 0.3);
-  flex: 0.8;
+  flex: 0 0 clamp(100px, 15%, 140px);
 }
 
-.move-buttons-horizontal {
+.move-buttons-vertical {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: clamp(0.25rem, 0.5vh, 0.375rem);
+  height: 100%;
 }
 
 .move-btn {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
+  gap: clamp(0.125rem, 0.5vh, 0.25rem);
+  padding: clamp(0.375rem, 1vh, 0.5rem) clamp(0.25rem, 1vw, 0.5rem);
   background: rgba(255, 215, 0, 0.15);
   border: 2px solid rgba(255, 215, 0, 0.4);
-  border-radius: 6px;
+  border-radius: clamp(4px, 1vh, 6px);
   color: #ffd700;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  min-height: 80px;
+  min-height: clamp(40px, 6vh, 60px);
+  max-height: 50%;
 }
 
 .move-btn .arrow {
-  font-size: 20px;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
   line-height: 1;
 }
 
 .move-btn .move-text {
-  font-size: 11px;
+  font-size: clamp(0.55rem, 1.3vw, 0.6875rem);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .move-btn .move-dist {
-  font-size: 13px;
+  font-size: clamp(0.65rem, 1.5vw, 0.8125rem);
   font-weight: 700;
   opacity: 0.8;
 }
@@ -335,13 +350,16 @@
 /* Attack Section */
 .attack-section {
   border-color: rgba(255, 107, 107, 0.3);
-  flex: 1.2;
+  flex: 1.4;
 }
 
-/* Skip Section */
+/* Skip Section - Make circular and center vertically */
 .skip-section {
   border-color: rgba(156, 163, 175, 0.3);
-  flex: 0.7;
+  flex: 0 0 clamp(80px, 10%, 110px);
+  align-items: center;
+  justify-content: center;
+  align-self: center;
 }
 
 /* Spell Section */
@@ -354,6 +372,21 @@
 .item-section {
   border-color: rgba(34, 197, 94, 0.3);
   flex: 0.8;
+  overflow-y: auto;
+}
+
+.item-section .item-bar {
+  flex: 1;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.item-section .item-bar-items {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Main Action Buttons */
@@ -361,35 +394,39 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 14px 12px;
-  border-radius: 6px;
+  justify-content: center;
+  gap: clamp(0.25rem, 1vh, 0.375rem);
+  padding: clamp(0.5rem, 1.5vh, 0.875rem) clamp(0.5rem, 1.5vw, 0.75rem);
+  border-radius: clamp(4px, 1vh, 6px);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   border: 2px solid;
   background: rgba(0, 0, 0, 0.3);
-  min-height: 70px;
+  min-height: clamp(60px, 9vh, 90px);
+  flex: 1;
 }
 
 .main-action-btn .action-icon {
-  font-size: 28px;
+  font-size: clamp(1.25rem, 3.5vw, 1.75rem);
   line-height: 1;
 }
 
 .main-action-btn .action-text {
-  font-size: 12px;
+  font-size: clamp(0.625rem, 1.4vw, 0.75rem);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  text-align: center;
 }
 
 .main-action-btn .effect-preview {
-  font-size: 10px;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
   font-weight: 500;
   opacity: 0.8;
-  letter-spacing: 0.3px;
-  margin-top: 2px;
+  letter-spacing: 0.2px;
+  margin-top: clamp(0.125rem, 0.25vh, 0.125rem);
   color: inherit;
+  text-align: center;
 }
 
 .main-action-btn .effect-preview.cooldown-text {
@@ -421,6 +458,20 @@
   background: rgba(156, 163, 175, 0.1);
   border-color: rgba(156, 163, 175, 0.4);
   color: #9ca3af;
+  border-radius: 50%;
+  width: clamp(70px, 10vw, 100px);
+  height: clamp(70px, 10vw, 100px);
+  min-height: clamp(70px, 10vw, 100px);
+  padding: 0;
+  align-self: center;
+}
+
+.main-action-btn.skip-btn .action-text {
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+}
+
+.main-action-btn.skip-btn .action-icon {
+  font-size: clamp(1.5rem, 4vw, 2rem);
 }
 
 .main-action-btn.skip-btn:hover:not(.disabled) {
@@ -446,12 +497,31 @@
   background: rgba(34, 197, 94, 0.15);
   border-color: rgba(34, 197, 94, 0.5);
   color: #22c55e;
+  flex: 0 0 auto;
+  min-height: clamp(45px, 6vh, 60px);
+  max-height: clamp(45px, 6vh, 60px);
 }
 
 .main-action-btn.item-btn:hover:not(.disabled) {
   background: rgba(34, 197, 94, 0.25);
   border-color: rgba(34, 197, 94, 0.7);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.main-action-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+/* Item section layout - button + inventory */
+.item-section .item-bar {
+  flex: 1;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .main-action-btn.item-btn.active {
@@ -470,9 +540,11 @@
 .item-bar-container {
   background: rgba(34, 197, 94, 0.1);
   border: 2px solid rgba(34, 197, 94, 0.3);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: clamp(4px, 1vh, 8px);
+  padding: clamp(0.5rem, 1.5vh, 0.75rem);
   animation: slideDown 0.3s ease;
+  max-height: clamp(120px, 20vh, 200px);
+  overflow-y: auto;
 }
 
 @keyframes slideDown {
@@ -816,4 +888,121 @@
 .move-arrow-btn.up-btn,
 .move-arrow-btn.down-btn {
   margin: 0;
+}
+
+/* Mobile Responsive Breakpoints */
+@media (max-width: 768px) {
+  .battle-screen {
+    padding: clamp(0.25rem, 0.5vh, 0.375rem);
+    gap: clamp(0.25rem, 0.5vh, 0.375rem);
+  }
+
+  .battle-header h1 {
+    font-size: clamp(1rem, 4vw, 1.25rem);
+  }
+
+  .battle-stats {
+    font-size: clamp(0.625rem, 2vw, 0.75rem);
+    gap: clamp(0.5rem, 2vw, 0.75rem);
+  }
+
+  .battle-arena {
+    height: clamp(150px, 25vh, 200px);
+    gap: clamp(0.25rem, 1vw, 0.5rem);
+  }
+
+  .battle-log {
+    height: clamp(50px, 8vh, 80px);
+  }
+
+  .main-actions-row {
+    gap: clamp(0.25rem, 1vw, 0.5rem);
+  }
+
+  .move-section {
+  .skip-section,
+  .item-section {
+    flex: 0 0 clamp(60px, 15%, 80px);
+  }
+
+  .main-action-btn.skip-btn {
+    width: clamp(50px, 12vw, 70px);
+    height: clamp(50px, 12vw, 70px);
+    min-height: clamp(50px, 12vw, 70px);
+  }
+
+  .spell-slots,
+  .weapon-slots {
+    gap: clamp(0.125rem, 0.5vw, 0.25rem);
+  }
+
+  .spell-slot,
+  .weapon-slot {
+    width: clamp(35px, 9vw, 45px);
+    height: clamp(35px, 9vw, 45px);
+  }
+}
+
+@media (max-width: 480px) {
+  .battle-header {
+    flex-direction: column;
+    gap: clamp(0.25rem, 1vh, 0.5rem);
+    align-items: flex-start;
+  }
+
+  .battle-stats {
+    flex-wrap: wrap;
+  }
+
+  .main-actions-row {
+    flex-wrap: wrap;
+  }
+
+  .action-section {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: calc(50% - 0.25rem);
+  }
+
+  .move-section {
+    order: 1;
+    flex-wrap: wrap;
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+
+  .attack-section {
+    order: 2;
+  }
+
+  .spell-section {
+    order: 3;
+  }
+
+  .skip-section {
+    order: 4;
+    flex: 0 1 100%;
+  }
+
+  .item-section {
+    order: 5;
+    flex: 0 1 100%;
+  }
+}
+
+/* Custom Scrollbar for Battle Log */
+.log-entries::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-entries::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.log-entries::-webkit-scrollbar-thumb {
+  background: rgba(74, 158, 255, 0.5);
+  border-radius: 3px;
+}
+
+.log-entries::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 158, 255, 0.7);
 }

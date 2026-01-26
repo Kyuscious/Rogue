@@ -22,13 +22,15 @@ export interface SpellEffect {
     };
   };
   stunDuration?: number; // Duration of stun in turns
+  slowPercent?: number; // Percentage to slow movement speed
+  slowDuration?: number; // Duration of slow in turns
   description: string;
 }
 
 export interface Spell {
   id: string;
-  name: string;
-  description: string;
+  name?: string; // Deprecated: Use getSpellTranslation(id) from i18n/helpers instead
+  description?: string; // Deprecated: Use getSpellTranslation(id) from i18n/helpers instead
   rarity: 'starter' | 'common' | 'epic' | 'legendary';
   effects: SpellEffect[];
   range?: number; // Spell range in units (default: uses attack range)
@@ -93,6 +95,9 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       {
         type: 'debuff',
         description: 'Reduces target movement speed by 10% for 3 turns.',
+        // Slow effect parameters
+        slowPercent: 10, // 10% movement speed reduction
+        slowDuration: 3, // 3 turns
       },
     ],
     cooldown: 2,

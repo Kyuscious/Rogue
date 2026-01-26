@@ -19,8 +19,8 @@ export interface WeaponEffect {
 
 export interface Weapon {
   id: string;
-  name: string;
-  description: string;
+  name?: string; // Deprecated: Use getWeaponTranslation(id) from i18n/helpers instead
+  description?: string; // Deprecated: Use getWeaponTranslation(id) from i18n/helpers instead
   rarity: 'starter' | 'common' | 'epic' | 'legendary';
   effects: WeaponEffect[];
   imagePath?: string;
@@ -44,7 +44,7 @@ export interface Weapon {
 export const WEAPON_DATABASE: Record<string, Weapon> = {
   // STARTER WEAPON - One for each starting Region
 
-  demancian_steel_blade: {
+  demacian_steel_blade: {
     id: 'demacian_steel_blade',
     name: 'Demacian Steel Blade',
     description: 'A demacian sword that protects you from magic and deals Attack damage.',
@@ -53,9 +53,9 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       {
         type: 'damage',
         damageScaling: {
-          attackDamage: 15, // 15% AD scaling
+          attackDamage: 60, // 60% AD scaling
         },
-        description: 'Deals 15% of your Attack Damage damage.',
+        description: 'Deals 60% of your Attack Damage damage.',
       },
     ],
     stats: {
@@ -74,10 +74,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       {
         type: 'damage',
         damageScaling: {
-          attackDamage: 10, // 10% AD scaling
-          abilityPower: 5, // 5% AP scaling
+          attackDamage: 30, // 30% AD scaling
+        
+          abilityPower: 30, // 30% AP scaling
         },
-        description: 'Deals 10% of your Attack Damage and 5% of your Ability Power as damage.',
+        description: 'Deals 30% of your Attack Damage and 30% of your Ability Power as damage.',
       },
     ],
     stats: {
@@ -96,10 +97,10 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       {
         type: 'damage',
         damageScaling: {
-          abilityPower: 10, // 10% AP scaling
-          attackDamage: 5, // 5% AD scaling
+          abilityPower: 20, // 20% AP scaling
+          attackDamage: 40, // 40% AD scaling
         },
-        description: 'Deals 10% of your Ability Power and 5% of your Attack Damage as damage.',
+        description: 'Deals 20% of your Ability Power and 40% of your Attack Damage as damage.',
       },
     ],
     stats: {

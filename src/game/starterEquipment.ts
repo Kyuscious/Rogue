@@ -17,7 +17,7 @@ export interface StarterEquipment {
 export const REGION_STARTER_EQUIPMENT: Record<Region, StarterEquipment> = {
   // STARTING REGIONS
   demacia: {
-    weapon: 'demancian_steel_blade', // +10 MR, +5 AD
+    weapon: 'demacian_steel_blade', // +10 MR, +5 AD
     spell: 'for_demacia', // +5% AD, +0.5 AS for 1 turn
     items: [], // No starting items
   },
@@ -98,6 +98,12 @@ export const REGION_STARTER_EQUIPMENT: Record<Region, StarterEquipment> = {
     spell: '',
     items: [],
   },
+  runeterra: {
+    weapon: '',
+    spell: '',
+    items: [],
+  },
+  
 };
 
 /**

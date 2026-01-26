@@ -32,7 +32,7 @@ export const CharacterStatus: React.FC<{
   // Convert CombatDebuffs to TemporaryStatModifiers for BuffsDisplay
   const temporaryDebuffs = combatDebuffs?.map(debuff => ({
     statName: debuff.stat,
-    value: Math.max(1, Math.round(debuff.amount)), // Round to integer, minimum 1
+    value: Math.round(debuff.amount), // Keep negative values for debuffs
     source: debuff.name,
     duration: debuff.duration,
     isDebuff: true,
@@ -58,7 +58,7 @@ export const CharacterStatus: React.FC<{
       <BuffsDisplay character={character} temporaryStats={allTemporaryStats} />
 
       {/* Toggleable: Stats Panel */}
-      <StatsPanel character={character} />
+      <StatsPanel character={character} combatBuffs={combatBuffs} combatDebuffs={combatDebuffs} />
     </div>
   );
 };

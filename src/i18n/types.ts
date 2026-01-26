@@ -158,11 +158,49 @@ export interface Translations {
     currentHp: string;
   };
 
+  // Disclaimer Screen
+  disclaimer: {
+    title: string;
+    subtitle: string;
+    paragraph1: string;
+    paragraph2: string;
+    paragraph3: string;
+    paragraph4: string;
+    paragraph5: string;
+    paragraph6: string;
+    paragraph7: string;
+    thankYou: string;
+    legalLinkText: string;
+    dontShowAgain: string;
+    skip: string;
+  };
+
   // Items (placeholders - will be populated per item)
   items: {
     [key: string]: {
       name: string;
       description: string;
+      passive?: string; // For passive descriptions
+      active?: string; // For active ability descriptions
+      onUse?: string; // For consumable use effects
+    };
+  };
+
+  // Weapons
+  weapons: {
+    [key: string]: {
+      name: string;
+      description: string;
+      lore?: string; // Optional lore text
+    };
+  };
+
+  // Spells
+  spells: {
+    [key: string]: {
+      name: string;
+      description: string;
+      effects?: string; // Detailed effect description
     };
   };
 
@@ -171,11 +209,30 @@ export interface Translations {
     [key: string]: {
       name: string;
       description?: string;
+      title?: string; // Optional title (e.g., "The Curator of Sands")
     };
   };
 
   // Abilities (placeholders)
   abilities: {
+    [key: string]: {
+      name: string;
+      description: string;
+    };
+  };
+
+  // Status Effects
+  statusEffects: {
+    stunned: string;
+    slowed: string;
+    rooted: string;
+    silenced: string;
+    buffed: string;
+    debuffed: string;
+  };
+
+  // Item Passives
+  passives: {
     [key: string]: {
       name: string;
       description: string;

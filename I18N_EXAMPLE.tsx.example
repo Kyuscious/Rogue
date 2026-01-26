@@ -1,0 +1,107 @@
+/**
+ * Example: How to Refactor Items to Use I18n
+ * 
+ * BEFORE (Old Way):
+ * ------------------
+ * dorans_blade: {
+ *   id: 'dorans_blade',
+ *   name: "Doran's Blade",  // ❌ Hardcoded English
+ *   description: 'A blade for explorers who deal physical damage',  // ❌ Hardcoded
+ *   rarity: 'starter',
+ *   price: 0,
+ *   stats: { attackDamage: 8, health: 80, lifeSteal: 1 },
+ *   passiveId: 'life_draining',
+ * },
+ * 
+ * AFTER (New Way):
+ * -----------------
+ * dorans_blade: {
+ *   id: 'dorans_blade',
+ *   // ✅ No name or description - stored in i18n files
+ *   rarity: 'starter',
+ *   price: 0,
+ *   stats: { attackDamage: 8, health: 80, lifeSteal: 1 },
+ *   passiveId: 'life_draining',
+ * },
+ * 
+ * Translation file (en.ts):
+ * -------------------------
+ * items: {
+ *   dorans_blade: {
+ *     name: "Doran's Blade",
+ *     description: "A blade for explorers who deal physical damage",
+ *     passive: "Life Draining: Gain 20 HP when defeating an enemy",
+ *   }
+ * }
+ * 
+ * 
+ * HOW TO USE IN COMPONENTS:
+ * --------------------------
+ */
+
+// Example 1: In a React Component
+import { useTranslations } from '../i18n/helpers';
+import { getItemById } from '../game/items';
+
+function ItemDisplay({ itemId }: { itemId: string }) {
+  const t = useTranslations();
+  const item = getItemById(itemId);
+  
+  if (!item) return null;
+  
+  // Get translated text
+  const itemName = t.items[itemId]?.name || itemId;
+  const itemDescription = t.items[itemId]?.description || '';
+  
+  return (
+    <div className="item-card">
+      <h3>{itemName}</h3>
+      <p>{itemDescription}</p>
+      <div className="stats">
+        {item.stats.attackDamage && (
+          <span>{t.common.attackDamage}: {item.stats.attackDamage}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Example 2: Using Helper Function
+import { getItemTranslation } from '../i18n/helpers';
+
+function showItemInLog(itemId: string) {
+  const { name, description } = getItemTranslation(itemId);
+  console.log(`Found ${name}: ${description}`);
+}
+
+// Example 3: In Battle Log Messages
+import { getTranslations } from '../i18n/helpers';
+
+function generateBattleLog(itemId: string) {
+  const t = getTranslations();
+  const { name } = getItemTranslation(itemId);
+  
+  return `${t.battle.victory}! ${name} was acquired.`;
+}
+
+
+/**
+ * MIGRATION CHECKLIST FOR YOUR PROJECT:
+ * 
+ * 1. ✅ Add type definitions (types.ts) - DONE
+ * 2. ✅ Create helper functions (helpers.ts) - DONE  
+ * 3. ✅ Add English translations (en.ts) - STARTED (need to complete all items)
+ * 4. ⏳ Update Item interface to make name/description optional
+ * 5. ⏳ Update getItemById to return item data only (no translations)
+ * 6. ⏳ Update all components that display items to use translations
+ * 7. ⏳ Same for weapons, spells, enemies
+ * 8. ⏳ Add French translations (fr.ts)
+ * 
+ * RECOMMENDATION: Do this incrementally
+ * - Start with items shown most frequently (health potions, starter items)
+ * - Then weapons and spells
+ * - Then enemies
+ * - Finally rare/legendary items
+ */
+
+export {};

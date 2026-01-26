@@ -3,13 +3,16 @@ import { Character } from '../../game/types';
 import { CharacterStats, getScaledStats } from '../../game/statsSystem';
 import { getPassiveIdsFromInventory } from '../../game/items';
 import { useGameStore } from '../../game/store';
+import { CombatBuff } from '../../game/itemSystem';
 import './StatsPanel.css';
 
 interface StatsPanelProps {
   character: Character;
+  combatBuffs?: CombatBuff[];
+  combatDebuffs?: CombatBuff[];
 }
 
-export const StatsPanel: React.FC<StatsPanelProps> = ({ character }) => {
+export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, combatDebuffs }) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const { state } = useGameStore();
@@ -24,7 +27,27 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character }) => {
   const scaledStats = character.role === 'enemy'
     ? character.stats
     : getScaledStats(character.stats, character.level, character.class, passiveIds);
-  const stats = scaledStats as Partial<CharacterStats> | undefined;
+  
+  // Apply combat buffs and debuffs to the stats
+  const statsWithModifiers = { ...scaledStats };
+  
+  // Apply buffs
+  combatBuffs?.forEach(buff => {
+    const statKey = buff.stat as keyof CharacterStats;
+    if (statsWithModifiers[statKey] !== undefined) {
+      (statsWithModifiers[statKey] as number) += buff.amount;
+    }
+  });
+  
+  // Apply debuffs
+  combatDebuffs?.forEach(debuff => {
+    const statKey = debuff.stat as keyof CharacterStats;
+    if (statsWithModifiers[statKey] !== undefined) {
+      (statsWithModifiers[statKey] as number) += debuff.amount; // amount is already negative for debuffs
+    }
+  });
+  
+  const stats = statsWithModifiers as Partial<CharacterStats> | undefined;
 
   // Survivability stats
   const survivalStats = [
