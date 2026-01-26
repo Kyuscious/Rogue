@@ -1,6 +1,15 @@
 import React from 'react';
 import './BattlefieldDisplay.css';
 
+export interface AoEIndicator {
+  type: 'rectangle' | 'circle';
+  position: number;
+  size: number;
+  color: string;
+  label?: string;
+  targetPosition?: number; // For rectangle, the target position to extend towards
+}
+
 interface BattlefieldDisplayProps {
   playerPosition: number;
   enemyPosition: number;
@@ -10,6 +19,7 @@ interface BattlefieldDisplayProps {
   enemyAttackRange: number;
   distance: number;
   vertical?: boolean;
+  aoeIndicators?: AoEIndicator[];
 }
 
 export const BattlefieldDisplay: React.FC<BattlefieldDisplayProps> = ({
@@ -19,10 +29,11 @@ export const BattlefieldDisplay: React.FC<BattlefieldDisplayProps> = ({
   enemyAttackRange,
   distance,
   vertical = false,
+  aoeIndicators = [],
 }) => {
-  // Battlefield is 1000 units (-500 to 500)
-  const BATTLEFIELD_MIN = -500;
-  const BATTLEFIELD_WIDTH = 1000;
+  // Battlefield is 5000 units (-1500 to 3000)
+  const BATTLEFIELD_MIN = -1500;
+  const BATTLEFIELD_WIDTH = 3000;
   const CANVAS_SIZE = vertical ? 280 : 600;
   const CANVAS_WIDTH = vertical ? 80 : 600;
   
@@ -87,6 +98,74 @@ export const BattlefieldDisplay: React.FC<BattlefieldDisplayProps> = ({
             strokeDasharray="3,3"
           />
           
+          {/* AoE indicators */}
+          {aoeIndicators.map((aoe, index) => {
+            const aoeCoord = posToCanvasCoord(aoe.position);
+            const aoePixels = rangeToPixels(aoe.size);
+            
+            if (aoe.type === 'circle') {
+              return (
+                <g key={index}>
+                  <circle
+                    cx={centerX}
+                    cy={aoeCoord}
+                    r={aoePixels}
+                    fill={`${aoe.color}20`}
+                    stroke={aoe.color}
+                    strokeWidth="2"
+                  />
+                  {aoe.label && (
+                    <text
+                      x={centerX}
+                      y={aoeCoord - aoePixels - 8}
+                      fill={aoe.color}
+                      fontSize="10"
+                      textAnchor="middle"
+                      fontWeight="600"
+                    >
+                      {aoe.label}
+                    </text>
+                  )}
+                </g>
+              );
+            } else {
+              // Rectangle: draw from position toward targetPosition (vertical)
+              const targetCoord = aoe.targetPosition !== undefined ? posToCanvasCoord(aoe.targetPosition) : aoeCoord;
+              const rectHeight = aoePixels;
+              const rectWidth = 30;
+              
+              // Determine direction and calculate rectangle bounds
+              const isTowardsPositive = targetCoord > aoeCoord;
+              const rectY = isTowardsPositive ? aoeCoord : Math.max(aoeCoord - rectHeight, 0);
+              
+              return (
+                <g key={index}>
+                  <rect
+                    x={centerX - rectWidth / 2}
+                    y={rectY}
+                    width={rectWidth}
+                    height={rectHeight}
+                    fill={`${aoe.color}20`}
+                    stroke={aoe.color}
+                    strokeWidth="2"
+                  />
+                  {aoe.label && (
+                    <text
+                      x={centerX + 20}
+                      y={rectY + 15}
+                      fill={aoe.color}
+                      fontSize="10"
+                      textAnchor="start"
+                      fontWeight="600"
+                    >
+                      {aoe.label}
+                    </text>
+                  )}
+                </g>
+              );
+            }
+          })}
+          
           {/* Player position (top of line) */}
           <circle
             cx={centerX}
@@ -150,8 +229,76 @@ export const BattlefieldDisplay: React.FC<BattlefieldDisplayProps> = ({
           strokeDasharray="3,3"
         />
         
+        {/* AoE indicators */}
+        {aoeIndicators.map((aoe, index) => {
+          const aoeCoord = posToCanvasCoord(aoe.position);
+          const aoePixels = rangeToPixels(aoe.size);
+          
+          if (aoe.type === 'circle') {
+            return (
+              <g key={index}>
+                <circle
+                  cx={aoeCoord}
+                  cy="60"
+                  r={aoePixels}
+                  fill={`${aoe.color}20`}
+                  stroke={aoe.color}
+                  strokeWidth="2"
+                />
+                {aoe.label && (
+                  <text
+                    x={aoeCoord}
+                    y="48"
+                    fill={aoe.color}
+                    fontSize="10"
+                    textAnchor="middle"
+                    fontWeight="600"
+                  >
+                    {aoe.label}
+                  </text>
+                )}
+              </g>
+            );
+          } else {
+            // Rectangle: draw from position toward targetPosition
+            const targetCoord = aoe.targetPosition !== undefined ? posToCanvasCoord(aoe.targetPosition) : aoeCoord;
+            const rectWidth = aoePixels;
+            const rectHeight = 30;
+            
+            // Determine direction and calculate rectangle bounds
+            const isTowardsPositive = targetCoord > aoeCoord;
+            const rectX = isTowardsPositive ? aoeCoord : Math.max(aoeCoord - rectWidth, 0);
+            
+            return (
+              <g key={index}>
+                <rect
+                  x={rectX}
+                  y="45"
+                  width={rectWidth}
+                  height={rectHeight}
+                  fill={`${aoe.color}20`}
+                  stroke={aoe.color}
+                  strokeWidth="2"
+                />
+                {aoe.label && (
+                  <text
+                    x={rectX + 5}
+                    y="40"
+                    fill={aoe.color}
+                    fontSize="10"
+                    textAnchor="start"
+                    fontWeight="600"
+                  >
+                    {aoe.label}
+                  </text>
+                )}
+              </g>
+            );
+          }
+        })}
+        
         {/* Player position */}
-        <circle cx={playerCoord} cy="60" r="6" fill="#4CAF50" stroke="#2E7D32" strokeWidth="2" />
+        <circle cx={playerCoord} cy="60" r="6" fill="#168cfa" stroke="#0b07f5" strokeWidth="2" />
         
         {/* Enemy position */}
         <circle cx={enemyCoord} cy="60" r="6" fill="#FF6B6B" stroke="#C92A2A" strokeWidth="2" />

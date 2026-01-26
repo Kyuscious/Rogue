@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../../../game/store';
 import { CharacterStatus } from '../../entity/CharacterStatus';
-import { BattlefieldDisplay } from './BattlefieldDisplay';
+import { BattlefieldDisplay, AoEIndicator } from './BattlefieldDisplay';
 import { TurnTimeline } from './TurnTimeline';
 import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, rollCriticalStrike, calculateCriticalDamage } from '../../../game/statsSystem';
 import { getPassiveIdsFromInventory } from '../../../game/items';
 import { calculateOnHitEffects, applyOnHitEffects, formatOnHitEffects } from '../../../game/onHitEffects';
+import { calculateCCDuration } from '../../../game/crowdControlSystem';
 import { 
   TurnEntity, 
   TurnAction, 
-  generateTurnSequence
+  generateTurnSequence,
+  applyStunDelay
 } from '../../../game/turnSystemV2';
+import { StatusEffect, createStunEffect } from '../../../game/statusEffects';
+import { calculateAoEDirection } from '../../../game/aoeUtils';
 import { 
   getItemById,
   createBuffFromItem,
@@ -119,6 +123,19 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   const [enemyEntity, setEnemyEntity] = useState<TurnEntity | null>(null);
   const [turnSequence, setTurnSequence] = useState<TurnAction[]>([]);
   const [sequenceIndex, setSequenceIndex] = useState(0);
+  
+  // Status effects system
+  const [_statusEffects, setStatusEffects] = useState<StatusEffect[]>([]);
+  const [pendingStuns, setPendingStuns] = useState<Array<{targetId: string; duration: number; currentTime: number}>>([]);
+  const [aoeIndicators, setAoeIndicators] = useState<AoEIndicator[]>([]);
+  const [aoeRemovalTimes, setAoeRemovalTimes] = useState<Array<{ label: string; removalTime: number }>>([]);
+  const [stunPeriods, setStunPeriods] = useState<Array<{
+    entityId: string;
+    entityName: string;
+    startTime: number;
+    endTime: number;
+  }>>([]);
+  const [weaponCooldowns, setWeaponCooldowns] = useState<Record<string, number>>({});
 
   // Movement and range system
   const [playerPosition, setPlayerPosition] = useState(50);
@@ -417,6 +434,18 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         },
       };
     });
+    
+    // Also reduce weapon cooldowns
+    setWeaponCooldowns(prev => {
+      const updated: Record<string, number> = {};
+      for (const [weaponId, cooldown] of Object.entries(prev)) {
+        if (cooldown > 1) {
+          updated[weaponId] = cooldown - 1;
+        }
+      }
+      console.log('🔄 Reducing weapon cooldowns (timeline turn):', { before: prev, after: updated });
+      return updated;
+    });
   };
 
   const handleAttack = () => {
@@ -430,6 +459,17 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       setBattleLog((prev) => [
         ...prev,
         { message: `${playerChar.name} has no weapon equipped!` },
+      ]);
+      return;
+    }
+    
+    // Check weapon cooldown
+    const weaponCooldown = weaponCooldowns[equippedWeaponId] || 0;
+    if (weaponCooldown > 0) {
+      console.log('❌ Weapon on cooldown, blocking attack');
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `⏰ ${equippedWeapon.name} is on cooldown (${weaponCooldown} turn${weaponCooldown > 1 ? 's' : ''} remaining)!` },
       ]);
       return;
     }
@@ -584,6 +624,58 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       }
     }
     
+    // Check for stun-on-hit from weapon (Shield of Daybreak)
+    if (newEnemyHp > 0) {
+      const hasStunEffect = equippedWeapon.effects.some(effect => effect.type === 'stun');
+      if (hasStunEffect) {
+        const stunEffect = equippedWeapon.effects.find(effect => effect.type === 'stun');
+        if (stunEffect && stunEffect.stunDuration) {
+          const currentTime = turnSequence[sequenceIndex]?.time || 0;
+          const baseDuration = stunEffect.stunDuration;
+          
+          // Calculate effective stun duration after enemy tenacity reduction
+          const enemyTenacity = enemyChar.stats.tenacity || 0;
+          const effectiveDuration = calculateCCDuration(baseDuration, enemyTenacity, 'stun');
+          
+          console.log(`[STUN WEAPON] Applying stun: base=${baseDuration}, tenacity=${enemyTenacity}, effective=${effectiveDuration}`);
+          
+          // Only apply stun if effective duration > 0 (not immune due to 100 tenacity)
+          if (effectiveDuration > 0) {
+            // Apply stun immediately (no cast time for weapon attacks)
+            setTurnSequence(prev => applyStunDelay(prev, 'enemy', effectiveDuration, currentTime));
+            
+            // Track stun period for timeline visualization
+            const stunStartTime = currentTime;
+            const stunEndTime = currentTime + effectiveDuration;
+            console.log(`🔵 STUN WEAPON: Adding stun period from ${stunStartTime.toFixed(2)} to ${stunEndTime.toFixed(2)} (duration: ${effectiveDuration})`);
+            setStunPeriods(prev => [...prev, {
+              entityId: 'enemy',
+              entityName: enemyChar.name,
+              startTime: stunStartTime,
+              endTime: stunEndTime,
+            }]);
+            
+            // Add stunned debuff for visual indicator
+            setEnemyDebuffs((prevDebuffs) => [
+              ...prevDebuffs,
+              {
+                id: `stunned_${Date.now()}`,
+                name: `Stunned (${stunStartTime.toFixed(2)}>${stunEndTime.toFixed(2)})`,
+                stat: 'health', // Use health as placeholder to avoid stat display issues
+                amount: 0, // Zero amount so no stat change shows
+                duration: Math.ceil(effectiveDuration) + 1, // Duration for visual display
+                type: 'instant',
+              } as CombatBuff,
+            ]);
+            
+            logMessages.push({ message: `💫 ${enemyChar.name} is stunned for ${effectiveDuration} turn(s)!` });
+          } else {
+            logMessages.push({ message: `🛡️ ${enemyChar.name}'s tenacity (${enemyTenacity}) negates the stun!` });
+          }
+        }
+      }
+    }
+    
     // Check for Life Draining passive (Doran's Blade)
     if (playerPassiveIds.includes('life_draining')) {
       const baseAD = playerChar.stats.attackDamage || 50;
@@ -599,6 +691,33 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     }
     
     setBattleLog((prev) => [...prev, ...logMessages]);
+    
+    // Apply weapon cooldown
+    // TIMING MODEL: Cooldowns snap to next integer turn (same as spells)
+    // Example: Attack at T1.65 with 3 CD → +1 for partial turn → 4 turns → Ready at T5.00
+    // This ensures cooldowns always count in full turn increments from next boundary
+    if (equippedWeapon.cooldown && equippedWeapon.cooldown > 0) {
+      const baseCooldown = equippedWeapon.cooldown as number;
+      // Add 1 to account for the partial turn we're in (snap to next integer turn)
+      const adjustedCooldown = baseCooldown + 1;
+      
+      console.log('⏰ Setting weapon cooldown:', {
+        weaponId: equippedWeaponId,
+        weaponName: equippedWeapon.name,
+        baseCooldown,
+        adjustedCooldown,
+        currentTime: currentAction?.time,
+        readyAt: `T${Math.ceil(currentAction?.time || 0) + baseCooldown}.00`,
+      });
+      
+      setWeaponCooldowns(prev => {
+        const updated: Record<string, number> = {
+          ...prev,
+          [equippedWeaponId]: adjustedCooldown
+        };
+        return updated;
+      });
+    }
     
     // Advance to next action in sequence
     
@@ -725,6 +844,76 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         totalHealing += healAmount;
         logMessages.push({ message: `💚 ${playerChar.name} heals for ${Math.round(healAmount)} HP!` });
       }
+      
+      // Handle stun effects
+      if (effect.type === 'stun' && effect.stunDuration) {
+        const currentTime = turnSequence[sequenceIndex]?.time || 0;
+        const castTime = equippedSpell.castTime || 0;
+        const baseDuration = effect.stunDuration; // Base stun duration
+        
+        // Calculate effective stun duration after enemy tenacity reduction
+        const enemyTenacity = enemyChar.stats.tenacity || 0;
+        const effectiveDuration = calculateCCDuration(baseDuration, enemyTenacity, 'stun');
+        
+        console.log(`[STUN] Applying stun: base=${baseDuration}, tenacity=${enemyTenacity}, effective=${effectiveDuration}`);
+        
+        // Only apply stun if effective duration > 0 (not immune due to 100 tenacity)
+        if (effectiveDuration > 0) {
+          // Check if enemy is in range
+          const spellRange = equippedSpell.range || 500; // Default spell range
+          if (currentDistance <= spellRange) {
+            // Apply stun with reduced duration
+            const stunEffect = createStunEffect('enemy', effectiveDuration, currentTime, 'player', castTime);
+            setStatusEffects(prev => [...prev, stunEffect]);
+          
+          // Show AoE indicator during cast time
+          if (equippedSpell.areaOfEffect) {
+            const aoe = equippedSpell.areaOfEffect;
+            // Use utility to calculate proper AoE direction
+            const aoeCalc = calculateAoEDirection(
+              playerPosition,
+              enemyPosition,
+              spellRange,
+              aoe.size
+            );
+            
+            const aoeLabel = `${equippedSpell.name}_${Date.now()}`;
+            setAoeIndicators(prev => [...prev, {
+              type: aoe.type,
+              position: aoeCalc.sourcePosition,
+              size: aoe.size,
+              color: '#4A90E2',
+              label: aoeLabel,
+              targetPosition: aoeCalc.targetPosition,
+            }]);
+            
+            // Track when to remove AoE indicator (at cast completion time)
+            const removalTime = currentTime + castTime;
+            console.log(`🎯 AoE indicator for ${equippedSpell.name} will be removed at T${removalTime.toFixed(2)}`);
+            setAoeRemovalTimes(prev => [...prev, { label: aoeLabel, removalTime }]);
+          }
+          
+          // Schedule stun application
+          setPendingStuns(prev => [...prev, {
+            targetId: 'enemy',
+            duration: effectiveDuration,
+            currentTime: currentTime + castTime
+          }]);
+          
+          if (castTime > 0) {
+            logMessages.push({ message: `⏰ ${playerChar.name} begins casting ${equippedSpell.name}! Stun will apply in ${castTime} turn(s).` });
+          } else {
+            logMessages.push({ message: `💫 ${playerChar.name} stuns ${enemyChar.name} for ${effectiveDuration} turn(s)!` });
+            // Apply stun immediately if no cast time
+            setTurnSequence(prev => applyStunDelay(prev, 'enemy', effectiveDuration, currentTime));
+          }
+        } else {
+          logMessages.push({ message: `❌ ${enemyChar.name} is out of range! (${Math.round(currentDistance)} > ${spellRange})` });
+        }
+        } else {
+          logMessages.push({ message: `🛡️ ${enemyChar.name}'s tenacity (${enemyTenacity}) negates the stun!` });
+        }
+      }
     }
     
     // Update enemy HP if damage was dealt
@@ -829,7 +1018,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     }
     
     // Check if player would escape/flee
-    if (newPosition > 500 || newPosition < -500) {
+    if (newPosition > 1500 || newPosition < -1500) {
       setBattleEnded(true);
       setBattleResult('defeat');
       setBattleLog((prev) => [
@@ -938,7 +1127,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     let newPosition = enemyPosition + MOVE_DISTANCE;
     
     // Check if enemy would escape
-    if (newPosition > 500 || newPosition < -500) {
+    if (newPosition > 2500 || newPosition < -2500) {
       setBattleEnded(true);
       setBattleResult('victory');
       setBattleLog((prev) => [
@@ -1220,6 +1409,58 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // Note: If battleResult === 'reward_selection', this won't be called
     // because the Continue button is hidden and reward selection handles its own flow
   };
+
+  // Remove AoE indicators when timeline reaches their removal time
+  useEffect(() => {
+    if (aoeRemovalTimes.length === 0 || !turnSequence[sequenceIndex]) return;
+    
+    const currentTime = turnSequence[sequenceIndex].time;
+    const indicatorsToRemove = aoeRemovalTimes.filter(item => currentTime >= item.removalTime);
+    
+    if (indicatorsToRemove.length > 0) {
+      indicatorsToRemove.forEach(item => {
+        console.log(`🎯 Removing AoE indicator "${item.label}" at T${currentTime.toFixed(2)}`);
+        setAoeIndicators(prev => prev.filter(a => a.label !== item.label));
+      });
+      
+      // Remove from tracking list
+      setAoeRemovalTimes(prev => prev.filter(item => currentTime < item.removalTime));
+    }
+  }, [sequenceIndex, turnSequence, aoeRemovalTimes]);
+
+  // Process pending stuns when timeline advances past their cast time
+  useEffect(() => {
+    if (pendingStuns.length === 0 || !turnSequence[sequenceIndex]) return;
+    
+    const currentTime = turnSequence[sequenceIndex].time;
+    const stunsToApply = pendingStuns.filter(stun => currentTime >= stun.currentTime);
+    
+    if (stunsToApply.length > 0) {
+      stunsToApply.forEach(stun => {
+        // Apply the stun delay to the turn sequence
+        setTurnSequence(prev => applyStunDelay(prev, stun.targetId, stun.duration, currentTime));
+        
+        // Track stun period for timeline visualization
+        console.log(`🔵 STUN SPELL: Adding stun period from ${currentTime.toFixed(2)} to ${(currentTime + stun.duration).toFixed(2)} (duration: ${stun.duration})`);
+        setStunPeriods(prev => [...prev, {
+          entityId: stun.targetId,
+          entityName: stun.targetId === 'player' ? playerChar.name : enemyChar.name,
+          startTime: currentTime,
+          endTime: currentTime + stun.duration,
+        }]);
+        
+        // Add log message
+        const targetName = stun.targetId === 'player' ? playerChar.name : enemyChar.name;
+        setBattleLog(prev => [
+          ...prev,
+          { message: `💫 ${targetName} is stunned for ${stun.duration} turn(s)!` }
+        ]);
+      });
+      
+      // Remove applied stuns from pending list
+      setPendingStuns(prev => prev.filter(stun => currentTime < stun.currentTime));
+    }
+  }, [sequenceIndex, turnSequence, pendingStuns, playerChar.name, enemyChar.name]);
 
   // Auto-scroll battle log to bottom when new entries are added
   useEffect(() => {
@@ -1575,6 +1816,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           enemyAttackRange={enemyScaledStats.attackRange || 125}
           distance={currentDistance}
           vertical={true}
+          aoeIndicators={aoeIndicators}
         />
         
         <div className="team-enemy">
@@ -1609,6 +1851,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           playerName={playerChar.name}
           enemyName={enemyChar.name}
           isPlayerTurn={isPlayerTurn}
+          stunPeriods={stunPeriods}
           onSimultaneousAction={handleSimultaneousAction}
         />
       )}
@@ -1699,7 +1942,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                       ) : null;
                     })()}
                   </button>
-                  <WeaponSelector />
+                  <WeaponSelector attackRange={playerScaledStats.attackRange} />
                 </div>
 
                 {/* Skip Section */}
@@ -1766,7 +2009,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                       ) : null;
                     })()}
                   </button>
-                  <SpellSelector />
+                  <SpellSelector attackRange={playerScaledStats.attackRange} />
                 </div>
 
                 {/* Item Section */}

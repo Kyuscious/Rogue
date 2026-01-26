@@ -1,0 +1,123 @@
+.ability-tooltip {
+  position: fixed;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #4a90e2;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 280px;
+  max-width: 350px;
+  z-index: 10000;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-name {
+  font-size: 16px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.tooltip-name.rarity-starter {
+  color: #9ca3af;
+}
+
+.tooltip-name.rarity-common {
+  color: #60a5fa;
+}
+
+.tooltip-name.rarity-epic {
+  color: #a855f7;
+}
+
+.tooltip-name.rarity-legendary {
+  color: #f59e0b;
+}
+
+.tooltip-type {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.tooltip-description {
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.tooltip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.tooltip-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.stat-label {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.stat-value {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.tooltip-effects {
+  background: rgba(74, 144, 226, 0.1);
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.effects-label {
+  color: #4a90e2;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.effect-item {
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.effect-item:last-child {
+  margin-bottom: 0;
+}

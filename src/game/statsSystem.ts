@@ -5,6 +5,7 @@
 
 import { CharacterClass } from './types';
 import { applyPassiveStatModifiers, PassiveId } from './itemPassives';
+import { MAX_TENACITY } from './crowdControlSystem';
 
 export type LootType = 
   | 'attackDamage' 
@@ -236,10 +237,15 @@ export function getScaledStats(
   // Finally, apply passive item modifiers (e.g., conversions, multipliers)
   const finalStats = applyPassiveStatModifiers(scaledStats, level, passiveIds);
   
-  // Round decimal stats properly
+  // Round decimal stats properly and apply caps
   (Object.keys(finalStats) as Array<keyof CharacterStats>).forEach((stat) => {
     if (!decimalStats.includes(stat)) {
       finalStats[stat as keyof CharacterStats] = Math.round(finalStats[stat as keyof CharacterStats]);
+    }
+    
+    // Cap tenacity at MAX_TENACITY (100)
+    if (stat === 'tenacity') {
+      finalStats.tenacity = Math.min(MAX_TENACITY, finalStats.tenacity);
     }
   });
   

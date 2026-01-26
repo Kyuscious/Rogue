@@ -183,10 +183,12 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporary
           <div className="tooltip-level">
             {temporaryStats[hoveredBuffIndex].duration && temporaryStats[hoveredBuffIndex].duration < 999 ? `${temporaryStats[hoveredBuffIndex].duration} turns remaining` : 'Permanent'}
           </div>
-          <div className="tooltip-stat">
-            {temporaryStats[hoveredBuffIndex].value > 0 ? '+' : ''}{temporaryStats[hoveredBuffIndex].value}{' '}
-            {STAT_DISPLAY_NAMES[temporaryStats[hoveredBuffIndex].statName] || temporaryStats[hoveredBuffIndex].statName}
-          </div>
+          {temporaryStats[hoveredBuffIndex].value !== 0 && (
+            <div className="tooltip-stat">
+              {temporaryStats[hoveredBuffIndex].value > 0 ? '+' : ''}{temporaryStats[hoveredBuffIndex].value}{' '}
+              {STAT_DISPLAY_NAMES[temporaryStats[hoveredBuffIndex].statName] || temporaryStats[hoveredBuffIndex].statName}
+            </div>
+          )}
         </div>
       )}
     </div>

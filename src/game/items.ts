@@ -48,8 +48,20 @@ export interface Item {
     trueDamage?: number; // Flat damage that bypasses armor/MR (on-hit for attacks and spells)
   };
   passive?: string;
+  cursed?: boolean; // Whether the item is cursed and cannot be unequipped without special means
   passiveId?: PassiveId;
   consumable?: boolean; // If true, item is consumed on use
+  active?: {
+    name: string;
+    description: string;
+    cooldown: number; // Turns until can use again
+    range?: number; // Range in units (uses attack range if not specified)
+    castTime?: number; // Cast time before effect applies
+    setupTime?: number; // Setup time for traps
+    effectRadius?: number; // Area of effect radius
+    stunDuration?: number; // Stun duration in turns
+    requiresEnemyInRange?: boolean; // Must have enemy in range to use
+  };
   onUseEffect?: string; // Description of what happens when used
   unlockRequirement?: {
     type: 'stat_threshold' | 'achievement' | 'progression';
@@ -334,6 +346,49 @@ export const ITEM_DATABASE: Record<string, Item> = {
     onUseEffect: 'Restores 50 health over 5 turns',
   },
   
+  // ACTIVE ITEMS - Combat Abilities
+  shield_of_daybreak_old: {
+    id: 'shield_of_daybreak_old',
+    name: 'Shield of Daybreak (Active)',
+    description: 'A radiant shield that can stun enemies on activation',
+    rarity: 'epic',
+    price: 350,
+    classes: ['vanguard', 'warden'],
+    stats: {
+      armor: 20,
+      health: 100,
+    },
+    active: {
+      name: 'Daybreak',
+      description: 'Stuns the enemy for 1.0 turn. Must be in attack range.',
+      cooldown: 3,
+      stunDuration: 1.0,
+      requiresEnemyInRange: true,
+    },
+  },
+  
+  // CONSUMABLE - Trap Item
+  flashbomb_trap: {
+    id: 'flashbomb_trap',
+    name: 'Flashbomb Trap',
+    description: 'A trap that stuns enemies after setup time',
+    rarity: 'common',
+    price: 75,
+    stats: {},
+    consumable: true,
+    active: {
+      name: 'Set Flashbomb',
+      description: 'Places trap at enemy location (500 range). After 0.5 turn setup, stuns for 0.5 turns in 50 unit radius.',
+      cooldown: 0,
+      range: 500,
+      setupTime: 0.5,
+      stunDuration: 0.5,
+      effectRadius: 50,
+      requiresEnemyInRange: true,
+    },
+    onUseEffect: 'Places a trap that stuns after 0.5 turns. Can be dodged by moving away.',
+  },
+  
   stealth_ward: {
     id: 'stealth_ward',
     name: 'Stealth Ward',
@@ -365,8 +420,20 @@ export const ITEM_DATABASE: Record<string, Item> = {
     onUseEffect: 'Reveals what the next encounter will be',
   },
 
-
   // Common Items
+  shield_of_daybreak: {
+    id: 'shield_of_daybreak',
+    name: 'Shield of Daybreak',
+    description: 'A radiant shield that stuns enemies with each strike. Deals 30% AD damage and stuns for 1.0 turn on attack.',
+    rarity: 'epic',
+    price: 400,
+    classes: ['vanguard', 'warden'],
+    stats: {
+      armor: 20,
+      health: 100,
+      attackDamage: 15,
+    },
+  },
   long_sword: {
     id: 'long_sword',
     name: 'Long Sword',

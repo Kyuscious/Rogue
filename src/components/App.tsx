@@ -250,6 +250,8 @@ export const App: React.FC = () => {
     visitRegion(region);
     // Add 3 health potions to help start the run
     addInventoryItem({ itemId: 'health_potion', quantity: 3 });
+    // Add 1 flashbomb trap
+    addInventoryItem({ itemId: 'flashbomb_trap', quantity: 1 });
     setScene('quest');
   };
 

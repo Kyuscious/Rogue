@@ -32,6 +32,8 @@ export interface TurnAction {
   description: string;
   priority: number; // 0 = player first, 1 = enemy second (for ties)
   accumulatedTime?: number; // For backwards compatibility
+  isDelayed?: boolean; // True if this action was delayed by a stun
+  delayedBy?: number; // Amount of delay applied
 }
 
 /**
@@ -172,6 +174,40 @@ export function generateTurnSequence(
       return a.time - b.time; // Chronological order
     }
     return a.priority - b.priority; // Player (0) before enemy (1) on ties
+  });
+}
+
+/**
+ * Apply stun delay to future actions of an entity
+ * @param turnSequence Current turn sequence
+ * @param targetEntityId Entity to stun ('player' or 'enemy')
+ * @param stunDuration Duration in turns to delay actions
+ * @param currentTime Current time on timeline when stun is applied
+ * @returns Updated turn sequence with delayed actions
+ */
+export function applyStunDelay(
+  turnSequence: TurnAction[],
+  targetEntityId: string,
+  stunDuration: number,
+  currentTime: number
+): TurnAction[] {
+  return turnSequence.map((action) => {
+    // Only delay future actions of the target entity
+    if (action.entityId === targetEntityId && action.time > currentTime) {
+      return {
+        ...action,
+        time: action.time + stunDuration,
+        turnNumber: Math.ceil(action.time + stunDuration),
+        isDelayed: true,
+        delayedBy: (action.delayedBy || 0) + stunDuration,
+      };
+    }
+    return action;
+  }).sort((a, b) => {
+    if (Math.abs(a.time - b.time) < 0.001) {
+      return a.priority - b.priority;
+    }
+    return a.time - b.time;
   });
 }
 

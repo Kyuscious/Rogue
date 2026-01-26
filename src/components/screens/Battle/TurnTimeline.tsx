@@ -8,12 +8,20 @@ interface TurnAction {
   turnNumber: number;
 }
 
+interface StunPeriod {
+  entityId: string;
+  entityName: string;
+  startTime: number;
+  endTime: number;
+}
+
 interface TurnTimelineProps {
   turnSequence: TurnAction[];
   currentIndex: number;
   playerName: string;
   enemyName: string;
   isPlayerTurn: boolean;
+  stunPeriods?: StunPeriod[];
   onSimultaneousAction?: (playerAction: string, enemyAction: string, time: number) => void;
 }
 
@@ -23,6 +31,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   playerName,
   enemyName,
   isPlayerTurn,
+  stunPeriods = [],
   onSimultaneousAction,
 }) => {
   // Get next 10 actions starting from current
@@ -151,6 +160,39 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
         
         {/* Timeline bar */}
         <div className="timeline-bar" />
+        
+        {/* Stun period indicators */}
+        {stunPeriods.map((stun, idx) => {
+          // Only show stuns that overlap with visible window
+          if (stun.endTime < startTurn || stun.startTime > endTurn) {
+            return null;
+          }
+          
+          const stunStart = Math.max(stun.startTime, startTurn);
+          const stunEnd = Math.min(stun.endTime, endTurn);
+          const startPos = getPositionPercent(stunStart);
+          const endPos = getPositionPercent(stunEnd);
+          const width = endPos - startPos;
+          
+          const isPlayer = stun.entityId === 'player';
+          const barColor = isPlayer ? 'rgba(76, 175, 80, 0.7)' : 'rgba(255, 107, 107, 0.7)';
+          
+          return (
+            <div
+              key={`stun-${idx}`}
+              className="stun-period"
+              style={{
+                left: `${startPos}%`,
+                width: `${width}%`,
+                background: barColor,
+                borderColor: isPlayer ? '#4CAF50' : '#FF6B6B',
+              }}
+              title={`${stun.entityName} stunned (${stun.startTime.toFixed(2)} - ${stun.endTime.toFixed(2)})`}
+            >
+              <span className="stun-label">💫 Stunned</span>
+            </div>
+          );
+        })}
         
         {/* Turn number markers - positioned at MIDPOINTS */}
         {turnMarkers.map((turn) => {

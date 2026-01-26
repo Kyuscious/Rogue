@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, InventoryItem, Region } from './types';
+import { Character, InventoryItem, Region, CharacterClass } from './types';
 import { DEFAULT_STATS } from './statsSystem';
 import { STARTING_ITEMS, ITEM_DATABASE, getRandomShopItemByAct } from './items';
 import { checkLevelUp, getLevelUpStatBoosts } from './experienceSystem';
@@ -8,6 +8,7 @@ import { REGION_SHOP_POOLS } from './rewardPool';
 import { CombatBuff } from './itemSystem';
 import { spawnEnemies, deepCopyEnemies } from './battle/enemySpawning';
 import { calculatePlayerMaxHp, applyItemToPlayer, removeItemFromPlayer, applyLevelUp } from './battle/playerStats';
+import { getStarterEquipment, hasStarterEquipment } from './starterEquipment';
 import { Language } from '../i18n';
 import { AudioSettings, audioManager } from './audioManager';
 
@@ -129,6 +130,7 @@ export interface GameStoreState {
   addSpell: (spellId: string) => void; // Add spell to collection (max 5)
   removeWeapon: (index: number) => void; // Remove weapon from collection
   removeSpell: (index: number) => void; // Remove spell from collection
+  setPlayerClass: (newClass: CharacterClass) => void; // Change player class
   // Post-Region Choice methods
   setCompletedRegion: (region: Region | null) => void; // Set completed region for travel actions
   showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
@@ -174,8 +176,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
     persistentBuffs: [],
     encountersCompleted: 0,
     // Weapons & Spells System
-    weapons: ['test_weapon'], // Player starts test weapon
-    spells: ['test_spell'], // Start with TestSpell
+    weapons: [], // Start with no weapons
+    spells: [], // Start with no spells
     equippedWeaponIndex: 0, // First weapon equipped
     equippedSpellIndex: 0, // First spell equipped
     spellCooldowns: {}, // Track spell cooldowns
@@ -215,10 +217,32 @@ export const useGameStore = create<GameStoreState>((set) => ({
       // Track region visit for unlock progress
       visitRegion(region);
       
+      // Check if this is the first region selection (start of run)
+      const isFirstRegion = !store.state.originalStartingRegion;
+      
       // Add to visited regions if not first visit
-      const newVisitedRegions = store.state.originalStartingRegion 
-        ? [...store.state.visitedRegionsThisRun, region]
-        : [region];
+      const newVisitedRegions = isFirstRegion
+        ? [region]
+        : [...store.state.visitedRegionsThisRun, region];
+      
+      // Get starter equipment if this is a starting region and first selection
+      let newWeapons = [...store.state.weapons];
+      let newSpells = [...store.state.spells];
+      
+      if (isFirstRegion && hasStarterEquipment(region)) {
+        const equipment = getStarterEquipment(region);
+        console.log(`[STARTER EQUIPMENT] Giving starter equipment for ${region}:`, equipment);
+        
+        // Add starter weapon
+        if (equipment.weapon && !newWeapons.includes(equipment.weapon)) {
+          newWeapons.push(equipment.weapon);
+        }
+        
+        // Add starter spell
+        if (equipment.spell && !newSpells.includes(equipment.spell)) {
+          newSpells.push(equipment.spell);
+        }
+      }
       
       return {
         state: {
@@ -227,6 +251,9 @@ export const useGameStore = create<GameStoreState>((set) => ({
           visitedRegionsThisRun: newVisitedRegions,
           // Set originalStartingRegion if this is the first region selection
           originalStartingRegion: store.state.originalStartingRegion || region,
+          // Update weapons and spells with starter equipment
+          weapons: newWeapons,
+          spells: newSpells,
         },
       };
     }),
@@ -566,8 +593,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
           maxAbilityPowerReached: 0,
           persistentBuffs: [],
           encountersCompleted: 0,
-          weapons: ['test_weapon'], // Reset to default starter weapon
-          spells: ['test_spell'], // Reset to default starter spells
+          weapons: [], // Start with no weapons
+          spells: [], // Start with no spells
           equippedWeaponIndex: 0,
           equippedSpellIndex: 0,
           spellCooldowns: {},
@@ -1252,4 +1279,15 @@ export const useGameStore = create<GameStoreState>((set) => ({
         },
       };
     }),
+
+  setPlayerClass: (newClass: CharacterClass) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        playerCharacter: {
+          ...store.state.playerCharacter,
+          class: newClass,
+        },
+      },
+    })),
 }));

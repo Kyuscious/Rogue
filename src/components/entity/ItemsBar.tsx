@@ -129,7 +129,55 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
               <div className="tooltip-stat">⚡ AS: +{totalStats.attackSpeed}</div>
             )}
             {totalStats.lifeSteal && (
-              <div className="tooltip-stat">💉 Lifesteal: +{totalStats.lifeSteal}</div>
+              <div className="tooltip-stat">💉 Lifesteal: +{totalStats.lifeSteal}%</div>
+            )}
+            {totalStats.omnivamp && (
+              <div className="tooltip-stat">🩸 Omnivamp: +{totalStats.omnivamp}%</div>
+            )}
+            {totalStats.health_regen && (
+              <div className="tooltip-stat">💚 HP Regen: +{totalStats.health_regen}</div>
+            )}
+            {totalStats.criticalChance && (
+              <div className="tooltip-stat">🎯 Crit Chance: +{totalStats.criticalChance}%</div>
+            )}
+            {totalStats.criticalDamage && (
+              <div className="tooltip-stat">💥 Crit Dmg: +{totalStats.criticalDamage}%</div>
+            )}
+            {totalStats.lethality && (
+              <div className="tooltip-stat">🗡️ Lethality: +{totalStats.lethality}</div>
+            )}
+            {totalStats.abilityHaste && (
+              <div className="tooltip-stat">⏱️ Ability Haste: +{totalStats.abilityHaste}</div>
+            )}
+            {totalStats.magicPenetration && (
+              <div className="tooltip-stat">🔹 Magic Pen: +{totalStats.magicPenetration}</div>
+            )}
+            {totalStats.heal_shield_power && (
+              <div className="tooltip-stat">💫 Heal/Shield: +{totalStats.heal_shield_power}%</div>
+            )}
+            {totalStats.movementSpeed && (
+              <div className="tooltip-stat">👟 Move Speed: +{totalStats.movementSpeed}</div>
+            )}
+            {totalStats.attackRange && (
+              <div className="tooltip-stat">🎯 Range: +{totalStats.attackRange}</div>
+            )}
+            {totalStats.tenacity && (
+              <div className="tooltip-stat">💪 Tenacity: +{totalStats.tenacity}%</div>
+            )}
+            {totalStats.healingOnHit && (
+              <div className="tooltip-stat">💝 Healing on Hit: +{totalStats.healingOnHit}</div>
+            )}
+            {totalStats.trueDamage && (
+              <div className="tooltip-stat">⚡ True Damage: +{totalStats.trueDamage}</div>
+            )}
+            {totalStats.xpGain && (
+              <div className="tooltip-stat">📚 XP Gain: +{totalStats.xpGain}</div>
+            )}
+            {totalStats.goldGain && (
+              <div className="tooltip-stat">💰 Gold Gain: +{totalStats.goldGain}</div>
+            )}
+            {totalStats.magicFind && (
+              <div className="tooltip-stat">🔮 Magic Find: +{totalStats.magicFind}%</div>
             )}
           </div>
         </div>
@@ -168,7 +216,55 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
                   <div className="tooltip-stat">⚡ AS: +{itemData.stats.attackSpeed}</div>
                 )}
                 {itemData?.stats.lifeSteal && (
-                  <div className="tooltip-stat">💉 Lifesteal: +{itemData.stats.lifeSteal}</div>
+                  <div className="tooltip-stat">💉 Lifesteal: +{itemData.stats.lifeSteal}%</div>
+                )}
+                {itemData?.stats.omnivamp && (
+                  <div className="tooltip-stat">🩸 Omnivamp: +{itemData.stats.omnivamp}%</div>
+                )}
+                {itemData?.stats.health_regen && (
+                  <div className="tooltip-stat">💚 HP Regen: +{itemData.stats.health_regen}</div>
+                )}
+                {itemData?.stats.criticalChance && (
+                  <div className="tooltip-stat">🎯 Crit Chance: +{itemData.stats.criticalChance}%</div>
+                )}
+                {itemData?.stats.criticalDamage && (
+                  <div className="tooltip-stat">💥 Crit Dmg: +{itemData.stats.criticalDamage}%</div>
+                )}
+                {itemData?.stats.lethality && (
+                  <div className="tooltip-stat">🗡️ Lethality: +{itemData.stats.lethality}</div>
+                )}
+                {itemData?.stats.abilityHaste && (
+                  <div className="tooltip-stat">⏱️ Ability Haste: +{itemData.stats.abilityHaste}</div>
+                )}
+                {itemData?.stats.magicPenetration && (
+                  <div className="tooltip-stat">🔹 Magic Pen: +{itemData.stats.magicPenetration}</div>
+                )}
+                {itemData?.stats.heal_shield_power && (
+                  <div className="tooltip-stat">💫 Heal/Shield: +{itemData.stats.heal_shield_power}%</div>
+                )}
+                {itemData?.stats.movementSpeed && (
+                  <div className="tooltip-stat">👟 Move Speed: +{itemData.stats.movementSpeed}</div>
+                )}
+                {itemData?.stats.attackRange && (
+                  <div className="tooltip-stat">🎯 Range: +{itemData.stats.attackRange}</div>
+                )}
+                {itemData?.stats.tenacity && (
+                  <div className="tooltip-stat">💪 Tenacity: +{itemData.stats.tenacity}%</div>
+                )}
+                {itemData?.stats.healingOnHit && (
+                  <div className="tooltip-stat">💝 Healing on Hit: +{itemData.stats.healingOnHit}</div>
+                )}
+                {itemData?.stats.trueDamage && (
+                  <div className="tooltip-stat">⚡ True Damage: +{itemData.stats.trueDamage}</div>
+                )}
+                {itemData?.stats.xpGain && (
+                  <div className="tooltip-stat">📚 XP Gain: +{itemData.stats.xpGain}</div>
+                )}
+                {itemData?.stats.goldGain && (
+                  <div className="tooltip-stat">💰 Gold Gain: +{itemData.stats.goldGain}</div>
+                )}
+                {itemData?.stats.magicFind && (
+                  <div className="tooltip-stat">🔮 Magic Find: +{itemData.stats.magicFind}%</div>
                 )}
               </div>
               {itemData?.passiveId && getPassiveDescription(itemData.passiveId) && (
@@ -203,7 +299,55 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
                     <div className="tooltip-stat">⚡ AS: +{itemData.stats.attackSpeed * quantity}</div>
                   )}
                   {itemData?.stats.lifeSteal && (
-                    <div className="tooltip-stat">💉 Lifesteal: +{itemData.stats.lifeSteal * quantity}</div>
+                    <div className="tooltip-stat">💉 Lifesteal: +{itemData.stats.lifeSteal * quantity}%</div>
+                  )}
+                  {itemData?.stats.omnivamp && (
+                    <div className="tooltip-stat">🩸 Omnivamp: +{itemData.stats.omnivamp * quantity}%</div>
+                  )}
+                  {itemData?.stats.health_regen && (
+                    <div className="tooltip-stat">💚 HP Regen: +{itemData.stats.health_regen * quantity}</div>
+                  )}
+                  {itemData?.stats.criticalChance && (
+                    <div className="tooltip-stat">🎯 Crit Chance: +{itemData.stats.criticalChance * quantity}%</div>
+                  )}
+                  {itemData?.stats.criticalDamage && (
+                    <div className="tooltip-stat">💥 Crit Dmg: +{itemData.stats.criticalDamage * quantity}%</div>
+                  )}
+                  {itemData?.stats.lethality && (
+                    <div className="tooltip-stat">🗡️ Lethality: +{itemData.stats.lethality * quantity}</div>
+                  )}
+                  {itemData?.stats.abilityHaste && (
+                    <div className="tooltip-stat">⏱️ Ability Haste: +{itemData.stats.abilityHaste * quantity}</div>
+                  )}
+                  {itemData?.stats.magicPenetration && (
+                    <div className="tooltip-stat">🔹 Magic Pen: +{itemData.stats.magicPenetration * quantity}</div>
+                  )}
+                  {itemData?.stats.heal_shield_power && (
+                    <div className="tooltip-stat">💫 Heal/Shield: +{itemData.stats.heal_shield_power * quantity}%</div>
+                  )}
+                  {itemData?.stats.movementSpeed && (
+                    <div className="tooltip-stat">👟 Move Speed: +{itemData.stats.movementSpeed * quantity}</div>
+                  )}
+                  {itemData?.stats.attackRange && (
+                    <div className="tooltip-stat">🎯 Range: +{itemData.stats.attackRange * quantity}</div>
+                  )}
+                  {itemData?.stats.tenacity && (
+                    <div className="tooltip-stat">💪 Tenacity: +{itemData.stats.tenacity * quantity}%</div>
+                  )}
+                  {itemData?.stats.healingOnHit && (
+                    <div className="tooltip-stat">💝 Healing on Hit: +{itemData.stats.healingOnHit * quantity}</div>
+                  )}
+                  {itemData?.stats.trueDamage && (
+                    <div className="tooltip-stat">⚡ True Damage: +{itemData.stats.trueDamage * quantity}</div>
+                  )}
+                  {itemData?.stats.xpGain && (
+                    <div className="tooltip-stat">📚 XP Gain: +{itemData.stats.xpGain * quantity}</div>
+                  )}
+                  {itemData?.stats.goldGain && (
+                    <div className="tooltip-stat">💰 Gold Gain: +{itemData.stats.goldGain * quantity}</div>
+                  )}
+                  {itemData?.stats.magicFind && (
+                    <div className="tooltip-stat">🔮 Magic Find: +{itemData.stats.magicFind * quantity}%</div>
                   )}
                 </div>
               </div>
