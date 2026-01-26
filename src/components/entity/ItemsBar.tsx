@@ -96,7 +96,7 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
               {itemData.imagePath ? (
                 <img src={itemData.imagePath} alt={itemData.name} className="item-icon-image" />
               ) : (
-                <span className="item-icon">{getItemIcon(itemData.name)}</span>
+                <span className="item-icon">{getItemIcon(itemData.name || '')}</span>
               )}
               {item.quantity > 1 && <span className="item-qty">x{item.quantity}</span>}
             </div>
