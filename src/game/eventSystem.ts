@@ -53,6 +53,7 @@ export const REGION_EVENTS: Record<Region, RegionEvent[]> = {
   camavor: [],
   ice_sea: [],
   marai_territory: [],
+  runeterra: [],
 };
 
 export function getRandomEventForRegion(region: Region): RegionEvent | undefined {

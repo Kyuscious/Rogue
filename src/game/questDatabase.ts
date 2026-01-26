@@ -134,6 +134,7 @@ export const QUESTS_BY_REGION: Record<Region, Quest[]> = {
   camavor: CAMAVOR_QUESTS,
   ice_sea: ICE_SEA_QUESTS,
   marai_territory: MARAI_QUESTS,
+  runeterra: [],
 };
 
 export function getRandomQuests(region: Region, count: number = 3): Quest[] {

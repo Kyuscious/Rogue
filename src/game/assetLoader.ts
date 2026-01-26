@@ -83,6 +83,10 @@ const REGION_ASSETS: Record<Region, RegionAssets> = {
     images: [],
     audio: [],
   },
+  runeterra: {
+    images: [],
+    audio: [],
+  },
 };
 
 // Global assets that are always loaded

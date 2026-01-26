@@ -138,6 +138,7 @@ export function generateRewardOptions(
     camavor: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
     ice_sea: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
     marai_territory: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
+    runeterra: { elite: ['longsword', 'cloth_armor', 'pickaxe'], boss: ['bf_sword', 'giants_belt'] },
   };
   
   // Default pool if no region selected

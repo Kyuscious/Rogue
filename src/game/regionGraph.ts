@@ -65,6 +65,7 @@ export const REGION_GRAPH: Record<Region, Region[]> = {
   ice_sea: ['freljord', 'marai_territory', 'ionia', 'demacia', 'camavor'],
   camavor: ['ice_sea', 'ionia', 'bilgewater', 'shurima', 'marai_territory'],
   marai_territory: ['ice_sea', 'shurima', 'bandle_city', 'demacia', 'camavor'],
+  runeterra: [],
 };
 
 /**
@@ -138,6 +139,7 @@ export function getRegionDisplayName(region: Region): string {
     camavor: 'Camavor',
     ice_sea: 'Ice Sea',
     marai_territory: 'Marai Territory',
+    runeterra: 'Runeterra',
   };
   return names[region] || region;
 }
@@ -163,6 +165,7 @@ export function getRegionDescription(region: Region): string {
     camavor: 'A cursed kingdom of ruin and shadow. Gateway to many lands.',
     marai_territory: 'The depths of the ocean. Connects distant shores.',
     ice_sea: 'Frozen waters between continents. A treacherous passage.',
+    runeterra: 'The world of Runeterra. All regions converge here.',
   };
   return descriptions[region] || '';
 }
