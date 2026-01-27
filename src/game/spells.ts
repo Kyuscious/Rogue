@@ -50,15 +50,15 @@ export const SPELL_DATABASE: Record<string, Spell> = {
   for_demacia: { // Demacia starter spell
     id: 'for_demacia',
     name: 'For Demacia!',
-    description: 'Warcry of Demacia that bolsters your resolve, granting +5% AD and +0.5 Attack Speed for 1 turn.',
+    description: 'Warcry of Demacia that bolsters your resolve, granting +5% Attack Damage and a shield equal to 10% of your max HP for the next turn.',
     rarity: 'starter',
     effects: [
       {
         type: 'buff',
-        description: 'Grants +5% Attack Damage and +0.5 Attack Speed for the next turn (starts at next integer turn).',
+        description: 'Grants +5% Attack Damage and a shield equal to 10% of your max HP for 1 turn.',
       },
     ],
-    cooldown: 2,
+    cooldown: 0,
   },
 
   rejuvenation: { // Ionia starter spell
@@ -76,7 +76,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Heals for 20 + 20% of your Ability Power.',
       },
     ],
-    cooldown: 2,
+    cooldown: 0,
   },
 
   quicksand: { // Shurima starter spell
@@ -97,10 +97,10 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Reduces target movement speed by 10% for 3 turns.',
         // Slow effect parameters
         slowPercent: 10, // 10% movement speed reduction
-        slowDuration: 3, // 3 turns
+        slowDuration: 1, // 1 turn
       },
     ],
-    cooldown: 2,
+    cooldown: 0,
   },
 
 

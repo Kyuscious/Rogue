@@ -7,6 +7,7 @@ import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, rollCrit
 import { getPassiveIdsFromInventory } from '../../../game/items';
 import { calculateOnHitEffects, applyOnHitEffects, formatOnHitEffects } from '../../../game/onHitEffects';
 import { calculateCCDuration } from '../../../game/crowdControlSystem';
+import { applyForDemaciaBuff, applyDamageWithShield, decayShieldDurations } from '../../../game/shieldSystem';
 import { 
   TurnEntity, 
   TurnAction, 
@@ -994,6 +995,35 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           logMessages.push({ message: `❌ Target out of range for ${equippedSpell.name}!` });
         }
       }
+
+      // Handle buff effects (e.g., For Demacia!)
+      if (effect.type === 'buff') {
+        // Special handling for For Demacia spell
+        if (equippedSpell.id === 'for_demacia') {
+          console.log('🎯 For Demacia spell casting!');
+          const uniqueId = `for_demacia_${Date.now()}`;
+          const buff = applyForDemaciaBuff(playerChar, uniqueId);
+          console.log('✅ For Demacia buff applied:', {
+            shieldId: `${uniqueId}_shield`,
+            shieldAmount: buff.shieldAmount,
+            playerShields: playerChar.shields,
+          });
+          
+          // Add combat buff for display
+          const adBonus = Math.round(playerScaledStats.attackDamage * 0.05);
+          const combatBuff: CombatBuff = {
+            id: uniqueId,
+            name: 'For Demacia!',
+            stat: 'attackDamage',
+            amount: adBonus,
+            duration: 2, // 2 turns: current turn + next turn
+            durationType: 'turns',
+          };
+          setPlayerBuffs(prev => [...prev, combatBuff]);
+          
+          logMessages.push({ message: `🛡️ ${playerChar.name} gains +${adBonus} AD and ${buff.shieldAmount} shield for 1 turn!` });
+        }
+      }
     }
     
     // Update enemy HP if damage was dealt
@@ -1042,6 +1072,19 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     }
     
     setBattleLog((prev) => [...prev, ...logMessages]);
+    
+    // Update store with any changes made to playerChar (shields, effects, etc.)
+    useGameStore.setState((store) => ({
+      state: {
+        ...store.state,
+        playerCharacter: {
+          ...store.state.playerCharacter,
+          shields: playerChar.shields,
+          effects: playerChar.effects,
+          hp: playerChar.hp,
+        },
+      },
+    }));
     
     // Apply spell cooldown
     // TIMING MODEL: Cooldowns snap to next integer turn
@@ -1353,9 +1396,9 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         enemyScaledStats.lethality || 0
       );
       
-      // Update player HP
-      const newPlayerHp = Math.max(0, playerChar.hp - finalDamage);
-      updatePlayerHp(newPlayerHp);
+      // Update player HP using shield-aware damage
+      const damageResult = applyDamageWithShield(playerChar, finalDamage);
+      updatePlayerHp(playerChar.hp);
       
       // Track damage taken for combat stats
       if (finalDamage > combatStats.highestDamageTaken) {
@@ -1366,8 +1409,16 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         }));
       }
       
+      // Log shield damage if any
+      if (damageResult.shieldDamage > 0) {
+        setBattleLog((prev) => [
+          ...prev,
+          { message: `🛡️ Shield absorbed ${damageResult.shieldDamage} damage!` },
+        ]);
+      }
+      
       // IMMEDIATE DEATH CHECK: End battle instantly if player dies
-      if (newPlayerHp <= 0 && !battleEnded) {
+      if (playerChar.hp <= 0 && !battleEnded) {
         setBattleEnded(true);
         setBattleResult('defeat');
         setShowSummary(true);
@@ -1375,7 +1426,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       }
       
       // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
-      if (newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus')) {
+      if (playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus')) {
         setPlayerBuffs((prev) => {
           const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage);
           return updatedBuffs;
@@ -1386,7 +1437,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         setBattleLog((prev) => [
           ...prev,
           { message: `💥 CRITICAL HIT! ${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
-          ...(newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus') 
+          ...(playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus') 
             ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
             : []),
         ]);
@@ -1394,7 +1445,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         setBattleLog((prev) => [
           ...prev,
           { message: `${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
-          ...(newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus') 
+          ...(playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus') 
             ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
             : []),
         ]);
@@ -1424,9 +1475,9 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         enemyScaledStats.magicPenetration || 0
       );
       
-      // Update player HP
-      const newPlayerHp = Math.max(0, playerChar.hp - finalDamage);
-      updatePlayerHp(newPlayerHp);
+      // Update player HP using shield-aware damage
+      const damageResult = applyDamageWithShield(playerChar, finalDamage);
+      updatePlayerHp(playerChar.hp);
       
       // Track damage taken for combat stats
       if (finalDamage > combatStats.highestDamageTaken) {
@@ -1437,8 +1488,16 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         }));
       }
       
+      // Log shield damage if any
+      if (damageResult.shieldDamage > 0) {
+        setBattleLog((prev) => [
+          ...prev,
+          { message: `🛡️ Shield absorbed ${damageResult.shieldDamage} damage!` },
+        ]);
+      }
+      
       // IMMEDIATE DEATH CHECK: End battle instantly if player dies
-      if (newPlayerHp <= 0 && !battleEnded) {
+      if (playerChar.hp <= 0 && !battleEnded) {
         setBattleEnded(true);
         setBattleResult('defeat');
         setShowSummary(true);
@@ -1446,7 +1505,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       }
       
       // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
-      if (newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus')) {
+      if (playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus')) {
         setPlayerBuffs((prev) => {
           const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage);
           return updatedBuffs;
@@ -1456,7 +1515,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       setBattleLog((prev) => [
         ...prev,
         { message: `${enemyChar.name} casts a spell on ${playerChar.name} for ${finalDamage} magic damage!` },
-        ...(newPlayerHp > 0 && playerPassiveIds.includes('enduring_focus') 
+        ...(playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus') 
           ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
           : []),
       ]);
@@ -1699,6 +1758,50 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             .map(buff => ({ ...buff, duration: buff.duration - 1 }))
             .filter(buff => buff.duration > 0)
         );
+      }
+      
+      // Process StatusEffect durations and shield removal (always, not just when buffs exist)
+      if (playerChar && playerChar.effects && playerChar.effects.length > 0) {
+        // First decrement all durations
+        playerChar.effects = playerChar.effects.map(effect => ({
+          ...effect,
+          duration: effect.duration - 1,
+        }));
+        
+        // Filter out all expired effects
+        playerChar.effects = playerChar.effects.filter(e => e.duration > 0);
+      }
+      
+      // Decay shield durations at turn boundaries (removes expired shields)
+      if (playerChar) {
+        const beforeShields = playerChar.shields?.map(s => ({
+          id: s.id,
+          duration: s.duration,
+        })) || [];
+        
+        decayShieldDurations(playerChar);
+        
+        const afterShields = playerChar.shields?.map(s => ({
+          id: s.id,
+          duration: s.duration,
+        })) || [];
+        
+        console.log('🛡️ SHIELD DECAY:', {
+          before: beforeShields,
+          after: afterShields,
+          removed: beforeShields.filter((b: any) => !afterShields.some((a: any) => a.id === b.id)).length,
+        });
+        
+        // Force update the store so React detects the shield changes
+        useGameStore.setState((store) => ({
+          state: {
+            ...store.state,
+            playerCharacter: {
+              ...store.state.playerCharacter,
+              shields: playerChar.shields,
+            },
+          },
+        }));
       }
       
       // Reduce spell cooldowns once per timeline turn

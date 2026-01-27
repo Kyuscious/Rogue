@@ -2,45 +2,47 @@
 .character-status {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: clamp(0.25rem, 0.75vh, 0.375rem);
+  padding: clamp(0.25rem, 0.75vh, 0.375rem);
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  min-width: 280px;
+  border-radius: clamp(4px, 1vh, 6px);
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .character-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: clamp(0.1875rem, 0.5vh, 0.25rem);
 }
 
 .level-exp-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: clamp(0.25rem, 0.75vw, 0.375rem);
   flex: 1;
 }
 
 .level {
   background: #4a9eff;
   color: #000;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: clamp(0.125rem, 0.4vh, 0.1875rem) clamp(0.25rem, 0.75vw, 0.375rem);
+  border-radius: clamp(3px, 0.75vh, 4px);
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
   font-weight: bold;
-  min-width: 50px;
+  min-width: clamp(40px, 8vw, 50px);
   text-align: center;
 }
 
 .exp-bar {
   flex: 1;
-  height: 16px;
+  height: clamp(12px, 2vh, 16px);
   background: #1a1a1a;
   border: 1px solid #4a4a4a;
-  border-radius: 4px;
+  border-radius: clamp(3px, 0.75vh, 4px);
   overflow: hidden;
   position: relative;
 }
@@ -57,7 +59,7 @@
   left: 50%;
   transform: translate(-50%, -50%);
   color: #fff;
-  font-size: 11px;
+  font-size: clamp(0.5625rem, 1.3vw, 0.6875rem);
   font-weight: bold;
   pointer-events: none;
   mix-blend-mode: lighten;
@@ -65,27 +67,28 @@
 
 /* HP Section */
 .hp-section {
-  margin-bottom: 12px;
-  padding: 8px;
+  margin-bottom: clamp(0.1875rem, 0.5vh, 0.25rem);
+  padding: clamp(0.1875rem, 0.6vh, 0.25rem);
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  border-radius: clamp(3px, 0.75vh, 4px);
   border: 1px solid rgba(74, 158, 255, 0.3);
 }
 
 .hp-bar-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: clamp(0.1875rem, 0.6vw, 0.25rem);
 }
 
 .hp-bar {
   flex: 1;
-  height: 28px;
+  height: clamp(18px, 2.5vh, 24px);
   background: #1a1a1a;
   border: 2px solid #4a4a4a;
-  border-radius: 4px;
-  overflow: hidden;
+  border-radius: clamp(3px, 0.75vh, 4px);
+  overflow: visible;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  position: relative;
 }
 
 .hp-fill {
@@ -93,56 +96,85 @@
   background: linear-gradient(90deg, rgb(255, 0, 0) 0%, rgb(255, 100, 0) 25%, rgb(255, 200, 0) 50%, rgb(0, 255, 0) 100%);
   transition: width 0.3s ease;
   box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.shield-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(100, 200, 255, 0.7) 0%, rgba(150, 220, 255, 0.9) 100%);
+  border-left: 2px solid rgba(100, 200, 255, 1);
+  transition: width 0.3s ease, left 0.3s ease;
+  box-shadow: 0 0 10px rgba(100, 200, 255, 0.5);
+  position: absolute;
+  top: 0;
+  animation: shieldPulse 2s ease-in-out infinite;
+}
+
+@keyframes shieldPulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .hp-text {
   color: #fff;
-  font-size: 12px;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
   font-weight: bold;
-  min-width: 75px;
+  min-width: clamp(55px, 11vw, 70px);
   text-align: right;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.shield-text {
+  color: #64c8ff;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(100, 200, 255, 0.5);
 }
 
 /* Stats Display */
 .stats-display {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 28vw, 180px), 1fr));
+  gap: clamp(0.1875rem, 0.6vh, 0.25rem);
+  margin-bottom: clamp(0.1875rem, 0.5vh, 0.25rem);
 }
 
 .stat-category {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(74, 158, 255, 0.2);
-  border-radius: 4px;
-  padding: 8px;
+  border-radius: clamp(3px, 0.75vh, 4px);
+  padding: clamp(0.1875rem, 0.6vh, 0.25rem);
 }
 
 .category-header {
   color: #4a9eff;
-  font-size: 11px;
+  font-size: clamp(0.5625rem, 1.3vw, 0.6875rem);
   font-weight: bold;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  letter-spacing: 0.3px;
+  margin-bottom: clamp(0.125rem, 0.4vh, 0.1875rem);
   border-bottom: 1px solid rgba(74, 158, 255, 0.3);
-  padding-bottom: 4px;
+  padding-bottom: clamp(0.0625rem, 0.3vh, 0.125rem);
 }
 
 .category-stats {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: clamp(0.0625rem, 0.3vh, 0.125rem);
 }
 
 .stat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
-  padding: 2px 4px;
-  border-radius: 2px;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
+  padding: clamp(0.0625rem, 0.25vh, 0.0625rem) clamp(0.125rem, 0.4vw, 0.1875rem);
+  border-radius: clamp(2px, 0.5vh, 3px);
   transition: background 0.2s ease;
 }
 
@@ -159,34 +191,34 @@
   color: #4a9eff;
   font-weight: bold;
   text-align: right;
-  min-width: 45px;
+  min-width: clamp(32px, 7vw, 40px);
 }
 
 /* Temporary Stats Section */
 .temporary-stats-section {
   background: rgba(255, 165, 0, 0.1);
   border: 1px solid rgba(255, 165, 0, 0.3);
-  border-radius: 4px;
-  padding: 8px;
-  margin-bottom: 8px;
+  border-radius: clamp(3px, 0.75vh, 4px);
+  padding: clamp(0.1875rem, 0.6vh, 0.25rem);
+  margin-bottom: clamp(0.1875rem, 0.5vh, 0.25rem);
 }
 
 .temp-header {
   color: #ff9900;
-  font-size: 11px;
+  font-size: clamp(0.5625rem, 1.3vw, 0.6875rem);
   font-weight: bold;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
+  letter-spacing: 0.3px;
+  margin-bottom: clamp(0.125rem, 0.4vh, 0.1875rem);
   border-bottom: 1px solid rgba(255, 165, 0, 0.3);
-  padding-bottom: 4px;
+  padding-bottom: clamp(0.0625rem, 0.3vh, 0.125rem);
 }
 
 .temp-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(32px, 1fr));
-  gap: 4px;
-  max-height: 200px;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(26px, 5vw, 32px), 1fr));
+  gap: clamp(0.0625rem, 0.3vh, 0.125rem);
+  max-height: clamp(140px, 22vh, 180px);
   overflow-y: auto;
 }
 
@@ -205,9 +237,9 @@
 
 .temp-stat-icon {
   position: relative;
-  width: 32px;
-  height: 32px;
-  border-radius: 3px;
+  width: clamp(26px, 5vw, 32px);
+  height: clamp(26px, 5vw, 32px);
+  border-radius: clamp(2px, 0.6vh, 3px);
   border: 1px solid rgba(255, 165, 0, 0.6);
   background: rgba(255, 165, 0, 0.15);
   display: flex;
@@ -245,16 +277,16 @@
 
 .duration-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: clamp(-2px, -0.3vh, -1px);
+  right: clamp(-2px, -0.3vh, -1px);
   background: rgba(0, 0, 0, 0.7);
   color: #fff;
-  font-size: 9px;
+  font-size: clamp(0.5rem, 1.2vw, 0.5625rem);
   font-weight: bold;
-  padding: 1px 3px;
-  border-radius: 2px;
+  padding: clamp(0.0625rem, 0.15vh, 0.0625rem) clamp(0.0625rem, 0.3vw, 0.125rem);
+  border-radius: clamp(2px, 0.5vh, 2px);
   border: 1px solid rgba(255, 255, 255, 0.5);
-  min-width: 16px;
+  min-width: clamp(12px, 2.5vw, 14px);
   text-align: center;
 }
 

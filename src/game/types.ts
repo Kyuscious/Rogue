@@ -28,6 +28,11 @@ export interface StatusEffect {
   duration: number; // turns remaining
   description: string;
   modifiers?: Partial<CharacterStats>;
+  shieldAmount?: number; // Shield granted by this buff
+  statModifiers?: { // Percentage-based stat modifiers
+    attackDamage?: number; // Percentage bonus to AD
+    health?: number; // Percentage of max HP
+  };
 }
 
 export interface Character {
@@ -39,6 +44,12 @@ export interface Character {
   tier?: EnemyTier; // Enemy tier for loot determination
   faction?: string; // Optional faction (e.g., 'guard', 'beast' for Demacia enemies)
   hp: number;
+  shields?: Array<{
+    id: string; // Unique identifier for this shield instance
+    currentAmount: number; // Remaining shield
+    maxAmount: number; // Original shield amount
+    duration: number; // Turns remaining until expiration
+  }>; // Array of individual shield instances (FIFO damage priority)
   maxHp?: never; // Deprecated: use stats.health instead
   abilities: Ability[];
   level: number;

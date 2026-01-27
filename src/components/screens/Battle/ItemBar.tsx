@@ -35,7 +35,7 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, sel
   }, [hoveredItem]);
 
   // Always show 6 item slots (max inventory)
-  const MAX_ITEM_SLOTS = 6;
+  const MAX_ITEM_SLOTS = 10;
   const itemSlots = Array.from({ length: MAX_ITEM_SLOTS }, (_, index) => {
     return usableItems[index] || null;
   });

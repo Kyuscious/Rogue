@@ -151,7 +151,7 @@ export function createHealthPotionBuff(buffId: string): CombatBuff {
     id: buffId,
     name: 'Health Potion',
     stat: 'heal_over_time',
-    amount: 10, // 10 HP per turn
+    amount: 20, // 20 HP per turn
     duration: 6, // 5 full ticks + 1 for partial turn
     type: 'heal_over_time',
   };

@@ -1,37 +1,37 @@
 .battlefield-display {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   border: 2px solid #0f3460;
-  border-radius: 8px;
-  padding: 8px;
+  border-radius: clamp(4px, 1vh, 6px);
+  padding: clamp(0.25rem, 0.75vh, 0.375rem);
   color: #e0e0e0;
 }
 
 .battlefield-display.vertical {
   margin: 0;
-  padding: 8px;
+  padding: clamp(0.25rem, 0.75vh, 0.375rem);
 }
 
 .battlefield-display.horizontal {
-  margin: 12px 0;
-  padding: 16px;
+  margin: clamp(0.375rem, 1vh, 0.5rem) 0;
+  padding: clamp(0.5rem, 1.5vh, 0.625rem);
 }
 
 .battlefield-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: clamp(0.6875rem, 1.6vw, 0.875rem);
   font-weight: 500;
 }
 
 .battlefield-display.vertical .battlefield-info {
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: clamp(0.1875rem, 0.6vh, 0.25rem);
+  margin-bottom: clamp(0.25rem, 0.75vh, 0.375rem);
 }
 
 .battlefield-display.horizontal .battlefield-info {
-  margin-bottom: 12px;
+  margin-bottom: clamp(0.375rem, 1vh, 0.5rem);
 }
 
 .distance-label {
@@ -39,9 +39,9 @@
 }
 
 .range-status {
-  padding: 4px 12px;
-  border-radius: 4px;
-  font-size: 12px;
+  padding: clamp(0.125rem, 0.4vh, 0.1875rem) clamp(0.375rem, 1vw, 0.5rem);
+  border-radius: clamp(3px, 0.75vh, 4px);
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
   font-weight: 600;
 }
 
@@ -60,62 +60,60 @@
 .battlefield-canvas {
   display: block;
   background-color: transparent;
-  min-height: clamp(45px, 6vh, 60px);
-  max-height: clamp(6vh, 60px);
-  border-radius: 4px;
+
   border: none;
 }
 
 .battlefield-display.horizontal .battlefield-canvas {
   width: 100%;
   height: auto;
-  margin: 8px 0;
+  margin: clamp(0.25rem, 0.75vh, 0.375rem) 0;
 }
 
 .battlefield-display.vertical .battlefield-canvas {
   width: auto;
   height: auto;
-  margin: 4px auto;
+  margin: clamp(0.125rem, 0.4vh, 0.1875rem) auto;
   display: block;
 }
 
 .boundary-marker {
-  font-size: 12px;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
   fill: #78909c;
 }
 
 .battlefield-labels {
-  font-size: 13px;
+  font-size: clamp(0.6875rem, 1.6vw, 0.8125rem);
 }
 
 .battlefield-labels.horizontal {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
+  margin-top: clamp(0.375rem, 1vh, 0.5rem);
 }
 
 .battlefield-labels.vertical {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
+  gap: clamp(0.1875rem, 0.6vh, 0.25rem);
+  margin-top: clamp(0.25rem, 0.75vh, 0.375rem);
 }
 
 .player-label,
 .enemy-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
+  gap: clamp(0.25rem, 0.75vw, 0.375rem);
+  padding: clamp(0.1875rem, 0.6vh, 0.25rem) clamp(0.25rem, 0.75vw, 0.375rem);
   background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  font-size: 13px;
+  border-radius: clamp(3px, 0.75vh, 4px);
+  font-size: clamp(0.6875rem, 1.6vw, 0.8125rem);
 }
 
 .indicator {
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  width: clamp(10px, 2vw, 12px);
+  height: clamp(10px, 2vw, 12px);
   border-radius: 50%;
   border: 1px solid #000;
 }
@@ -129,10 +127,10 @@
 }
 
 .range-indicator {
-  font-size: 11px;
-  margin-left: 6px;
-  padding: 2px 6px;
-  border-radius: 3px;
+  font-size: clamp(0.5625rem, 1.3vw, 0.6875rem);
+  margin-left: clamp(0.1875rem, 0.6vw, 0.25rem);
+  padding: clamp(0.0625rem, 0.25vh, 0.0625rem) clamp(0.1875rem, 0.6vw, 0.25rem);
+  border-radius: clamp(2px, 0.6vh, 3px);
   background-color: rgba(0, 0, 0, 0.3);
 }
 
@@ -147,6 +145,6 @@
 }
 
 .flee-marker {
-  font-size: 10px;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
   font-weight: 600;
 }
