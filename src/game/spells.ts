@@ -50,12 +50,12 @@ export const SPELL_DATABASE: Record<string, Spell> = {
   for_demacia: { // Demacia starter spell
     id: 'for_demacia',
     name: 'For Demacia!',
-    description: 'Warcry of Demacia that bolsters your resolve, granting +5% Attack Damage and a shield equal to 10% of your max HP for the next turn.',
+    description: 'Warcry of Demacia that bolsters your resolve, granting +5% Attack Damage and a shield equal to 5% of your max HP for the next turn.',
     rarity: 'starter',
     effects: [
       {
         type: 'buff',
-        description: 'Grants +5% Attack Damage and a shield equal to 10% of your max HP for 1 turn.',
+        description: 'Grants +5% Attack Damage and a shield equal to 5% of your max HP for 1 turn.',
       },
     ],
     cooldown: 0,
@@ -64,16 +64,16 @@ export const SPELL_DATABASE: Record<string, Spell> = {
   rejuvenation: { // Ionia starter spell
     id: 'rejuvenation',
     name: 'Rejuvenation',
-    description: 'Concentrate your spiritual energy to heal your wounds for 20 HP + 20% of your Ability Power.',
+    description: 'Concentrate your spiritual energy to heal your wounds for 5 HP + 20% of your Ability Power.',
     rarity: 'starter',
     effects: [
       {
         type: 'heal',
         healScaling: {
-          flatAmount: 20,
+          flatAmount: 5,
           abilityPower: 20, // 20% AP scaling
         },
-        description: 'Heals for 20 + 20% of your Ability Power.',
+        description: 'Heals for 5 + 20% of your Ability Power.',
       },
     ],
     cooldown: 0,
@@ -82,7 +82,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
   quicksand: { // Shurima starter spell
     id: 'quicksand',
     name: 'Quicksand',
-    description: 'Summon quicksand to damage and slow an enemy, reducing their movement speed by 10% for 3 turns.',
+    description: 'Summon quicksand to damage and slow an enemy, reducing their movement speed by 10% for 1 turn.',
     rarity: 'starter',
     effects: [
       {
@@ -94,7 +94,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       },
       {
         type: 'debuff',
-        description: 'Reduces target movement speed by 10% for 3 turns.',
+        description: 'Reduces target movement speed by 10% for 1 turn.',
         // Slow effect parameters
         slowPercent: 10, // 10% movement speed reduction
         slowDuration: 1, // 1 turn

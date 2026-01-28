@@ -380,7 +380,7 @@ export function getShurimaEnemyByTierAndFaction(tier: 'minion' | 'elite' | 'boss
  * Format: 'random:tier:faction'
  * Example: 'random:minion:construct' -> random construct minion
  */
-export function resolveShurımaEnemyId(enemyIdOrMarker: string): string {
+export function resolveShurimaEnemyId(enemyIdOrMarker: string): string {
   if (!enemyIdOrMarker.startsWith('random:')) {
     // Static ID, return as-is
     return enemyIdOrMarker;

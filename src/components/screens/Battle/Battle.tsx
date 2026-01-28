@@ -111,7 +111,7 @@ const formatSpellEffects = (spell: any) => {
 export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   const store = useGameStore();
   const state = store.state;
-  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion } = store;
+  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion, revealEnemy, decayRevealedEnemies } = store;
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
@@ -365,6 +365,9 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       }, 500);
     } else {
       // No more enemies - check if quest is complete
+      // Decay all reveal durations for next encounter
+      decayRevealedEnemies();
+      
       if (state.currentFloor >= 10 && state.selectedRegion) {
         // Region complete! Mark it and navigate to region selection with actions
         console.log('🎉 Region complete (after reward) - setting completedRegion to:', state.selectedRegion);
@@ -661,8 +664,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       // Apply healing from on-hit effects
       if (totalHealing > 0) {
         const newPlayerHp = Math.min(
-          playerChar.hp + totalHealing,
-          playerScaledStats.health
+          Math.round(playerChar.hp + totalHealing),
+          Math.round(playerScaledStats.health)
         );
         updatePlayerHp(newPlayerHp);
         const effectsText = formatOnHitEffects(onHitResult.effects);
@@ -1051,8 +1054,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // Apply healing
     if (totalHealing > 0) {
       const newPlayerHp = Math.min(
-        playerChar.hp + totalHealing,
-        playerScaledStats.health
+        Math.round(playerChar.hp + totalHealing),
+        Math.round(playerScaledStats.health)
       );
       updatePlayerHp(newPlayerHp);
     }
@@ -1074,6 +1077,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     setBattleLog((prev) => [...prev, ...logMessages]);
     
     // Update store with any changes made to playerChar (shields, effects, etc.)
+    // Note: Do NOT include hp here since updatePlayerHp() already synced it to the store
     useGameStore.setState((store) => ({
       state: {
         ...store.state,
@@ -1081,7 +1085,6 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           ...store.state.playerCharacter,
           shields: playerChar.shields,
           effects: playerChar.effects,
-          hp: playerChar.hp,
         },
       },
     }));
@@ -1202,6 +1205,30 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       ]);
       
       // Consume the item from inventory
+      consumeInventoryItem(selectedItemId);
+    } else if (selectedItemId === 'stealth_ward') {
+      // Stealth Ward: Reveal enemy stats for current encounter only (1 turn remaining after this battle)
+      for (const enemy of state.enemyCharacters) {
+        revealEnemy(enemy.id, 1);
+      }
+      
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `👁️ ${playerChar.name} placed a Stealth Ward! Enemy stats are now revealed!` },
+      ]);
+      
+      consumeInventoryItem(selectedItemId);
+    } else if (selectedItemId === 'control_ward') {
+      // Control Ward: Reveal enemy stats for 3 encounters (current + next 2)
+      for (const enemy of state.enemyCharacters) {
+        revealEnemy(enemy.id, 3);
+      }
+      
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `👁️ ${playerChar.name} placed a Control Ward! Enemy stats will be revealed for the next 3 encounters!` },
+      ]);
+      
       consumeInventoryItem(selectedItemId);
     } else if (selectedItemId === 'flashbomb_trap' && item.active) {
       // Handle flashbomb trap placement
@@ -1728,7 +1755,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       if (playerChar && playerChar.hp > 0 && playerScaledStats.health_regen > 0) {
         const regenAmount = Math.floor(playerScaledStats.health_regen);
         if (regenAmount > 0 && playerChar.hp < playerScaledStats.health) {
-          const newPlayerHp = Math.min(playerChar.hp + regenAmount, playerScaledStats.health);
+          const newPlayerHp = Math.min(Math.round(playerChar.hp + regenAmount), Math.round(playerScaledStats.health));
           const actualHealing = newPlayerHp - playerChar.hp;
           if (actualHealing > 0) {
             updatePlayerHp(newPlayerHp);
@@ -1744,7 +1771,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           const totalHealing = hotBuffs.reduce((sum, buff) => sum + buff.amount, 0);
           // Ensure minimum 1 HP healing per turn
           const healingAmount = Math.max(1, Math.floor(totalHealing));
-          const newPlayerHp = Math.min(playerChar.hp + healingAmount, playerScaledStats.health);
+          const newPlayerHp = Math.min(Math.round(playerChar.hp + healingAmount), Math.round(playerScaledStats.health));
           const actualHealing = newPlayerHp - playerChar.hp;
           if (actualHealing > 0) {
             updatePlayerHp(newPlayerHp);
@@ -2096,7 +2123,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         />
         
         <div className="team-enemy">
-          <CharacterStatus characterId={enemyChar.id} combatDebuffs={enemyDebuffs} />
+          <CharacterStatus characterId={enemyChar.id} combatDebuffs={enemyDebuffs} isRevealed={store.isEnemyRevealed(enemyChar.id)} />
         </div>
       </div>
 

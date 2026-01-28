@@ -108,6 +108,8 @@ export interface GameStoreState {
     equippedWeaponIndex: number; // Index of currently equipped weapon (0-2)
     equippedSpellIndex: number; // Index of currently equipped spell (0-4)
     spellCooldowns: Record<string, number>; // Spell ID -> turns remaining until usable
+    // Revealed enemies tracking (for stealth/control ward mechanic)
+    revealedEnemies: Record<string, number>; // Enemy ID -> encounters remaining where they stay revealed (0 = not revealed, 1 = stealth_ward effect, 5+ = control_ward effect)
     // Post-Region Choice System
     showPostRegionChoice: boolean; // Show post-region choice UI after completing region
     completedRegion: Region | null; // Region just completed (for random events)
@@ -159,6 +161,10 @@ export interface GameStoreState {
   removeWeapon: (index: number) => void; // Remove weapon from collection
   removeSpell: (index: number) => void; // Remove spell from collection
   setPlayerClass: (newClass: CharacterClass) => void; // Change player class
+  // Revealed enemies management (stealth/control ward mechanic)
+  revealEnemy: (enemyId: string, duration: number) => void; // Reveal an enemy for N encounters (1 for stealth, 5 for control)
+  isEnemyRevealed: (enemyId: string) => boolean; // Check if enemy is currently revealed
+  decayRevealedEnemies: () => void; // Decrement all revealed enemy counters (call after each battle)
   // Post-Region Choice methods
   setCompletedRegion: (region: Region | null) => void; // Set completed region for travel actions
   showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
@@ -209,6 +215,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     equippedWeaponIndex: 0, // First weapon equipped
     equippedSpellIndex: 0, // First spell equipped
     spellCooldowns: {}, // Track spell cooldowns
+    revealedEnemies: {}, // Track which enemies are revealed (stealth/control ward mechanic)
     // Language/Settings
     currentLanguage: getInitialLanguage(),
     showSettings: false,
@@ -626,6 +633,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           equippedWeaponIndex: 0,
           equippedSpellIndex: 0,
           spellCooldowns: {},
+          revealedEnemies: {},
           showPostRegionChoice: false,
           postRegionChoiceComplete: false,
           completedRegion: null,
@@ -1330,4 +1338,38 @@ export const useGameStore = create<GameStoreState>((set) => ({
         },
       },
     })),
+
+  revealEnemy: (enemyId: string, duration: number) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        revealedEnemies: {
+          ...store.state.revealedEnemies,
+          [enemyId]: Math.max(store.state.revealedEnemies[enemyId] || 0, duration),
+        },
+      },
+    })),
+
+  isEnemyRevealed: (enemyId: string): boolean => {
+    const revealed = useGameStore.getState().state.revealedEnemies[enemyId];
+    return revealed !== undefined && revealed > 0;
+  },
+
+  decayRevealedEnemies: () =>
+    set((store) => {
+      const decayedEnemies: Record<string, number> = {};
+      for (const [enemyId, duration] of Object.entries(store.state.revealedEnemies)) {
+        const newDuration = duration - 1;
+        if (newDuration > 0) {
+          decayedEnemies[enemyId] = newDuration;
+        }
+      }
+      return {
+        state: {
+          ...store.state,
+          revealedEnemies: decayedEnemies,
+        },
+      };
+    }),
+
 }));

@@ -10,9 +10,10 @@ interface StatsPanelProps {
   character: Character;
   combatBuffs?: CombatBuff[];
   combatDebuffs?: CombatBuff[];
+  isRevealed?: boolean; // Whether to show stats or hide them
 }
 
-export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, combatDebuffs }) => {
+export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, combatDebuffs, isRevealed = true }) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const { state } = useGameStore();
@@ -123,32 +124,38 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
     <div className="stats-panel">
       <div className={`stats-panel-container ${character.role === 'enemy' ? 'enemy-stats' : 'player-stats'}`}>
         {character.role === 'enemy' && (
-          <div className="quick-stats enemy-quick-stats">
-            <div className="quick-stat" title="Attack Damage">
-              <span className="quick-stat-icon">⚔️</span>
-              <span className="quick-stat-value">{Math.round(stats?.attackDamage || 0)}</span>
-            </div>
-            <div className="quick-stat" title="Attack Speed">
-              <span className="quick-stat-icon">⚡</span>
-              <span className="quick-stat-value">{(stats?.attackSpeed || 0).toFixed(1)}</span>
-            </div>
-            <div className="quick-stat" title="Ability Power">
-              <span className="quick-stat-icon">✨</span>
-              <span className="quick-stat-value">{Math.round(stats?.abilityPower || 0)}</span>
-            </div>
-            <div className="quick-stat" title="Ability Haste">
-              <span className="quick-stat-icon">⏱️</span>
-              <span className="quick-stat-value">{Math.round(stats?.abilityHaste || 0)}</span>
-            </div>
+          <div className={`quick-stats enemy-quick-stats ${!isRevealed ? 'hidden-stats' : ''}`}>
+            {isRevealed ? (
+              <>
+                <div className="quick-stat" title="Attack Damage">
+                  <span className="quick-stat-icon">⚔️</span>
+                  <span className="quick-stat-value">{Math.round(stats?.attackDamage || 0)}</span>
+                </div>
+                <div className="quick-stat" title="Attack Speed">
+                  <span className="quick-stat-icon">⚡</span>
+                  <span className="quick-stat-value">{(stats?.attackSpeed || 0).toFixed(1)}</span>
+                </div>
+                <div className="quick-stat" title="Ability Power">
+                  <span className="quick-stat-icon">✨</span>
+                  <span className="quick-stat-value">{Math.round(stats?.abilityPower || 0)}</span>
+                </div>
+                <div className="quick-stat" title="Ability Haste">
+                  <span className="quick-stat-icon">⏱️</span>
+                  <span className="quick-stat-value">{Math.round(stats?.abilityHaste || 0)}</span>
+                </div>
+              </>
+            ) : (
+              <span className="invisible-icon">👁️‍🗨️</span>
+            )}
           </div>
         )}
         
         <button 
-          className="stats-button"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
+          className={`stats-button ${!isRevealed ? 'invisible-button' : ''}`}
+          onMouseEnter={isRevealed ? handleMouseEnter : undefined}
+          onMouseLeave={isRevealed ? handleMouseLeave : undefined}
         >
-          📊 Stats
+          {isRevealed ? '📊 Stats' : '👁️‍🗨️'}
         </button>
         
         {character.role === 'player' && (
@@ -173,7 +180,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
         )}
       </div>
 
-      {tooltipVisible && (
+      {tooltipVisible && isRevealed && (
         <div 
           className={`stats-tooltip ${character.role === 'enemy' ? 'tooltip-left' : 'tooltip-right'}`}
           style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}

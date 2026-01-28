@@ -6,9 +6,10 @@ import './ItemsBar.css';
 
 interface ItemsBarProps {
   inventory?: InventoryItem[]; // Optional inventory prop for enemy/custom display
+  isRevealed?: boolean; // Whether to show item details or blur them
 }
 
-export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }) => {
+export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, isRevealed = true }) => {
   const { state } = useGameStore();
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -62,6 +63,7 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
         <div
           className="item-icon-slot total-slot"
           onMouseEnter={(e) => {
+            if (!isRevealed) return; // Don't show total tooltip when hidden
             setShowTotalTooltip(true);
             const rect = e.currentTarget.getBoundingClientRect();
             setTotalTooltipPosition({
@@ -82,8 +84,9 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
           return (
             <div
               key={idx}
-              className={`item-icon-slot rarity-${itemData.rarity}`}
+              className={`item-icon-slot rarity-${itemData.rarity} ${!isRevealed ? 'blurred-item' : ''}`}
               onMouseEnter={(e) => {
+                if (!isRevealed) return; // Don't show tooltip when hidden
                 setHoveredItemId(item.itemId);
                 const rect = e.currentTarget.getBoundingClientRect();
                 setTooltipPosition({
@@ -93,10 +96,18 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
               }}
               onMouseLeave={() => setHoveredItemId(null)}
             >
-              {itemData.imagePath ? (
-                <img src={itemData.imagePath} alt={itemData.name} className="item-icon-image" />
+              {!isRevealed ? (
+                // When hidden, show only the blurred rarity-colored square
+                <span className="item-blur-icon">?</span>
               ) : (
-                <span className="item-icon">{getItemIcon(itemData.name || '')}</span>
+                // When revealed, show the normal item icon
+                <>
+                  {itemData.imagePath ? (
+                    <img src={itemData.imagePath} alt={itemData.name} className="item-icon-image" />
+                  ) : (
+                    <span className="item-icon">{getItemIcon(itemData.name || '')}</span>
+                  )}
+                </>
               )}
               {item.quantity > 1 && <span className="item-qty">x{item.quantity}</span>}
             </div>
@@ -105,7 +116,7 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
       </div>
 
       {/* Total Stats Tooltip */}
-      {showTotalTooltip && Object.keys(totalStats).length > 0 && (
+      {showTotalTooltip && isRevealed && Object.keys(totalStats).length > 0 && (
         <div className="item-tooltip-bar total-tooltip" style={{ left: `${totalTooltipPosition.x}px`, top: `${totalTooltipPosition.y}px` }}>
           <h4 className="tooltip-item-name">Total Stats</h4>
           <p className="tooltip-item-description">Combined stats from all items</p>
@@ -184,7 +195,7 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory }
       )}
 
       {/* Single Item Tooltip */}
-      {hoveredItemId && getItemById(hoveredItemId) && (() => {
+      {hoveredItemId && isRevealed && getItemById(hoveredItemId) && (() => {
         const itemData = getItemById(hoveredItemId);
         const inventoryItem = inventory.find(i => i.itemId === hoveredItemId);
         const quantity = inventoryItem?.quantity || 1;

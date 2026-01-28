@@ -36,11 +36,35 @@
   box-shadow: 0 0 10px rgba(74, 158, 255, 0.4);
 }
 
+/* Hidden stats button - when enemy is not revealed */
+.stats-button.invisible-button {
+  background: rgba(100, 100, 100, 0.3);
+  border-color: rgba(100, 100, 100, 0.6);
+  color: rgba(200, 200, 200, 0.7);
+  cursor: not-allowed;
+}
+
+.stats-button.invisible-button:hover {
+  background: rgba(100, 100, 100, 0.3);
+  border-color: rgba(100, 100, 100, 0.6);
+  box-shadow: none;
+}
+
 /* Quick Stats Display */
 .quick-stats {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+/* Hidden quick stats - show invisible icon instead */
+.quick-stats.hidden-stats {
+  justify-content: center;
+}
+
+.invisible-icon {
+  font-size: 18px;
+  opacity: 0.6;
 }
 
 .quick-stat {

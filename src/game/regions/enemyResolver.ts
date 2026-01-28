@@ -1,6 +1,9 @@
 import { Character } from '../types';
+import { Region } from '../types';
 import { DEFAULT_STATS } from '../statsSystem';
-import { getDemaciaEnemyById } from './demacia';
+import { getDemaciaEnemyById, resolveDemaciaEnemyId } from './demacia';
+import { getIoniaEnemyById, resolveIoniaEnemyId } from './ionia';
+import { getShurimaEnemyById, resolveShurimaEnemyId } from './shurima';
 
 // Placeholder enemies for regions without implemented enemies yet
 export const PLACEHOLDER_MINION: Character = {
@@ -77,10 +80,15 @@ export const PLACEHOLDER_BOSS: Character = {
  * IMPORTANT: Always returns a copy to prevent mutation of database objects
  */
 export function getEnemyById(id: string): Character | undefined {
-  // Try Demacia first (only implemented region)
-  // getDemaciaEnemyById already returns a copy
+  // Try each region's enemy database
   const demaciaEnemy = getDemaciaEnemyById(id);
   if (demaciaEnemy) return demaciaEnemy;
+
+  const ioniaEnemy = getIoniaEnemyById(id);
+  if (ioniaEnemy) return ioniaEnemy;
+
+  const shurimaEnemy = getShurimaEnemyById(id);
+  if (shurimaEnemy) return shurimaEnemy;
 
   // Fall back to placeholders - return copies to prevent mutation
   if (id === 'placeholder_minion') return { ...PLACEHOLDER_MINION, stats: { ...PLACEHOLDER_MINION.stats }, abilities: [...PLACEHOLDER_MINION.abilities] };
@@ -90,4 +98,25 @@ export function getEnemyById(id: string): Character | undefined {
   // Default fallback
   console.warn(`Enemy "${id}" not found, using placeholder minion`);
   return { ...PLACEHOLDER_MINION, stats: { ...PLACEHOLDER_MINION.stats }, abilities: [...PLACEHOLDER_MINION.abilities] };
+}
+
+/**
+ * Resolve an enemy ID marker (which can be either static or random) for a specific region
+ * For example: 'random:minion:beast' gets resolved to an actual enemy ID from that region
+ * @param enemyIdOrMarker - The enemy ID or random marker (e.g., 'random:minion:beast')
+ * @param region - The region to resolve from
+ * @returns The actual enemy ID
+ */
+export function resolveEnemyIdByRegion(enemyIdOrMarker: string, region: Region): string {
+  // Use region-specific resolver functions
+  if (region === 'demacia') {
+    return resolveDemaciaEnemyId(enemyIdOrMarker);
+  } else if (region === 'ionia') {
+    return resolveIoniaEnemyId(enemyIdOrMarker);
+  } else if (region === 'shurima') {
+    return resolveShurimaEnemyId(enemyIdOrMarker);
+  }
+  
+  // For other regions, just return the ID as-is (no random markers implemented)
+  return enemyIdOrMarker;
 }

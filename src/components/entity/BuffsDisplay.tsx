@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Character } from '../../game/types';
-import { getClassStatBonuses } from '../../game/statsSystem';
 
 interface TemporaryStatModifier {
   statName: string;
@@ -13,29 +12,8 @@ interface TemporaryStatModifier {
 interface BuffsDisplayProps {
   character: Character;
   temporaryStats?: TemporaryStatModifier[];
+  isRevealed?: boolean; // Whether to show buffs or blur them
 }
-
-const CLASS_ICONS: Record<string, string> = {
-  mage: '✨',
-  vanguard: '🛡️',
-  warden: '🧙',
-  juggernaut: '⚔️',
-  skirmisher: '💨',
-  assassin: '🗡️',
-  marksman: '🏹',
-  enchanter: '✨',
-};
-
-const CLASS_NAMES: Record<string, string> = {
-  mage: 'Mage',
-  vanguard: 'Vanguard',
-  warden: 'Warden',
-  juggernaut: 'Juggernaut',
-  skirmisher: 'Skirmisher',
-  assassin: 'Assassin',
-  marksman: 'Marksman',
-  enchanter: 'Enchanter',
-};
 
 const STAT_DISPLAY_NAMES: Record<string, string> = {
   health: 'HP',
@@ -60,18 +38,15 @@ const STAT_DISPLAY_NAMES: Record<string, string> = {
   heal_over_time: 'Heal/Turn',
 };
 
-export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporaryStats = [] }) => {
-  const [hoveredClass, setHoveredClass] = useState(false);
+export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporaryStats = [], isRevealed = true }) => {
   const [hoveredBuffIndex, setHoveredBuffIndex] = useState<number | null>(null);
   const [showTotalTooltip, setShowTotalTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [totalTooltipPosition, setTotalTooltipPosition] = useState({ x: 0, y: 0 });
-  
-  const classBonuses = getClassStatBonuses(character.class, character.level);
 
-  // Calculate total stats from class bonuses + all temporary buffs
+  // Calculate total stats from all temporary buffs only (no class bonuses)
   const calculateTotalStats = () => {
-    const totals: any = { ...classBonuses };
+    const totals: any = {};
     temporaryStats.forEach((mod) => {
       const statKey = mod.statName;
       totals[statKey] = (totals[statKey] || 0) + mod.value;
@@ -98,22 +73,6 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporary
           onMouseLeave={() => setShowTotalTooltip(false)}
         >
           <span className="total-icon">Σ</span>
-        </div>
-
-        {/* Class buff as first buff slot */}
-        <div
-          className="buff-icon class-buff"
-          onMouseEnter={(e) => {
-            setHoveredClass(true);
-            const rect = e.currentTarget.getBoundingClientRect();
-            setTooltipPosition({
-              x: rect.left,
-              y: rect.bottom + 5,
-            });
-          }}
-          onMouseLeave={() => setHoveredClass(false)}
-        >
-          <span>{CLASS_ICONS[character.class]}</span>
         </div>
 
         {/* Temporary buffs/debuffs as individual slots */}
@@ -152,22 +111,7 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporary
             .filter(([_, value]) => value && value !== 0)
             .map(([stat, value]) => (
               <div key={stat} className="tooltip-stat">
-                {(value as number) > 0 ? '+' : ''}{value as number} {STAT_DISPLAY_NAMES[stat] || stat}
-              </div>
-            ))}
-        </div>
-      )}
-
-      {/* Class Buff Tooltip */}
-      {hoveredClass && (
-        <div className="stat-bonus-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-          <div className="tooltip-title">{CLASS_NAMES[character.class]}</div>
-          <div className="tooltip-level">Level {character.level}</div>
-          {Object.entries(classBonuses)
-            .filter(([_, value]) => value && value !== 0)
-            .map(([stat, value]) => (
-              <div key={stat} className="tooltip-stat">
-                +{value} {STAT_DISPLAY_NAMES[stat]}
+                {(value as number) > 0 ? '+' : ''}{Math.round(value as number)} {STAT_DISPLAY_NAMES[stat] || stat}
               </div>
             ))}
         </div>
@@ -185,7 +129,7 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporary
           </div>
           {temporaryStats[hoveredBuffIndex].value !== 0 && (
             <div className="tooltip-stat">
-              {temporaryStats[hoveredBuffIndex].value > 0 ? '+' : ''}{temporaryStats[hoveredBuffIndex].value}{' '}
+              {temporaryStats[hoveredBuffIndex].value > 0 ? '+' : ''}{Math.round(temporaryStats[hoveredBuffIndex].value)}{' '}
               {STAT_DISPLAY_NAMES[temporaryStats[hoveredBuffIndex].statName] || temporaryStats[hoveredBuffIndex].statName}
             </div>
           )}

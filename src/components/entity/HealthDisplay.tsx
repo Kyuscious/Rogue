@@ -39,7 +39,7 @@ export const HealthDisplay: React.FC<HealthDisplayProps> = ({ character }) => {
           )}
         </div>
         <span className="hp-text">
-          {character.hp}/{maxHp} HP
+          {Math.round(character.hp)}/{Math.round(maxHp)} HP
           {shield > 0 && <span className="shield-text"> +{Math.round(shield)}</span>}
         </span>
       </div>

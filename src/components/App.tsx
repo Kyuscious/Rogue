@@ -16,8 +16,7 @@ import { LoadingScreen } from './screens/LoadingScreen/LoadingScreen';
 import { PostRegionChoiceScreen } from './screens/PostRegionChoice/PostRegionChoice';
 import { SettingsScreen } from './screens/Settings/Settings';
 import { getQuestById } from '../game/questDatabase';
-import { resolveDemaciaEnemyId } from '../game/regions/demacia';
-import { getEnemyById } from '../game/regions/enemyResolver';
+import { resolveEnemyIdByRegion, getEnemyById } from '../game/regions/enemyResolver';
 import { getItemById } from '../game/items';
 import { CharacterStats } from '../game/statsSystem';
 import { Region } from '../game/types';
@@ -250,8 +249,8 @@ export const App: React.FC = () => {
     visitRegion(region);
     // Add 3 health potions to help start the run
     addInventoryItem({ itemId: 'health_potion', quantity: 3 });
-    // Add 1 flashbomb trap
-    addInventoryItem({ itemId: 'flashbomb_trap', quantity: 1 });
+    // Add 1 stealth ward for vision control
+    addInventoryItem({ itemId: 'stealth_ward', quantity: 1 });
     setScene('quest');
   };
 
@@ -313,8 +312,9 @@ export const App: React.FC = () => {
     
     // Load enemies for this path
     // Resolve random enemy markers (e.g., 'random:minion:guard') to actual enemy IDs
+    // Use the quest's region to resolve region-specific random markers
     const enemies = path.enemyIds
-      .map(id => resolveDemaciaEnemyId(id))
+      .map(id => resolveEnemyIdByRegion(id, quest.region))
       .map(id => getEnemyById(id))
       .filter((enemy): enemy is typeof enemy & {} => enemy !== undefined);
     
