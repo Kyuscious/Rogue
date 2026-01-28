@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Character } from '../../game/types';
 
 interface TemporaryStatModifier {
   statName: string;
@@ -10,9 +9,7 @@ interface TemporaryStatModifier {
 }
 
 interface BuffsDisplayProps {
-  character: Character;
   temporaryStats?: TemporaryStatModifier[];
-  isRevealed?: boolean; // Whether to show buffs or blur them
 }
 
 const STAT_DISPLAY_NAMES: Record<string, string> = {
@@ -38,7 +35,7 @@ const STAT_DISPLAY_NAMES: Record<string, string> = {
   heal_over_time: 'Heal/Turn',
 };
 
-export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ character, temporaryStats = [], isRevealed = true }) => {
+export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [] }) => {
   const [hoveredBuffIndex, setHoveredBuffIndex] = useState<number | null>(null);
   const [showTotalTooltip, setShowTotalTooltip] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });

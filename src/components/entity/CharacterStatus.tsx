@@ -136,7 +136,7 @@ export const CharacterStatus: React.FC<{
       <LevelDisplay character={character} />
 
       {/* Always Visible: Active Effects (Buffs/Debuffs) */}
-      <BuffsDisplay character={character} temporaryStats={allTemporaryStats} isRevealed={isRevealed} />
+      <BuffsDisplay temporaryStats={allTemporaryStats} />
 
       {/* Toggleable: Stats Panel */}
       <StatsPanel character={character} combatBuffs={combatBuffs} combatDebuffs={combatDebuffs} isRevealed={isRevealed} />
