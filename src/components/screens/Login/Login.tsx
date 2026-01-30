@@ -147,20 +147,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleLinkRiotAccount = async () => {
-    setIsLoading(true);
-    setError('');
-    try {
-      // TODO: Implement Riot OAuth flow
-      // This would redirect to Riot's OAuth endpoint and get the summoner name
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setUsername('RiotSummonerName');
-      setError('');
-    } catch (err) {
-      setError('Failed to link Riot account. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handlePlayAsGuest = () => {
+    // Guest mode uses a temporary username
+    setPlayerName('Guest');
+    onLoginSuccess();
   };
 
   return (
@@ -247,13 +237,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <p className="divider">or</p>
           <button
             type="button"
-            onClick={handleLinkRiotAccount}
+            onClick={handlePlayAsGuest}
             disabled={isLoading}
             className="btn-riot-link"
           >
-            🎮 Link Riot Account
+            👤 Play as Guest
           </button>
-          <p className="riot-hint">Auto-fill your summoner name instantly</p>
+          <p className="riot-hint">⚠️ Progress will not be saved</p>
         </div>
 
         <p className="login-footer">

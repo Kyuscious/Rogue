@@ -1,5 +1,5 @@
 import { Region } from './types';
-import { DEMACIA_QUEST_PATHS } from './regions/demacia';
+import { DEMACIA_QUEST_PATHS } from './regions/demacia/quests';
 import { IONIA_QUEST_PATHS } from './regions/ionia/quests';
 import { SHURIMA_QUEST_PATHS } from './regions/shurima/quests';
 import { NOXUS_QUEST_PATHS } from './regions/noxus/quests';

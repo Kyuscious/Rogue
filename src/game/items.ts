@@ -343,13 +343,9 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 50,
     stats: {},
     consumable: true,
-    onUseEffect: 'Restores 50 health over 5 turns',
+    onUseEffect: 'Restores 100 health over 5 turns',
   },
-  
-  // ACTIVE ITEMS - Combat Abilities
-
-  
-  // CONSUMABLE - Trap Item
+ 
   flashbomb_trap: {
     id: 'flashbomb_trap',
     name: 'Flashbomb Trap',
@@ -374,13 +370,24 @@ export const ITEM_DATABASE: Record<string, Item> = {
   stealth_ward: {
     id: 'stealth_ward',
     name: 'Stealth Ward',
-    description: 'Invisible ward that reveals the stats of the enemy',
+    description: 'Invisible ward that reveals the stats of enemies for the encounter',
     rarity: 'common',
-    price: 75,
+    price: 50,
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals the enemy stats for the remainder of the encounter',
   },
+  control_ward: {
+    id: 'control_ward',
+    name: 'Control Ward',
+    description: 'A ward that reveals the stats of enemies for multiple encounters',
+    rarity: 'common',
+    price: 75,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Reveals the enemy stats for the next 5 encounters',
+  },
+
   oracle_lens: {
     id: 'oracle_lens',
     name: 'Oracle Lens',
@@ -400,6 +407,16 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals what the next encounter will be',
+  },
+  poro_snax: {
+    id: 'poro_snax',
+    name: 'Poro Snax',
+    description: 'A treat for poros that grants a temporary buff',
+    rarity: 'common',
+    price: 0,
+    stats: {},
+    consumable: true,
+    onUseEffect: 'Grants +10 movement speed and +5 health regen for 5 turns',
   },
 
   // Common Items
@@ -651,8 +668,8 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'The Legendary Jeweled crossblade boomerang',
     rarity: 'exalted',
     price: 5000,
-    stats: { attackDamage: 90, health: 200 },
-    }
+    stats: { attackDamage: 90, health: 200 },  
+  },
   // Transcendent Items
   
 };

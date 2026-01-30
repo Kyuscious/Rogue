@@ -1,13 +1,13 @@
 import { Region, Character } from './types';
 
-export type PostRegionChoice = 'rest' | 'modify_build' | 'random_event';
+export type PostRegionChoice = 'rest' | 'trade' | 'event';
 
 /**
  * Post-Region Choice Options
  * After completing a region, players can choose to:
  * 1. Rest - Heal HP and restore resources
- * 2. Modify Build - Change class, manage items/spells/weapons
- * 3. Random Event - Trigger a region-specific event
+ * 2. Trade - Visit a trading outpost/merchant: combine items, change class, discard items
+ * 3. Event - Trigger a region-specific event
  */
 
 export interface PostRegionChoiceOption {
@@ -25,13 +25,13 @@ export const POST_REGION_CHOICES: PostRegionChoiceOption[] = [
     icon: '🛏️',
   },
   {
-    type: 'modify_build',
-    title: 'Modify Build',
-    description: 'Change your class, reorganize items, or adjust spells and weapons.',
-    icon: '⚙️',
+    type: 'trade',
+    title: 'Trade',
+    description: 'Visit a merchant or trading outpost. Combine items, change class, or discard items.',
+    icon: '🛍️',
   },
   {
-    type: 'random_event',
+    type: 'event',
     title: 'Explore',
     description: 'Trigger a random event from this region. Risk and reward!',
     icon: '🎲',

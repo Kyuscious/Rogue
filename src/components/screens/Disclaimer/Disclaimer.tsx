@@ -14,16 +14,21 @@ export const Disclaimer: React.FC<DisclaimerProps> = ({ onAccept }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       setProgress((prev) => {
-        // Loop back to 0 when reaching 100 for continuous animation
-        if (prev >= 100) {
-          return 0;
+        const newProgress = prev + (100 / 100); // 10 seconds = 100 * 100ms
+        if (newProgress >= 100) {
+          // Auto-accept when timer reaches 100%
+          if (dontShowAgain) {
+            localStorage.setItem('skipDisclaimer', 'true');
+          }
+          onAccept();
+          return 100;
         }
-        return prev + (100 / 100); // 10 seconds = 100 * 100ms
+        return newProgress;
       });
     }, 100);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [dontShowAgain, onAccept]);
 
   const handleSkip = () => {
     if (dontShowAgain) {

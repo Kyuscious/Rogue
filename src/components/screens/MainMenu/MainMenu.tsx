@@ -45,6 +45,7 @@ const CREDITS_DATA: CreditsCategory[] = [
     title: 'Tested by',
     contributors: [
       { name: 'ad Raychu', link: 'https://twitter.com/ad_raychu', icon: '🧪' },
+      { name: 'Fotok', link: 'https://twitter.com/fotok', icon: '🧪' },
     ],
   },
   {

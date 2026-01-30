@@ -3,56 +3,52 @@ import { useGameStore } from '../../../game/store';
 import './RestScreen.css';
 
 interface RestScreenProps {
+  completedRegion: string;
   onContinue: () => void;
 }
 
-export const RestScreen: React.FC<RestScreenProps> = ({ onContinue }) => {
-  const { state } = useGameStore();
+export const RestScreen: React.FC<RestScreenProps> = ({ completedRegion, onContinue }) => {
+  const state = useGameStore((store) => store.state);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
+  const applyRestAction = useGameStore((store) => store.applyRestAction);
 
   const restActions = [
     {
       id: 'meditate',
       name: '🧘 Meditate',
       description: 'Clear your mind and focus. Gain temporary mental fortitude.',
-      benefit: '+20% Ability Power for next 3 encounters',
+      benefit: '+10% Ability Power buff for next 10 encounters',
       available: true,
     },
     {
       id: 'train',
       name: '⚔️ Train',
       description: 'Practice your combat techniques.',
-      benefit: '+15% Attack Damage for next 3 encounters',
+      benefit: '+10% Attack Damage buff for next 10 encounters',
       available: true,
     },
     {
       id: 'scout',
-      name: '🔍 Scout Ahead',
+      name: '🔍 Scout',
       description: 'Survey the area and plan your approach.',
-      benefit: 'Reveal next enemy type and stats',
-      available: true,
-    },
-    {
-      id: 'pray',
-      name: '🙏 Pray',
-      description: 'Seek divine guidance.',
-      benefit: 'Random blessing: Gold, Item, or Stat bonus',
+      benefit: '+5 Rerolls',
       available: true,
     },
   ];
 
-  const handleActionSelect = (actionId: string) => {
-    setSelectedAction(actionId);
-    // TODO: Implement action effects
-    console.log(`[REST] Selected action: ${actionId}`);
+  const handleContinue = () => {
+    if (selectedAction) {
+      applyRestAction(selectedAction as 'meditate' | 'train' | 'scout');
+      onContinue();
+    }
   };
 
   return (
     <div className="rest-screen">
       <div className="rest-container">
-        <h1 className="rest-title">🏕️ Rest & Recovery</h1>
+        <h1 className="rest-title">🏕️ Rest</h1>
         <p className="rest-subtitle">
-          You've completed {state.selectedRegion}! Take a moment to rest and prepare.
+          You've completed {completedRegion}! Prepare yourself for the next region.
         </p>
 
         <div className="rest-status">
@@ -71,13 +67,13 @@ export const RestScreen: React.FC<RestScreenProps> = ({ onContinue }) => {
         </div>
 
         <div className="rest-actions">
-          <h2>Choose a Rest Activity:</h2>
+          <h2>Choose an action to prepare:</h2>
           <div className="action-grid">
             {restActions.map((action) => (
               <button
                 key={action.id}
                 className={`action-card ${selectedAction === action.id ? 'selected' : ''} ${!action.available ? 'disabled' : ''}`}
-                onClick={() => handleActionSelect(action.id)}
+                onClick={() => action.available && setSelectedAction(action.id)}
                 disabled={!action.available}
               >
                 <div className="action-name">{action.name}</div>
@@ -90,10 +86,10 @@ export const RestScreen: React.FC<RestScreenProps> = ({ onContinue }) => {
 
         <button 
           className="continue-btn"
-          onClick={onContinue}
+          onClick={handleContinue}
           disabled={!selectedAction}
         >
-          {selectedAction ? 'Continue Journey →' : 'Select an activity to continue'}
+          {selectedAction ? `Continue to ${completedRegion} →` : 'Select an action to continue'}
         </button>
       </div>
     </div>

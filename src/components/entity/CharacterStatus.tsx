@@ -82,8 +82,32 @@ export const CharacterStatus: React.FC<{
     isDebuff: true,
   })) || [];
 
-  // Combine buffs and debuffs
-  const allTemporaryStats = [...temporaryStats, ...temporaryDebuffs];
+  // Convert character.effects (StatusEffect) to TemporaryStatModifiers
+  const statusEffectBuffs = character.effects
+    ?.filter(effect => effect.type === 'buff')
+    .map(effect => ({
+      statName: effect.statModifiers?.attackDamage ? 'attackDamage' : 
+                 effect.statModifiers?.abilityPower ? 'abilityPower' :
+                 effect.statModifiers?.health ? 'health' : 'health',
+      value: effect.statModifiers?.attackDamage || effect.statModifiers?.abilityPower || effect.statModifiers?.health || 0,
+      source: effect.name,
+      duration: effect.duration,
+      isDebuff: false,
+    })) || [];
+
+  // Convert character.effects debuffs to TemporaryStatModifiers
+  const statusEffectDebuffs = character.effects
+    ?.filter(effect => effect.type === 'debuff')
+    .map(effect => ({
+      statName: 'debuff',
+      value: 0,
+      source: effect.name,
+      duration: effect.duration,
+      isDebuff: true,
+    })) || [];
+
+  // Combine all buffs and debuffs
+  const allTemporaryStats = [...temporaryStats, ...temporaryDebuffs, ...statusEffectBuffs, ...statusEffectDebuffs];
 
   return (
     <div className="character-status">

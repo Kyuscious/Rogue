@@ -1,36 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '../../../game/store';
 import { POST_REGION_CHOICES, PostRegionChoice, hasRegionEvents } from '../../../game/postRegionChoice';
-import { getRandomEventForRegion } from '../../../game/eventSystem';
+import { RestScreen } from './RestScreen';
 import './PostRegionChoice.css';
 
 export const PostRegionChoiceScreen: React.FC = () => {
   const state = useGameStore((store) => store.state);
   const hidePostRegionChoiceScreen = useGameStore((store) => store.hidePostRegionChoiceScreen);
-  const applyRestChoice = useGameStore((store) => store.applyRestChoice);
+  const [showRest, setShowRest] = useState(false);
 
   if (!state.showPostRegionChoice || !state.completedRegion) {
     return null;
   }
 
+  // Show rest screen if user selected rest
+  if (showRest) {
+    return (
+      <RestScreen 
+        completedRegion={state.completedRegion}
+        onContinue={() => {
+          setShowRest(false);
+          hidePostRegionChoiceScreen();
+        }}
+      />
+    );
+  }
+
   const handleChoice = (choice: PostRegionChoice) => {
     if (choice === 'rest') {
-      applyRestChoice();
-    } else if (choice === 'modify_build') {
-      // TODO: Show build modification screen
+      setShowRest(true);
+    } else if (choice === 'trade') {
+      // Set pending action in store - App.tsx will handle routing to TradeScreen
+      useGameStore.getState().state.pendingPostRegionAction = 'trade';
       hidePostRegionChoiceScreen();
-      console.log('Build modification not yet implemented');
-    } else if (choice === 'random_event') {
-      // TODO: Trigger random region event
+    } else if (choice === 'event') {
+      // Set pending action in store - App.tsx will handle routing to EventScreen
       if (state.completedRegion && hasRegionEvents(state.completedRegion)) {
-        const randomEvent = getRandomEventForRegion(state.completedRegion);
-        if (randomEvent) {
-          console.log('Triggering event:', randomEvent);
-          // TODO: Show event UI
-        }
+        useGameStore.getState().state.pendingPostRegionAction = 'event';
+        hidePostRegionChoiceScreen();
       }
-      hidePostRegionChoiceScreen();
-      console.log('Random event not yet fully implemented');
     }
   };
 
@@ -45,8 +53,8 @@ export const PostRegionChoiceScreen: React.FC = () => {
 
         <div className="post-region-choices">
           {POST_REGION_CHOICES.map((option) => {
-            // Disable random event if region has no events
-            const isDisabled = option.type === 'random_event' && 
+            // Disable event if region has no events
+            const isDisabled = option.type === 'event' && 
               (!state.completedRegion || !hasRegionEvents(state.completedRegion));
 
             return (

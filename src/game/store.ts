@@ -8,6 +8,7 @@ import { REGION_SHOP_POOLS } from './rewardPool';
 import { CombatBuff } from './itemSystem';
 import { spawnEnemies, deepCopyEnemies } from './battle/enemySpawning';
 import { calculatePlayerMaxHp, applyItemToPlayer, removeItemFromPlayer, applyLevelUp } from './battle/playerStats';
+import { PostRegionChoice } from './postRegionChoice';
 import { getStarterEquipment, hasStarterEquipment } from './starterEquipment';
 import { Language } from '../i18n';
 import { AudioSettings, audioManager } from './audioManager';
@@ -114,6 +115,7 @@ export interface GameStoreState {
     showPostRegionChoice: boolean; // Show post-region choice UI after completing region
     completedRegion: Region | null; // Region just completed (for random events)
     postRegionChoiceComplete: boolean; // Flag set to true when user makes a choice, App.tsx watches this
+    pendingPostRegionAction: PostRegionChoice | null; // Action selected to perform before traveling to next region
     // Language/Settings
     currentLanguage: Language; // Current selected language
     showSettings: boolean; // Show settings modal
@@ -170,6 +172,8 @@ export interface GameStoreState {
   showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
   hidePostRegionChoiceScreen: () => void; // Hide post-region choice UI
   applyRestChoice: () => void; // Rest and heal to full HP
+  applyRestAction: (action: 'meditate' | 'train' | 'scout') => void; // Apply selected rest action with effects
+  setPostRegionAction: (action: PostRegionChoice | null) => void; // Store action selected during region selection
   clearPostRegionCompletion: () => void; // Clear completion flag after navigation
   // Language/Settings methods
   setLanguage: (language: Language) => void; // Change language
@@ -233,6 +237,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     showPostRegionChoice: false,
     completedRegion: null,
     postRegionChoiceComplete: false,
+    pendingPostRegionAction: null,
   },
 
   setUsername: (username: string) =>
@@ -386,6 +391,17 @@ export const useGameStore = create<GameStoreState>((set) => ({
         }
       }
       
+      // Decay character effects (buffs/debuffs) - decrement duration by 1 encounter
+      const updatedPlayer = {
+        ...store.state.playerCharacter,
+        effects: store.state.playerCharacter.effects
+          ?.map(effect => ({
+            ...effect,
+            duration: effect.duration - 1,
+          }))
+          .filter(effect => effect.duration > 0) || [],
+      };
+      
       // Use battle system to spawn and scale enemies
       const currentRegion = store.state.selectedRegion || 'demacia';
       const spawnedEnemies = spawnEnemies(
@@ -400,7 +416,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           ...store.state,
           currentFloor: newFloor,
           spellCooldowns: updatedCooldowns,
-          playerCharacter: store.state.playerCharacter,
+          playerCharacter: updatedPlayer,
           originalEnemyQueue: deepCopyEnemies(enemies),
           enemyCharacters: spawnedEnemies,
         },
@@ -637,6 +653,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           showPostRegionChoice: false,
           postRegionChoiceComplete: false,
           completedRegion: null,
+          pendingPostRegionAction: null,
           currentLanguage: store.state.currentLanguage, // Persist language
           showSettings: false,
           audioSettings: store.state.audioSettings, // Persist audio settings
@@ -1202,11 +1219,78 @@ export const useGameStore = create<GameStoreState>((set) => ({
       };
     }),
 
+  applyRestAction: (action: 'meditate' | 'train' | 'scout') =>
+    set((store) => {
+      const maxHp = calculatePlayerMaxHp(store.state.playerCharacter);
+      let updatedPlayer = {
+        ...store.state.playerCharacter,
+        hp: maxHp,
+      };
+      let updatedRerolls = store.state.rerolls;
+
+      // Apply appropriate buff or reroll bonus
+      if (action === 'meditate') {
+        // Add "Well Rested" buff with 10% AP for 10 encounters
+        const wellRestedBuff = {
+          id: 'well_rested_ap',
+          name: 'Well Rested',
+          type: 'buff' as const,
+          duration: 10,
+          description: '+10% Ability Power',
+          statModifiers: {
+            abilityPower: 10, // 10% bonus to AP
+          },
+        };
+        updatedPlayer = {
+          ...updatedPlayer,
+          effects: [...(updatedPlayer.effects || []), wellRestedBuff],
+        };
+      } else if (action === 'train') {
+        // Add "Well Rested" buff with 10% AD for 10 encounters
+        const wellRestedBuff = {
+          id: 'well_rested_ad',
+          name: 'Well Rested',
+          type: 'buff' as const,
+          duration: 10,
+          description: '+10% Attack Damage',
+          statModifiers: {
+            attackDamage: 10, // 10% bonus to AD
+          },
+        };
+        updatedPlayer = {
+          ...updatedPlayer,
+          effects: [...(updatedPlayer.effects || []), wellRestedBuff],
+        };
+      } else if (action === 'scout') {
+        // Add 5 rerolls
+        updatedRerolls = store.state.rerolls + 5;
+      }
+
+      return {
+        state: {
+          ...store.state,
+          playerCharacter: updatedPlayer,
+          rerolls: updatedRerolls,
+          postRegionChoiceComplete: true,
+          showPostRegionChoice: false,
+        },
+      };
+    }),
+
+  setPostRegionAction: (action: PostRegionChoice | null) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        pendingPostRegionAction: action,
+      },
+    })),
+
   clearPostRegionCompletion: () =>
     set((store) => ({
       state: {
         ...store.state,
         postRegionChoiceComplete: false,
+        pendingPostRegionAction: null,
       },
     })),
 

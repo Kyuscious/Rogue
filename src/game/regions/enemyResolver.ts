@@ -1,9 +1,9 @@
 import { Character } from '../types';
 import { Region } from '../types';
 import { DEFAULT_STATS } from '../statsSystem';
-import { getDemaciaEnemyById, resolveDemaciaEnemyId } from './demacia';
-import { getIoniaEnemyById, resolveIoniaEnemyId } from './ionia';
-import { getShurimaEnemyById, resolveShurimaEnemyId } from './shurima';
+import { getDemaciaEnemyById, resolveDemaciaEnemyId } from './demacia/enemies';
+import { getIoniaEnemyById, resolveIoniaEnemyId } from './ionia/enemies';
+import { getShurimaEnemyById, resolveShurimaEnemyId } from './shurima/enemies';
 
 // Placeholder enemies for regions without implemented enemies yet
 export const PLACEHOLDER_MINION: Character = {

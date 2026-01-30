@@ -31,6 +31,7 @@ export interface StatusEffect {
   shieldAmount?: number; // Shield granted by this buff
   statModifiers?: { // Percentage-based stat modifiers
     attackDamage?: number; // Percentage bonus to AD
+    abilityPower?: number; // Percentage bonus to AP
     health?: number; // Percentage of max HP
   };
 }

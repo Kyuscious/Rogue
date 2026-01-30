@@ -11,7 +11,6 @@ import {
 } from '../../../game/regionGraph';
 import { discoverConnection } from '../../../game/profileSystem';
 import { POST_REGION_CHOICES, PostRegionChoice, hasRegionEvents } from '../../../game/postRegionChoice';
-import { getRandomEventForRegion } from '../../../game/eventSystem';
 import './RegionSelection.css';
 
 interface RegionSelectionProps {
@@ -20,13 +19,10 @@ interface RegionSelectionProps {
 
 export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion }) => {
   const store = useGameStore();
-  const { state, applyRestChoice } = store;
+  const { state } = store;
   const [showPathTooltip, setShowPathTooltip] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<Region | null>(null);
   const [selectedAction, setSelectedAction] = useState<PostRegionChoice | null>(null);
-  
-  // Debug logging
-  console.log('🔍 RegionSelection - completedRegion:', state.completedRegion);
   
   if (!state.selectedRegion) {
     return <div>Error: No current region</div>;
@@ -65,34 +61,18 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
       return;
     }
 
-    // Apply the chosen action first (if any)
-    if (selectedAction) {
-      if (selectedAction === 'rest') {
-        applyRestChoice();
-      } else if (selectedAction === 'modify_build') {
-        // TODO: Show build modification screen before proceeding
-        console.log('Build modification not yet implemented');
-      } else if (selectedAction === 'random_event') {
-        // TODO: Trigger random event from completed region
-        if (state.completedRegion && hasRegionEvents(state.completedRegion)) {
-          const randomEvent = getRandomEventForRegion(state.completedRegion);
-          if (randomEvent) {
-            console.log('Triggering event:', randomEvent);
-            // TODO: Show event UI before proceeding
-          }
-        }
-        console.log('Random event not yet fully implemented');
-      }
-    }
-
-    // Clear completedRegion flag now that we're proceeding
-    if (state.completedRegion) {
-      store.setCompletedRegion(null);
+    // Store selected action FIRST, using getState() to ensure immediate update
+    if (state.completedRegion && selectedAction) {
+      useGameStore.getState().setPostRegionAction(selectedAction);
     }
 
     // Then navigate to selected destination
+    // NOTE: Do NOT clear completedRegion - the postRegionAction scene needs it
     onSelectRegion(selectedDestination);
   };
+
+  // Don't show rest screen here - just select the action
+  // The action will be processed after region selection
   
   const getRegionCategory = (region: Region): string => {
     const hardRegions: Region[] = ['void', 'targon', 'shadow_isles'];
@@ -166,7 +146,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
           <p className="travel-actions-subtitle">What will you do while traveling?</p>
           <div className="travel-actions-grid">
             {POST_REGION_CHOICES.map((option) => {
-              const isDisabled = option.type === 'random_event' && 
+              const isDisabled = option.type === 'event' && 
                 (!state.completedRegion || !hasRegionEvents(state.completedRegion));
               const isSelected = selectedAction === option.type;
 

@@ -13,7 +13,9 @@ import { QuestSelect } from './screens/QuestSelect/QuestSelect';
 import { Shop } from './screens/Shop/Shop';
 import { RegionSelection } from './screens/RegionSelection/RegionSelection';
 import { LoadingScreen } from './screens/LoadingScreen/LoadingScreen';
-import { PostRegionChoiceScreen } from './screens/PostRegionChoice/PostRegionChoice';
+import { RestScreen } from './screens/PostRegionChoice/RestScreen';
+import { TradeScreen } from './screens/PostRegionChoice/TradeScreen';
+import { EventScreen } from './screens/PostRegionChoice/EventScreen';
 import { SettingsScreen } from './screens/Settings/Settings';
 import { getQuestById } from '../game/questDatabase';
 import { resolveEnemyIdByRegion, getEnemyById } from '../game/regions/enemyResolver';
@@ -25,7 +27,7 @@ import { loadRegionAssets, unloadRegionAssets } from '../game/assetLoader';
 import './App.css';
 import './ActComplete.css';
 
-type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'loading';
+type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'postRegionAction' | 'loading';
 
 interface ResetConfirmModalProps {
   isOpen: boolean;
@@ -144,7 +146,7 @@ const ContinueRunModal: React.FC<ContinueRunModalProps> = ({ isOpen, onContinue,
 };
 
 export const App: React.FC = () => {
-  const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, saveRun, clearSavedRun, loadRun, setCurrentFloor } = useGameStore();
+  const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, saveRun, clearSavedRun, loadRun } = useGameStore();
   
   // Check localStorage on mount to see if we should skip disclaimer
   const shouldSkipDisclaimer = typeof window !== 'undefined' && localStorage.getItem('skipDisclaimer') === 'true';
@@ -157,6 +159,7 @@ export const App: React.FC = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [loadingRegion, setLoadingRegion] = useState<Region | null>(null);
   const [savedRunData, setSavedRunData] = useState<{ regionName: string; floor: number; gold: number; rerolls: number; level: number } | null>(null);
+  const [nextRegionToTravel, setNextRegionToTravel] = useState<Region | null>(null);
 
   // Check for saved run on mount (after login)
   useEffect(() => {
@@ -343,7 +346,19 @@ export const App: React.FC = () => {
 
   // Handle selecting a new region to travel to
   const handleSelectRegion = async (newRegion: Region) => {
-    if (!state.selectedRegion) return;
+    
+    // Use getState() to get the CURRENT store state, not the stale component state
+    const currentState = useGameStore.getState().state;
+    
+    if (!currentState.selectedRegion) return;
+    
+    // Check if there's a pending post-region action to perform
+    if (currentState.pendingPostRegionAction) {
+      // Store the next region and show the action screen
+      setNextRegionToTravel(newRegion);
+      setScene('postRegionAction');
+      return;
+    }
     
     // Show loading screen
     setLoadingRegion(newRegion);
@@ -364,7 +379,7 @@ export const App: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Travel from current region to new region
-    travelToRegion(state.selectedRegion, newRegion);
+    travelToRegion(currentState.selectedRegion, newRegion);
     
     // Track that we've visited this new region for unlock progress
     visitRegion(newRegion);
@@ -383,11 +398,61 @@ export const App: React.FC = () => {
     }, 100);
   };
 
+  const handlePostRegionActionComplete = async () => {
+    // Action has been applied by RestScreen or other action screen
+    // Clear the pending action and completed region
+    useGameStore.getState().setPostRegionAction(null);
+    useGameStore.getState().setCompletedRegion(null);
+    
+    // Now proceed to travel to the next region
+    if (!nextRegionToTravel || !state.selectedRegion) return;
+    
+    // Show loading screen
+    setLoadingRegion(nextRegionToTravel);
+    setLoadingProgress(0);
+    setLoadingMessage('Preparing journey...');
+    setScene('loading');
+    
+    // Unload previous region's assets
+    unloadRegionAssets();
+    
+    // Load new region's assets
+    await loadRegionAssets(nextRegionToTravel, (progress, message) => {
+      setLoadingProgress(progress);
+      setLoadingMessage(message);
+    });
+    
+    // Ensure we stay on loading screen for at least 1 second
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Travel from current region to new region
+    travelToRegion(state.selectedRegion, nextRegionToTravel);
+    
+    // Track that we've visited this new region for unlock progress
+    visitRegion(nextRegionToTravel);
+    
+    // Reset skip counter
+    setSkipClickCount(0);
+    
+    // Go to quest scene and save progress
+    setScene('quest');
+    
+    // Save run progress after a short delay (to ensure state is updated)
+    setTimeout(() => {
+      saveRun();
+      setShowSavedIndicator(true);
+      setTimeout(() => setShowSavedIndicator(false), 3000); // Hide after 3 seconds
+    }, 100);
+    
+    // Clear the next region
+    setNextRegionToTravel(null);
+  };
+
   // Handle skip click for testing (hidden feature)
   const handleSkipClick = () => {
     setSkipClickCount(prev => prev + 1);
     if (skipClickCount + 1 >= 3) {
-      // Skip the current quest and go to region selection
+      // Skip the current quest and go to region selection with action choices
       setSkipClickCount(0);
       
       // Award 10 battles won for skipping the region
@@ -396,9 +461,13 @@ export const App: React.FC = () => {
       }
       
       // Increment floor counter by 10 for difficulty scaling
-      setCurrentFloor(state.currentFloor + 10);
+      useGameStore.getState().setCurrentFloor(state.currentFloor + 10);
       
-      handleQuestComplete();
+      // Set completed region so RegionSelection shows action options (Rest, Build, Event)
+      useGameStore.getState().setCompletedRegion(state.selectedRegion);
+      
+      // Go to region selection
+      setScene('regionSelection');
     }
   };
 
@@ -623,6 +692,42 @@ export const App: React.FC = () => {
     );
   }
 
+  if (scene === 'postRegionAction') {
+    const completedRegion = state.completedRegion || state.selectedRegion;
+    
+    if (state.pendingPostRegionAction === 'rest') {
+      if (completedRegion) {
+        return (
+          <RestScreen 
+            completedRegion={completedRegion}
+            onContinue={handlePostRegionActionComplete}
+          />
+        );
+      }
+    } else if (state.pendingPostRegionAction === 'trade') {
+      if (completedRegion) {
+        return (
+          <TradeScreen 
+            completedRegion={completedRegion}
+            onContinue={handlePostRegionActionComplete}
+          />
+        );
+      }
+    } else if (state.pendingPostRegionAction === 'event') {
+      if (completedRegion) {
+        return (
+          <EventScreen 
+            completedRegion={completedRegion}
+            onContinue={handlePostRegionActionComplete}
+          />
+        );
+      }
+    }
+    // Other post-region actions can be added here
+    handlePostRegionActionComplete();
+    return null;
+  }
+
   if (scene === 'regionSelection') {
     return (
       <div className="game-wrapper">
@@ -712,8 +817,8 @@ export const App: React.FC = () => {
         savedRunData={savedRunData}
       />
       
-      {/* Post-Region Choice Overlay */}
-      <PostRegionChoiceScreen />
+      {/* Post-Region Choice Overlay - DISABLED: Logic is now in RegionSelection */}
+      {/* <PostRegionChoiceScreen /> */}
       
       {/* Settings Modal */}
       <SettingsScreen />

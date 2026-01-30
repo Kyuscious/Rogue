@@ -5,8 +5,8 @@ import { ITEM_DATABASE, ItemRarity, getPassiveDescription } from '../../../game/
 import { REGION_GRAPH } from '../../../game/regionGraph';
 import { getQuestsByRegion } from '../../../game/questDatabase';
 import { Region } from '../../../game/types';
-import { DEMACIA_MINIONS, DEMACIA_ELITES, DEMACIA_BOSSES } from '../../../game/regions/demacia';
-import { CAMAVOR_MINIONS, CAMAVOR_ELITES, CAMAVOR_BOSSES } from '../../../game/regions/camavor';
+import { DEMACIA_MINIONS, DEMACIA_ELITES, DEMACIA_BOSSES } from '../../../game/regions/demacia/enemies';
+import { CAMAVOR_MINIONS, CAMAVOR_ELITES, CAMAVOR_BOSSES } from '../../../game/regions/camavor/enemies';
 import './Index.css';
 
 interface IndexProps {
