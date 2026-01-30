@@ -53,12 +53,54 @@
 }
 
 .legal-notice {
+  position: relative;
   background: rgba(0, 0, 0, 0.3);
   border-left: 4px solid #ff6b6b;
   padding: 15px;
   margin-bottom: 30px;
   border-radius: 6px;
   font-size: 15px;
+  overflow: hidden;
+}
+
+.disclheimer-image {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15vw;
+  height: auto;
+  max-width: 250px;
+  object-fit: contain;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.disclheimer-image:hover {
+  opacity: 1;
+}
+
+/* Tablet and smaller */
+@media (max-width: 1024px) {
+  .disclheimer-image {
+    width: 12vw;
+  }
+}
+
+/* Mobile devices */
+@media (max-width: 768px) {
+  .disclheimer-image {
+    width: 10vw;
+    max-width: 150px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .disclheimer-image {
+    width: 8vw;
+    max-width: 100px;
+  }
 }
 
 .legal-notice p {

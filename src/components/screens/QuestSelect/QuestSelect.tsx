@@ -2,6 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { getQuestsByRegion, Quest, QuestPath } from '../../../game/questDatabase';
 import { Region } from '../../../game/types';
 import { useGameStore } from '../../../game/store';
+import { getWeaponById } from '../../../game/weapons';
+import { getSpellById } from '../../../game/spells';
+import { getItemById } from '../../../game/items';
+import { WeaponSelector } from '../Battle/WeaponSelector';
+import { SpellSelector } from '../Battle/SpellSelector';
+import { ItemBar } from '../Battle/ItemBar';
 import './QuestSelect.css';
 
 interface QuestSelectProps {
@@ -11,9 +17,24 @@ interface QuestSelectProps {
 
 export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }) => {
   const { state, useReroll } = useGameStore();
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
   // Get all available quests for this region
   const allQuests = useMemo(() => getQuestsByRegion(region), [region]);
+  
+  // Get usable items from inventory
+  const usableItems = useMemo(() => {
+    return state.inventory
+      .map(item => {
+        const fullItem = getItemById(item.itemId);
+        return {
+          itemId: item.itemId,
+          item: fullItem || { id: item.itemId }, // Use full item data or minimal fallback
+          quantity: item.quantity
+        };
+      })
+      .slice(0, 6); // Max 6 items
+  }, [state.inventory]);
   
   // Initialize with 3 random quests from the available pool
   const [displayedQuests, setDisplayedQuests] = useState<Quest[]>(() => {
@@ -65,6 +86,82 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
 
   return (
     <div className="quest-select">
+      {/* Left: Inventory Management */}
+      <div className="inventory-panel">
+        {/* Equipped Weapons & Spells */}
+        <div className="inventory-section">
+          <WeaponSelector />
+        </div>
+        <div className="inventory-section">
+          <SpellSelector />
+        </div>
+
+        {/* Overflow Weapons */}
+        {state.weapons.length > 3 && (
+          <div className="inventory-section overflow-section">
+            <div className="overflow-title">Weapons Inventory</div>
+            <div className="overflow-container weapons-overflow">
+              {state.weapons.slice(3).map((weaponId, index) => {
+                const weapon = getWeaponById(weaponId);
+                return (
+                  <div key={`overflow-weapon-${index}`} className="overflow-item">
+                    {weapon ? (
+                      <>
+                        {weapon.imagePath ? (
+                          <img src={weapon.imagePath} alt={weapon.name} title={weapon.name} />
+                        ) : (
+                          <span className="weapon-icon-text">⚔️</span>
+                        )}
+                      </>
+                    ) : (
+                      <span>-</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Overflow Spells */}
+        {state.spells.length > 5 && (
+          <div className="inventory-section overflow-section">
+            <div className="overflow-title">Spells Inventory</div>
+            <div className="overflow-container spells-overflow">
+              {state.spells.slice(5).map((spellId, index) => {
+                const spell = getSpellById(spellId);
+                return (
+                  <div key={`overflow-spell-${index}`} className="overflow-item">
+                    {spell ? (
+                      <>
+                        {spell.imagePath ? (
+                          <img src={spell.imagePath} alt={spell.name} title={spell.name} />
+                        ) : (
+                          <span className="spell-icon-text">✨</span>
+                        )}
+                      </>
+                    ) : (
+                      <span>-</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Usable Items */}
+        <div className="inventory-section">
+          <ItemBar 
+            usableItems={usableItems}
+            onSelectItem={setSelectedItemId}
+            selectedItemId={selectedItemId}
+            canUse={true}
+          />
+        </div>
+      </div>
+
+      {/* Right: Quests */}
       <div className="quests-container">
         {displayedQuests.map((quest: Quest, index: number) => (
           <div key={quest.id} className="quest-card">

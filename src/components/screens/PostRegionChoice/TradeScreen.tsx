@@ -14,10 +14,11 @@ import './TradeScreen.css';
 
 interface TradeScreenProps {
   completedRegion: string;
+  nextRegion?: string;
   onContinue: () => void;
 }
 
-export const TradeScreen: React.FC<TradeScreenProps> = ({ completedRegion, onContinue }) => {
+export const TradeScreen: React.FC<TradeScreenProps> = ({ completedRegion, nextRegion, onContinue }) => {
   const state = useGameStore((store) => store.state);
   const setPlayerClass = useGameStore((store) => store.setPlayerClass);
   const [activeTab, setActiveTab] = useState<'trades' | 'class' | 'discard'>('trades');
@@ -273,7 +274,7 @@ export const TradeScreen: React.FC<TradeScreenProps> = ({ completedRegion, onCon
 
         {/* Continue Button */}
         <button className="continue-btn" onClick={onContinue}>
-          Continue to {completedRegion} →
+          Continue to {nextRegion || completedRegion} →
         </button>
       </div>
     </div>

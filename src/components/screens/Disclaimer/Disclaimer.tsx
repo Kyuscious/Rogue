@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTranslations } from '../../../i18n/helpers';
 import './Disclaimer.css';
 
@@ -8,27 +8,9 @@ interface DisclaimerProps {
 
 export const Disclaimer: React.FC<DisclaimerProps> = ({ onAccept }) => {
   const t = useTranslations();
-  const [progress, setProgress] = useState(0);
   const [dontShowAgain, setDontShowAgain] = useState(false);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        const newProgress = prev + (100 / 100); // 10 seconds = 100 * 100ms
-        if (newProgress >= 100) {
-          // Auto-accept when timer reaches 100%
-          if (dontShowAgain) {
-            localStorage.setItem('skipDisclaimer', 'true');
-          }
-          onAccept();
-          return 100;
-        }
-        return newProgress;
-      });
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [dontShowAgain, onAccept]);
+  
 
   const handleSkip = () => {
     if (dontShowAgain) {
@@ -75,12 +57,15 @@ export const Disclaimer: React.FC<DisclaimerProps> = ({ onAccept }) => {
             {t.disclaimer.paragraph7}
           </p>
           <p><strong>{t.disclaimer.thankYou}</strong></p>
+          
+          <img 
+            src="/assets/global/images/disclheimer.png" 
+            alt="Disclheimer Mascot" 
+            className="disclheimer-image"
+          />
         </div>
 
         <div className="loading-section">
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-          </div>
           <label className="checkbox-container">
             <input
               type="checkbox"

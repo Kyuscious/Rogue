@@ -709,6 +709,7 @@ export const App: React.FC = () => {
         return (
           <TradeScreen 
             completedRegion={completedRegion}
+            nextRegion={nextRegionToTravel}
             onContinue={handlePostRegionActionComplete}
           />
         );
