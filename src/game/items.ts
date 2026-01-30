@@ -411,12 +411,12 @@ export const ITEM_DATABASE: Record<string, Item> = {
   poro_snax: {
     id: 'poro_snax',
     name: 'Poro Snax',
-    description: 'A treat for poros that grants a temporary buff',
+    description: 'A treat for poros',
     rarity: 'common',
     price: 0,
     stats: {},
     consumable: true,
-    onUseEffect: 'Grants +10 movement speed and +5 health regen for 5 turns',
+    onUseEffect: 'It must do something',
   },
 
   // Common Items

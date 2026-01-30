@@ -35,8 +35,8 @@ export const DEMACIA_QUEST_PATHS = [
           DEMACIA_BOSSES[1].id, // Encounter 10: Boss
         ],
         lootType: 'damage' as const,
-        rewardGoldMultiplier: 1.2,
-        rewardExpMultiplier: 1.2,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
       },
       {
         id: 'demacia_path_1_risky',
@@ -51,8 +51,8 @@ export const DEMACIA_QUEST_PATHS = [
           'demacia_crag_elder', // Encounter 10: Crag Beast Elder (Boss)
         ],
         lootType: 'defense' as const,
-        rewardGoldMultiplier: 1.5,
-        rewardExpMultiplier: 1.5,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
       },
     ],
   },
@@ -91,8 +91,8 @@ export const DEMACIA_QUEST_PATHS = [
           'random:boss:guard', // Encounter 10: Random guard boss
         ],
         lootType: 'mixed' as const,
-        rewardGoldMultiplier: 1.2,
-        rewardExpMultiplier: 1.2,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
         finalBossId: 'demacia_mageseeker', // For UI preview
       },
       {
@@ -108,8 +108,8 @@ export const DEMACIA_QUEST_PATHS = [
           'garen', // Encounter 10: Garen (champion)
         ],
         lootType: 'damage' as const,
-        rewardGoldMultiplier: 1.5,
-        rewardExpMultiplier: 1.5,
+        rewardGoldMultiplier: 1.2,
+        rewardExpMultiplier: 1.2,
         finalBossId: 'garen', // For UI preview - Garen is the final boss
       },
     ],
@@ -148,8 +148,8 @@ export const DEMACIA_QUEST_PATHS = [
           DEMACIA_BOSSES[0].id, // Encounter 10: Boss
         ],
         lootType: 'damage' as const,
-        rewardGoldMultiplier: 1.2,
-        rewardExpMultiplier: 1.2,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
       },
       {
         id: 'demacia_path_3_risky',
@@ -164,8 +164,8 @@ export const DEMACIA_QUEST_PATHS = [
           DEMACIA_BOSSES[1].id, // Encounter 10: Legend Boss
         ],
         lootType: 'mixed' as const,
-        rewardGoldMultiplier: 1.5,
-        rewardExpMultiplier: 1.5,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
       },
     ],
   },
@@ -201,8 +201,8 @@ export const DEMACIA_QUEST_PATHS = [
           DEMACIA_BOSSES[0].id,
         ],
         lootType: 'damage' as const,
-        rewardGoldMultiplier: 1.2,
-        rewardExpMultiplier: 1.2,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
       },
       {
         id: 'demacia_path_4_risky',
@@ -216,8 +216,8 @@ export const DEMACIA_QUEST_PATHS = [
           DEMACIA_BOSSES[1].id,
         ],
         lootType: 'mixed' as const,
-        rewardGoldMultiplier: 1.5,
-        rewardExpMultiplier: 1.5,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
       },
     ],
   },
@@ -253,8 +253,8 @@ export const DEMACIA_QUEST_PATHS = [
           DEMACIA_BOSSES[0].id,
         ],
         lootType: 'damage' as const,
-        rewardGoldMultiplier: 1.2,
-        rewardExpMultiplier: 1.2,
+        rewardGoldMultiplier: 1.0,
+        rewardExpMultiplier: 1.0,
       },
       {
         id: 'demacia_path_5_risky',
@@ -269,7 +269,7 @@ export const DEMACIA_QUEST_PATHS = [
         ],
         lootType: 'mixed' as const,
         rewardGoldMultiplier: 1.5,
-        rewardExpMultiplier: 1.5,
+        rewardExpMultiplier: 1.0,
       },
     ],
   },
