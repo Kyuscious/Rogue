@@ -116,6 +116,9 @@ export interface GameStoreState {
     completedRegion: Region | null; // Region just completed (for random events)
     postRegionChoiceComplete: boolean; // Flag set to true when user makes a choice, App.tsx watches this
     pendingPostRegionAction: PostRegionChoice | null; // Action selected to perform before traveling to next region
+    // Event weight modifiers (for items that modify event probabilities)
+    eventWeightModifiers: Record<string, number>; // Event ID -> weight multiplier (e.g., "treasure_events": 2.0)
+    globalEventWeightModifier: number; // Global multiplier for all events (e.g., 1.0, 1.5, 0.5)
     // Language/Settings
     currentLanguage: Language; // Current selected language
     showSettings: boolean; // Show settings modal
@@ -175,6 +178,13 @@ export interface GameStoreState {
   applyRestAction: (action: 'meditate' | 'train' | 'scout') => void; // Apply selected rest action with effects
   setPostRegionAction: (action: PostRegionChoice | null) => void; // Store action selected during region selection
   clearPostRegionCompletion: () => void; // Clear completion flag after navigation
+  // Event weight modifiers (RNG system for event selection)
+  modifyEventWeight: (eventId: string, multiplier: number) => void; // Modify weight of specific event (e.g., 2.0 = double chance)
+  modifyEventTypeWeight: (eventType: string, multiplier: number) => void; // Modify all events of a type (e.g., "treasure" -> 1.5x)
+  modifyRunetterraEventWeight: (multiplier: number) => void; // Modify all Runeterra events (default 0.2-0.5, can increase with items)
+  setGlobalEventWeightModifier: (multiplier: number) => void; // Apply multiplier to ALL events
+  getEventWeightMultiplier: (eventId: string) => number; // Get final weight multiplier for an event after all modifiers
+  resetEventWeights: () => void; // Reset all event weight modifiers to defaults
   // Language/Settings methods
   setLanguage: (language: Language) => void; // Change language
   toggleSettings: () => void; // Show/hide settings modal
@@ -238,6 +248,9 @@ export const useGameStore = create<GameStoreState>((set) => ({
     completedRegion: null,
     postRegionChoiceComplete: false,
     pendingPostRegionAction: null,
+    // Event weight modifiers (RNG system)
+    eventWeightModifiers: {}, // Event ID -> multiplier
+    globalEventWeightModifier: 1.0, // Default 1.0 (no change)
   },
 
   setUsername: (username: string) =>
@@ -654,6 +667,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
           postRegionChoiceComplete: false,
           completedRegion: null,
           pendingPostRegionAction: null,
+          eventWeightModifiers: {}, // Reset event RNG modifiers
+          globalEventWeightModifier: 1.0, // Reset global event weight modifier
           currentLanguage: store.state.currentLanguage, // Persist language
           showSettings: false,
           audioSettings: store.state.audioSettings, // Persist audio settings
@@ -1291,6 +1306,61 @@ export const useGameStore = create<GameStoreState>((set) => ({
         ...store.state,
         postRegionChoiceComplete: false,
         pendingPostRegionAction: null,
+      },
+    })),
+
+  // Event weight modifiers (RNG system for event selection)
+  modifyEventWeight: (eventId: string, multiplier: number) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        eventWeightModifiers: {
+          ...store.state.eventWeightModifiers,
+          [eventId]: multiplier,
+        },
+      },
+    })),
+
+  modifyEventTypeWeight: (eventType: string, multiplier: number) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        eventWeightModifiers: {
+          ...store.state.eventWeightModifiers,
+          [`type:${eventType}`]: multiplier,
+        },
+      },
+    })),
+
+  modifyRunetterraEventWeight: (multiplier: number) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        eventWeightModifiers: {
+          ...store.state.eventWeightModifiers,
+          'runeterra:all': multiplier,
+        },
+      },
+    })),
+
+  setGlobalEventWeightModifier: (multiplier: number) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        globalEventWeightModifier: Math.max(0.1, multiplier), // Min 0.1x
+      },
+    })),
+
+  getEventWeightMultiplier: (eventId: string): number => {
+    return useGameStore.getState().state.eventWeightModifiers[eventId] ?? 1.0;
+  },
+
+  resetEventWeights: () =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        eventWeightModifiers: {},
+        globalEventWeightModifier: 1.0,
       },
     })),
 

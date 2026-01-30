@@ -1,6 +1,6 @@
 import React from 'react';
 import { Character } from '../game/types';
-import { RegionEvent } from '../game/eventSystem';
+import { GameEvent } from '../game/events/eventTypes';
 import '../styles/PostEncounterScreen.css';
 
 type PostEncounterChoice = 'loot' | 'rest' | 'modify_build' | 'random_event';
@@ -9,7 +9,7 @@ interface PostEncounterScreenProps {
   character: Character;
   regionName: string;
   questPathName: string;
-  selectedEvent?: RegionEvent;
+  selectedEvent?: GameEvent;
   onChoice: (choice: PostEncounterChoice) => void;
   canRest: boolean;
 }

@@ -25,6 +25,11 @@ export interface GameEvent {
   restrictedToRegions?: string[];
   // Regions this event is particularly associated with
   originRegions?: string[];
+  
+  // Event weight/probability (1-100, default 1)
+  // Used for weighted random selection - higher weight = higher chance
+  // Can be modified by items/buffs to make certain events more common
+  weight?: number;
 }
 
 /**
