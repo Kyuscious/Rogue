@@ -85,14 +85,14 @@ export const PostEncounterScreen: React.FC<PostEncounterScreenProps> = ({
           <button 
             className="choice-button event-choice"
             onClick={() => onChoice('random_event')}
-            title={selectedEvent ? `${selectedEvent.name}: ${selectedEvent.description}` : 'Encounter a random event'}
+            title={selectedEvent ? `${selectedEvent.title}: ${selectedEvent.description}` : 'Encounter a random event'}
           >
             <div className="choice-icon">🎲</div>
             <div className="choice-title">Random Event</div>
             <div className="choice-description">
               {selectedEvent ? (
                 <>
-                  {selectedEvent.name}<br/>
+                  {selectedEvent.title}<br/>
                   <em>{selectedEvent.type}</em>
                 </>
               ) : (
