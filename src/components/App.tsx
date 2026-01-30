@@ -709,7 +709,7 @@ export const App: React.FC = () => {
         return (
           <TradeScreen 
             completedRegion={completedRegion}
-            nextRegion={nextRegionToTravel}
+            nextRegion={nextRegionToTravel || undefined}
             onContinue={handlePostRegionActionComplete}
           />
         );
