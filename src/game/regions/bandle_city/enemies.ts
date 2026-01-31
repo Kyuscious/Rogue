@@ -4,6 +4,20 @@ import { DEFAULT_STATS } from '../../statsSystem';
 // Bandle City minion-tier enemies
 export const BANDLE_CITY_MINIONS: Character[] = [
   {
+    id: 'bandle_poro',
+    name: 'Bandle Poro',
+    role: 'enemy',
+    class: 'enchanter',
+    region: 'bandle_city',
+    tier: 'minion',
+    hp: 30,
+    abilities: [],
+    level: 1,
+    experience: 0,
+    stats: DEFAULT_STATS, 
+  },
+
+  {
     id: 'bandle_soldier',
     name: 'Bandle Guard',
     role: 'enemy',

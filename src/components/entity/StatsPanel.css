@@ -168,9 +168,7 @@
 }
 
 /* Stats Category */
-.stats-category {
-  margin-bottom: 0px;
-}
+
 
 .stats-category:last-child {
   margin-bottom: 0;
