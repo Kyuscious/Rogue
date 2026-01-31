@@ -29,6 +29,11 @@
   overflow: hidden;
 }
 
+.explore-screen.quest-screen {
+  padding: 8px;
+  gap: 8px;
+}
+
 /* Character section with title */
 .character-section {
   display: flex;
@@ -49,81 +54,48 @@
   text-shadow: 0 0 12px rgba(74, 158, 255, 0.4);
 }
 
-/* Responsive layout for quest screen */
-@media (min-aspect-ratio: 16/9) {
-  /* Landscape: character left, quest right */
-  .explore-screen.quest-screen {
-    flex-direction: row;
-    align-items: stretch;
-    height: 100vh;
-    max-height: 100vh;
-    overflow: hidden;
-  }
-
-  .explore-screen.quest-screen .ui-header {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    right: 20px;
-    margin-bottom: 0;
-    z-index: 10;
-  }
-
-  .explore-screen.quest-screen .character-section {
-    flex: 0 0 35%;
-    margin-top: 100px;
-    max-height: calc(100vh - 140px);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    overflow: hidden;
-  }
-
-  .explore-screen.quest-screen .character-info {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-  }
-
-  .explore-screen.quest-screen .quest-panel {
-    flex: 1;
-    margin-bottom: 0;
-    margin-top: 100px;
-    max-height: calc(100vh - 140px);
-    overflow-y: auto;
-  }
+/* Quest screen - 3 equal columns: character | inventory | quests */
+.explore-screen.quest-screen {
+  flex-direction: row;
+  align-items: stretch;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 6px;
+  gap: 6px;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
 }
 
-@media (max-aspect-ratio: 16/9) {
-  /* Portrait: character top, quest bottom */
-  .explore-screen.quest-screen {
-    flex-direction: column;
-    height: 100vh;
-    max-height: 100vh;
-    overflow: hidden;
-  }
+.explore-screen.quest-screen .ui-header {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  margin-bottom: 0;
+  z-index: 10;
+}
 
-  .explore-screen.quest-screen .character-section {
-    flex: 0 0 auto;
-    max-height: 40vh;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    overflow: hidden;
-  }
+.explore-screen.quest-screen .character-section {
+  max-height: 100%;
+  width: 33vw;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  padding-top: 0;
+}
 
-  .explore-screen.quest-screen .character-info {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-  }
+.explore-screen.quest-screen .character-info {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
 
-  .explore-screen.quest-screen .quest-panel {
-    flex: 1;
-    margin-bottom: 0;
-    overflow-y: auto;
-    min-height: 0;
-  }
+.explore-screen.quest-screen .quest-select {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  width: 66vw;
 }
 
 .ui-header {
@@ -172,8 +144,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-}
-  background-clip: text;
 }
 
 .ui-stats {
@@ -281,27 +251,9 @@
   box-shadow: 0 8px 16px rgba(74, 158, 255, 0.2);
 }
 .quest-panel {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 8px;
-  margin-bottom: 20px;
-}
-
-.quest-panel::-webkit-scrollbar {
-  width: 8px;
-}
-
-.quest-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.quest-panel::-webkit-scrollbar-thumb {
-  background: #4a9eff;
-  border-radius: 4px;
-}
-
-.quest-panel::-webkit-scrollbar-thumb:hover {
-  background: #6ab5ff;
+  flex: 1 1;
+  width: 66vw;
+  margin-bottom: 2px;
 }
 
 /* UI Header styling */
