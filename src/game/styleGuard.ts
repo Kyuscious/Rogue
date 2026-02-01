@@ -81,6 +81,27 @@ export const initStyleGuard = () => {
     console.log('[StyleGuard] Master stylesheet injected');
   };
   
+  // Remove DarkReader inline attributes that override our colors
+  const removeDarkReaderAttributes = () => {
+    const allElements = document.querySelectorAll('[data-darkreader-inline-bgcolor], [data-darkreader-inline-bgimage], [data-darkreader-inline-color], [data-darkreader-inline-border]');
+    
+    allElements.forEach((element) => {
+      // Remove the data attributes that cause color overrides
+      element.removeAttribute('data-darkreader-inline-bgcolor');
+      element.removeAttribute('data-darkreader-inline-bgimage');
+      element.removeAttribute('data-darkreader-inline-color');
+      element.removeAttribute('data-darkreader-inline-border');
+      element.removeAttribute('data-darkreader-inline-fill');
+      element.removeAttribute('data-darkreader-inline-stroke');
+    });
+    
+    // Remove DarkReader CSS custom properties
+    document.documentElement.style.removeProperty('--darkreader-inline-bgcolor');
+    document.documentElement.style.removeProperty('--darkreader-inline-bgimage');
+    document.documentElement.style.removeProperty('--darkreader-inline-color');
+    document.documentElement.style.removeProperty('--darkreader-inline-border');
+  };
+  
   // Inject immediately
   if (document.head) {
     injectMasterStylesheet();
@@ -94,6 +115,9 @@ export const initStyleGuard = () => {
     const body = document.body;
     const root = document.getElementById('root');
     const gameWrapper = document.querySelector('.game-wrapper');
+    
+    // Remove DarkReader attributes first
+    removeDarkReaderAttributes();
     
     if (body) {
       body.style.setProperty('width', '100%', 'important');
@@ -144,12 +168,18 @@ export const initStyleGuard = () => {
     subtree: true,
   });
   
-  // Aggressively re-enforce every 100ms
+  observer.observe(document.body, {
+    attributes: true,
+    attributeFilter: ['data-darkreader-inline-bgcolor', 'data-darkreader-inline-bgimage', 'data-darkreader-inline-color'],
+    subtree: true,
+  });
+  
+  // Aggressively re-enforce every 50ms - even more aggressive now
   const styleEnforcementInterval = setInterval(() => {
     enforceGameStyles();
-  }, 100);
+  }, 50);
   
-  console.log('[StyleGuard] Continuous enforcement started (100ms)');
+  console.log('[StyleGuard] Continuous enforcement started (50ms)');
   
   // Return cleanup function
   return () => {
