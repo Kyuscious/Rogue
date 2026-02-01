@@ -2,10 +2,10 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App } from './components/App'
 import './styles/global.css'
-import { initStyleGuard } from './game/styleGuard'
 
-// Initialize style guard to prevent extension interference
-initStyleGuard()
+// Style guard disabled - causing DOM mutation issues
+// import { initStyleGuard } from './game/styleGuard'
+// initStyleGuard()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

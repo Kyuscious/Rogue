@@ -22,41 +22,15 @@
   --theme-contrast: 1;
 }
 
-/* Explicit anti-inversion for DarkReader */
-* {
-  background-color: unset !important;
-  color: unset !important;
-}
-
-/* Prevent extension interference with game styling */
-html,
-html[data-game-theme] {
-  background: #0a0e27 !important;
-  color: #ffffff !important;
-  filter: none !important;
-}
-
-body,
-body[data-game-theme] {
-  background: #0a0e27 !important;
-  color: #ffffff !important;
-  filter: none !important;
-}
-
-#root,
 .game-wrapper {
-  filter: brightness(var(--theme-brightness)) saturate(var(--theme-saturation)) contrast(var(--theme-contrast)) !important;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
 }
-
-.game-wrapper {
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-height: 100% !important;
-  overflow: hidden !important;
-  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%) !important;
-  isolation: isolate !important;
 
 .explore-screen {
   flex: 1;
