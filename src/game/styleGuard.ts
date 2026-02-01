@@ -1,6 +1,6 @@
 /**
  * Style Guard - Prevents browser extensions from breaking game visuals
- * Actively removes extension stylesheets and enforces game styling
+ * Aggressively removes extension stylesheets and enforces game styling
  */
 
 export const initStyleGuard = () => {
@@ -73,6 +73,8 @@ export const initStyleGuard = () => {
       /* Override any background color changes */
       div, span, p, h1, h2, h3, h4, h5, h6, button, input, select, textarea {
         filter: none !important;
+        background-color: unset !important;
+        color: unset !important;
       }
     `;
     
@@ -81,12 +83,46 @@ export const initStyleGuard = () => {
     console.log('[StyleGuard] Master stylesheet injected');
   };
   
+  // Remove all DarkReader stylesheets
+  const removeDarkReaderStylesheets = () => {
+    const stylesheets = document.querySelectorAll('style.darkreader, link[href*="darkreader"], style[class*="darkreader"]');
+    let removed = 0;
+    
+    stylesheets.forEach((sheet) => {
+      try {
+        if (sheet.parentNode) {
+          sheet.remove();
+          removed++;
+          console.log('[StyleGuard] Removed DarkReader stylesheet');
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    });
+    
+    if (removed > 0) {
+      console.log(`[StyleGuard] Removed ${removed} DarkReader stylesheets`);
+    }
+  };
+  
   // Remove DarkReader inline attributes that override our colors
   const removeDarkReaderAttributes = () => {
+    // Remove from root and body
+    [document.documentElement, document.body].forEach(el => {
+      if (!el) return;
+      el.removeAttribute('data-darkreader-inline-bgcolor');
+      el.removeAttribute('data-darkreader-inline-bgimage');
+      el.removeAttribute('data-darkreader-inline-color');
+      el.removeAttribute('data-darkreader-inline-border');
+      el.removeAttribute('data-darkreader-inline-fill');
+      el.removeAttribute('data-darkreader-inline-stroke');
+      el.removeAttribute('style');
+    });
+    
+    // Remove from all child elements
     const allElements = document.querySelectorAll('[data-darkreader-inline-bgcolor], [data-darkreader-inline-bgimage], [data-darkreader-inline-color], [data-darkreader-inline-border]');
     
     allElements.forEach((element) => {
-      // Remove the data attributes that cause color overrides
       element.removeAttribute('data-darkreader-inline-bgcolor');
       element.removeAttribute('data-darkreader-inline-bgimage');
       element.removeAttribute('data-darkreader-inline-color');
@@ -94,30 +130,27 @@ export const initStyleGuard = () => {
       element.removeAttribute('data-darkreader-inline-fill');
       element.removeAttribute('data-darkreader-inline-stroke');
     });
-    
-    // Remove DarkReader CSS custom properties
-    document.documentElement.style.removeProperty('--darkreader-inline-bgcolor');
-    document.documentElement.style.removeProperty('--darkreader-inline-bgimage');
-    document.documentElement.style.removeProperty('--darkreader-inline-color');
-    document.documentElement.style.removeProperty('--darkreader-inline-border');
   };
   
   // Inject immediately
   if (document.head) {
+    removeDarkReaderStylesheets();
     injectMasterStylesheet();
   } else {
-    // If head doesn't exist yet, wait for it
-    document.addEventListener('DOMContentLoaded', injectMasterStylesheet);
+    document.addEventListener('DOMContentLoaded', () => {
+      removeDarkReaderStylesheets();
+      injectMasterStylesheet();
+    });
   }
   
   // Force specific inline styles that extensions often break
   const enforceGameStyles = () => {
+    removeDarkReaderStylesheets();
+    removeDarkReaderAttributes();
+    
     const body = document.body;
     const root = document.getElementById('root');
     const gameWrapper = document.querySelector('.game-wrapper');
-    
-    // Remove DarkReader attributes first
-    removeDarkReaderAttributes();
     
     if (body) {
       body.style.setProperty('width', '100%', 'important');
@@ -168,23 +201,25 @@ export const initStyleGuard = () => {
     subtree: true,
   });
   
-  observer.observe(document.body, {
+  observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ['data-darkreader-inline-bgcolor', 'data-darkreader-inline-bgimage', 'data-darkreader-inline-color'],
-    subtree: true,
+    attributeFilter: ['data-darkreader-inline-bgcolor', 'data-darkreader-inline-bgimage', 'data-darkreader-inline-color', 'style'],
   });
   
-  // Aggressively re-enforce every 50ms - even more aggressive now
-  const styleEnforcementInterval = setInterval(() => {
+  // Use requestAnimationFrame for ultra-aggressive enforcement
+  let rafId: number;
+  const enforceWithRAF = () => {
     enforceGameStyles();
-  }, 50);
+    rafId = requestAnimationFrame(enforceWithRAF);
+  };
+  enforceWithRAF();
   
-  console.log('[StyleGuard] Continuous enforcement started (50ms)');
+  console.log('[StyleGuard] Continuous enforcement started (RAF)');
   
   // Return cleanup function
   return () => {
     observer.disconnect();
-    clearInterval(styleEnforcementInterval);
+    cancelAnimationFrame(rafId);
     console.log('[StyleGuard] Cleaned up');
   };
 };
