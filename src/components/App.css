@@ -22,9 +22,27 @@
   --theme-contrast: 1;
 }
 
+/* Explicit anti-inversion for DarkReader */
+* {
+  background-color: unset !important;
+  color: unset !important;
+}
+
 /* Prevent extension interference with game styling */
-html[data-game-theme],
-body[data-game-theme],
+html,
+html[data-game-theme] {
+  background: #0a0e27 !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+
+body,
+body[data-game-theme] {
+  background: #0a0e27 !important;
+  color: #ffffff !important;
+  filter: none !important;
+}
+
 #root,
 .game-wrapper {
   filter: brightness(var(--theme-brightness)) saturate(var(--theme-saturation)) contrast(var(--theme-contrast)) !important;
