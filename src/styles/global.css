@@ -51,6 +51,11 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Prevent browser extensions from modifying game styles */
+  contain: layout style paint;
+  all: initial;
+  all: revert;
+  color-scheme: dark;
 }
 
 /* Prevent scrolling on main containers */

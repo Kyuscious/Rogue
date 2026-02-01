@@ -161,6 +161,20 @@ export const App: React.FC = () => {
   const [savedRunData, setSavedRunData] = useState<{ regionName: string; floor: number; gold: number; rerolls: number; level: number } | null>(null);
   const [nextRegionToTravel, setNextRegionToTravel] = useState<Region | null>(null);
 
+  // Apply theme settings on mount to prevent extension interference
+  useEffect(() => {
+    const applyTheme = () => {
+      document.documentElement.style.setProperty('--theme-brightness', state.themeSettings.brightness.toString());
+      document.documentElement.style.setProperty('--theme-saturation', state.themeSettings.saturation.toString());
+      document.documentElement.style.setProperty('--theme-contrast', state.themeSettings.contrast.toString());
+      // Mark root as game-controlled
+      document.documentElement.setAttribute('data-game-theme', 'true');
+    };
+    
+    // Apply on mount and whenever theme settings change
+    applyTheme();
+  }, [state.themeSettings]);
+
   // Check for saved run on mount (after login)
   useEffect(() => {
     if (scene === 'mainMenu' && typeof window !== 'undefined') {

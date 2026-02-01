@@ -302,3 +302,112 @@
   font-size: 11px;
 }
 
+/* Theme Controls */
+.theme-section {
+  background: linear-gradient(135deg, rgba(100, 100, 200, 0.1) 0%, rgba(100, 100, 200, 0.05) 100%) !important;
+  border-color: #5a7aff !important;
+}
+
+.section-description {
+  color: #aaa;
+  font-size: 12px;
+  margin: 10px 0 20px 0;
+  line-height: 1.4;
+}
+
+.theme-control {
+  margin-bottom: 20px;
+}
+
+.theme-control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.theme-control-header label {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.theme-value {
+  color: #5a7aff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.theme-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #2a2a3a 0%, #3a3a4a 100%);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.theme-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5a7aff 0%, #4a6aef 100%);
+  cursor: pointer;
+  border: 2px solid #3a5adf;
+  box-shadow: 0 0 8px rgba(90, 122, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.theme-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(90, 122, 255, 0.8);
+}
+
+.theme-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5a7aff 0%, #4a6aef 100%);
+  cursor: pointer;
+  border: 2px solid #3a5adf;
+  box-shadow: 0 0 8px rgba(90, 122, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.theme-markers {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+  padding: 0 2px;
+}
+
+.theme-markers span {
+  color: #6a6a7a;
+  font-size: 11px;
+}
+
+.reset-theme-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background: linear-gradient(135deg, #5a7aff 0%, #4a6aef 100%);
+  color: #ffffff;
+  border: 1px solid #3a5adf;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.reset-theme-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(90, 122, 255, 0.4);
+}
+
+.reset-theme-btn:active {
+  transform: translateY(0px);
+}

@@ -123,6 +123,11 @@ export interface GameStoreState {
     currentLanguage: Language; // Current selected language
     showSettings: boolean; // Show settings modal
     audioSettings: AudioSettings; // Audio volume settings
+    themeSettings: {
+      brightness: number; // 0.5 - 2.0 (prevents extensions from darkening)
+      saturation: number; // 0.5 - 1.5
+      contrast: number; // 0.5 - 1.5
+    };
   };
   selectRegion: (region: Region) => void;
   selectStartingItem: (itemId: string) => void;
@@ -197,6 +202,11 @@ export interface GameStoreState {
   toggleMusicVolume: () => void;
   setVoiceVolume: (volume: number) => void;
   toggleVoiceVolume: () => void;
+  // Theme methods (prevents extension interference)
+  setThemeBrightness: (brightness: number) => void;
+  setThemeSaturation: (saturation: number) => void;
+  setThemeContrast: (contrast: number) => void;
+  resetTheme: () => void;
 }
 
 export const useGameStore = create<GameStoreState>((set) => ({
@@ -242,6 +252,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
       musicEnabled: true,
       voiceVolume: 75,
       voiceEnabled: true,
+    },
+    // Theme customization (prevents extension interference)
+    themeSettings: {
+      brightness: 1,
+      saturation: 1,
+      contrast: 1,
     },
     // Post-Region Choice System
     showPostRegionChoice: false,
@@ -672,6 +688,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           currentLanguage: store.state.currentLanguage, // Persist language
           showSettings: false,
           audioSettings: store.state.audioSettings, // Persist audio settings
+          themeSettings: store.state.themeSettings, // Persist theme settings
         },
       };
     }),
@@ -1522,6 +1539,69 @@ export const useGameStore = create<GameStoreState>((set) => ({
         state: {
           ...store.state,
           revealedEnemies: decayedEnemies,
+        },
+      };
+    }),
+
+  // Theme methods to prevent extension interference
+  setThemeBrightness: (brightness: number) =>
+    set((store) => {
+      const clamped = Math.max(0.5, Math.min(2, brightness));
+      document.documentElement.style.setProperty('--theme-brightness', clamped.toString());
+      return {
+        state: {
+          ...store.state,
+          themeSettings: {
+            ...store.state.themeSettings,
+            brightness: clamped,
+          },
+        },
+      };
+    }),
+
+  setThemeSaturation: (saturation: number) =>
+    set((store) => {
+      const clamped = Math.max(0.5, Math.min(1.5, saturation));
+      document.documentElement.style.setProperty('--theme-saturation', clamped.toString());
+      return {
+        state: {
+          ...store.state,
+          themeSettings: {
+            ...store.state.themeSettings,
+            saturation: clamped,
+          },
+        },
+      };
+    }),
+
+  setThemeContrast: (contrast: number) =>
+    set((store) => {
+      const clamped = Math.max(0.5, Math.min(1.5, contrast));
+      document.documentElement.style.setProperty('--theme-contrast', clamped.toString());
+      return {
+        state: {
+          ...store.state,
+          themeSettings: {
+            ...store.state.themeSettings,
+            contrast: clamped,
+          },
+        },
+      };
+    }),
+
+  resetTheme: () =>
+    set((store) => {
+      document.documentElement.style.setProperty('--theme-brightness', '1');
+      document.documentElement.style.setProperty('--theme-saturation', '1');
+      document.documentElement.style.setProperty('--theme-contrast', '1');
+      return {
+        state: {
+          ...store.state,
+          themeSettings: {
+            brightness: 1,
+            saturation: 1,
+            contrast: 1,
+          },
         },
       };
     }),

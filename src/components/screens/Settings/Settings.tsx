@@ -68,6 +68,10 @@ export const SettingsScreen: React.FC = () => {
   const toggleMusicVolume = useGameStore((store) => store.toggleMusicVolume);
   const setVoiceVolume = useGameStore((store) => store.setVoiceVolume);
   const toggleVoiceVolume = useGameStore((store) => store.toggleVoiceVolume);
+  const setThemeBrightness = useGameStore((store) => store.setThemeBrightness);
+  const setThemeSaturation = useGameStore((store) => store.setThemeSaturation);
+  const setThemeContrast = useGameStore((store) => store.setThemeContrast);
+  const resetTheme = useGameStore((store) => store.resetTheme);
   const t = useTranslation();
 
   if (!state.showSettings) {
@@ -106,6 +110,83 @@ export const SettingsScreen: React.FC = () => {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="settings-divider"></div>
+
+        <div className="settings-section theme-section">
+          <h3 className="section-title">Display & Theme</h3>
+          <p className="section-description">Customize display settings to prevent browser extensions from affecting your game visuals.</p>
+          
+          <div className="theme-control">
+            <div className="theme-control-header">
+              <label htmlFor="brightness-slider">Brightness</label>
+              <span className="theme-value">{Math.round(state.themeSettings.brightness * 100)}%</span>
+            </div>
+            <input
+              id="brightness-slider"
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={state.themeSettings.brightness}
+              onChange={(e) => setThemeBrightness(Number(e.target.value))}
+              className="theme-slider"
+            />
+            <div className="theme-markers">
+              <span>Dark</span>
+              <span>Normal</span>
+              <span>Bright</span>
+            </div>
+          </div>
+
+          <div className="theme-control">
+            <div className="theme-control-header">
+              <label htmlFor="saturation-slider">Saturation</label>
+              <span className="theme-value">{Math.round(state.themeSettings.saturation * 100)}%</span>
+            </div>
+            <input
+              id="saturation-slider"
+              type="range"
+              min="0.5"
+              max="1.5"
+              step="0.1"
+              value={state.themeSettings.saturation}
+              onChange={(e) => setThemeSaturation(Number(e.target.value))}
+              className="theme-slider"
+            />
+            <div className="theme-markers">
+              <span>Muted</span>
+              <span>Normal</span>
+              <span>Vivid</span>
+            </div>
+          </div>
+
+          <div className="theme-control">
+            <div className="theme-control-header">
+              <label htmlFor="contrast-slider">Contrast</label>
+              <span className="theme-value">{Math.round(state.themeSettings.contrast * 100)}%</span>
+            </div>
+            <input
+              id="contrast-slider"
+              type="range"
+              min="0.5"
+              max="1.5"
+              step="0.1"
+              value={state.themeSettings.contrast}
+              onChange={(e) => setThemeContrast(Number(e.target.value))}
+              className="theme-slider"
+            />
+            <div className="theme-markers">
+              <span>Low</span>
+              <span>Normal</span>
+              <span>High</span>
+            </div>
+          </div>
+
+          <button className="reset-theme-btn" onClick={resetTheme}>
+            🔄 Reset to Default
+          </button>
         </div>
 
         <div className="settings-divider"></div>
