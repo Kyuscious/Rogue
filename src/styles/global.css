@@ -45,17 +45,14 @@ body {
 
 /* Root container */
 #root {
-  width: 100%;
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  /* Prevent browser extensions from modifying game styles */
-  contain: layout style paint;
-  all: initial;
-  all: revert;
-  color-scheme: dark;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  color-scheme: dark !important;
+  background: #0a0e27 !important;
 }
 
 /* Prevent scrolling on main containers */

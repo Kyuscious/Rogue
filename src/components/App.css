@@ -27,21 +27,18 @@ html[data-game-theme],
 body[data-game-theme],
 #root,
 .game-wrapper {
-  color-scheme: dark !important;
   filter: brightness(var(--theme-brightness)) saturate(var(--theme-saturation)) contrast(var(--theme-contrast)) !important;
 }
 
 .game-wrapper {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
-  /* Strict containment prevents extension injection */
-  contain: layout style paint;
-  isolation: isolate;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%) !important;
+  isolation: isolate !important;
 
 .explore-screen {
   flex: 1;
