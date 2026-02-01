@@ -1,16 +1,9 @@
 services:
   - type: web
     name: runeterrogue
-    env: static
+    env: node
     buildCommand: npm install && npm run build
-    staticPublishPath: ./dist
-    headers:
-      - path: /assets/*.css
-        name: Content-Type
-        value: text/css
-      - path: /assets/*.js
-        name: Content-Type
-        value: application/javascript
+    startCommand: npm start
     routes:
       - type: rewrite
         source: /*
