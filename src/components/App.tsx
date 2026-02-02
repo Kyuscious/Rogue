@@ -17,6 +17,7 @@ import { RestScreen } from './screens/PostRegionChoice/RestScreen';
 import { TradeScreen } from './screens/PostRegionChoice/TradeScreen';
 import { EventScreen } from './screens/PostRegionChoice/EventScreen';
 import { SettingsScreen } from './screens/Settings/Settings';
+import { ScreenTitle } from './shared/ScreenTitle';
 import { getQuestById } from '../game/questDatabase';
 import { resolveEnemyIdByRegion, getEnemyById } from '../game/regions/enemyResolver';
 import { getItemById } from '../game/items';
@@ -562,7 +563,7 @@ export const App: React.FC = () => {
       <div className="game-wrapper">
         <div className="ui-header">
           <div className="header-left">
-            <h1>Runeterrogue</h1>
+            <ScreenTitle scene={scene} />
             {showSavedIndicator && (
               <span className="saved-indicator">💾 Progress Saved</span>
             )}
@@ -636,7 +637,7 @@ export const App: React.FC = () => {
       <div className="game-wrapper">
         <div className="ui-header">
           <div className="header-left">
-            <h1>Runeterrogue</h1>
+            <ScreenTitle scene={scene} />
             {showSavedIndicator && (
               <span className="saved-indicator">💾 Progress Saved</span>
             )}
@@ -676,7 +677,7 @@ export const App: React.FC = () => {
       <div className="game-wrapper">
         <div className="ui-header">
           <div className="header-left">
-            <h1>Runeterrogue</h1>
+            <ScreenTitle scene={scene} />
           </div>
           <div className="ui-stats">
             <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>
@@ -748,7 +749,7 @@ export const App: React.FC = () => {
       <div className="game-wrapper">
         <div className="ui-header">
           <div className="header-left">
-            <h1>Runeterrogue</h1>
+            <ScreenTitle scene={scene} />
           </div>
           <div className="ui-stats">
             <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>
@@ -796,7 +797,7 @@ export const App: React.FC = () => {
     <div className="game-wrapper">
       <div className="ui-header">
         <div className="header-left">
-          <h1>Runeterrogue</h1>
+          <ScreenTitle scene={scene} />
         </div>
         <div className="ui-stats">
           <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>

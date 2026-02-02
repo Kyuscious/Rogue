@@ -128,7 +128,7 @@ export const SettingsScreen: React.FC = () => {
               type="range"
               min="0.5"
               max="2"
-              step="0.1"
+              step="0.01"
               value={state.themeSettings.brightness}
               onChange={(e) => setThemeBrightness(Number(e.target.value))}
               className="theme-slider"
@@ -150,7 +150,7 @@ export const SettingsScreen: React.FC = () => {
               type="range"
               min="0.5"
               max="1.5"
-              step="0.1"
+              step="0.01"
               value={state.themeSettings.saturation}
               onChange={(e) => setThemeSaturation(Number(e.target.value))}
               className="theme-slider"
@@ -172,7 +172,7 @@ export const SettingsScreen: React.FC = () => {
               type="range"
               min="0.5"
               max="1.5"
-              step="0.1"
+              step="0.01"
               value={state.themeSettings.contrast}
               onChange={(e) => setThemeContrast(Number(e.target.value))}
               className="theme-slider"

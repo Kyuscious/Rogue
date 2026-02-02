@@ -14,17 +14,10 @@ interface DragData {
   sourceType: 'equipped' | 'inventory';
 }
 
-interface TooltipState {
-  type: 'weapon' | 'spell' | 'item';
-  data: any;
-  position: { x: number; y: number };
-}
-
 export const GearChange: React.FC = () => {
   const { state, equipWeapon, equipSpell, removeWeapon, removeSpell } = useGameStore();
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<DragData | null>(null);
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const overflowWeapons = state.weapons.slice(3);
   const overflowSpells = state.spells.slice(5);
@@ -80,19 +73,6 @@ export const GearChange: React.FC = () => {
     setDraggedItem(null);
   };
 
-  const showTooltip = (e: React.MouseEvent, type: 'weapon' | 'spell' | 'item', data: any) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setTooltip({
-      type,
-      data,
-      position: { x: rect.left, y: rect.top - 10 },
-    });
-  };
-
-  const hideTooltip = () => {
-    setTooltip(null);
-  };
-
   const renderEquippedWeapon = (index: number) => {
     const weaponId = state.weapons[index];
     const weapon = weaponId ? getWeaponById(weaponId) : null;
@@ -102,11 +82,7 @@ export const GearChange: React.FC = () => {
         key={`weapon-${index}`}
         className={`gear-slot weapon-slot ${hoveredSlot === `w-${index}` ? 'hovered' : ''}`}
         onMouseEnter={() => setHoveredSlot(`w-${index}`)}
-        onMouseLeave={() => {
-          setHoveredSlot(null);
-          hideTooltip();
-        }}
-        onMouseMove={(e) => weapon && showTooltip(e, 'weapon', weapon)}
+        onMouseLeave={() => setHoveredSlot(null)}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDropOnEquipped(e, index, 'weapon')}
       >
@@ -136,11 +112,7 @@ export const GearChange: React.FC = () => {
         key={`spell-${index}`}
         className={`gear-slot spell-slot ${hoveredSlot === `s-${index}` ? 'hovered' : ''}`}
         onMouseEnter={() => setHoveredSlot(`s-${index}`)}
-        onMouseLeave={() => {
-          setHoveredSlot(null);
-          hideTooltip();
-        }}
-        onMouseMove={(e) => spell && showTooltip(e, 'spell', spell)}
+        onMouseLeave={() => setHoveredSlot(null)}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDropOnEquipped(e, index, 'spell')}
       >
@@ -170,11 +142,7 @@ export const GearChange: React.FC = () => {
         key={`item-${index}`}
         className={`gear-slot item-slot ${hoveredSlot === `i-${index}` ? 'hovered' : ''}`}
         onMouseEnter={() => setHoveredSlot(`i-${index}`)}
-        onMouseLeave={() => {
-          setHoveredSlot(null);
-          hideTooltip();
-        }}
-        onMouseMove={(e) => itemData && showTooltip(e, 'item', itemData)}
+        onMouseLeave={() => setHoveredSlot(null)}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDropOnEquipped(e, index, 'item')}
       >
@@ -217,8 +185,6 @@ export const GearChange: React.FC = () => {
         className="inventory-item"
         draggable
         onDragStart={(e) => handleDragStart(e, { type: invItem.type, id: invItem.id, sourceType: 'inventory', sourceIndex: invItem.index })}
-        onMouseMove={(e) => displayData && showTooltip(e, invItem.type, displayData)}
-        onMouseLeave={hideTooltip}
       >
         {displayData?.imagePath ? (
           <img src={displayData.imagePath} alt={displayData.name} />
@@ -227,69 +193,6 @@ export const GearChange: React.FC = () => {
         )}
         {invItem.quantity && invItem.quantity > 1 && (
           <div className="item-quantity">{invItem.quantity}</div>
-        )}
-      </div>
-    );
-  };
-
-  const renderTooltip = () => {
-    if (!tooltip) return null;
-
-    const { type, data, position } = tooltip;
-
-    return (
-      <div className="gear-tooltip-container" style={{ left: `${position.x}px`, top: `${position.y}px` }}>
-        {type === 'weapon' && (
-          <>
-            <div className="tooltip-header">
-              <span className="tooltip-name">{data.name}</span>
-              <span className="tooltip-type">Weapon</span>
-            </div>
-            <div className="tooltip-description">{data.description}</div>
-            {data.stats && Object.keys(data.stats).length > 0 && (
-              <div className="tooltip-stats">
-                {Object.entries(data.stats).map(([key, value]) => (
-                  value !== undefined && (
-                    <div key={key} className="tooltip-stat">
-                      <span className="stat-label">{key.replace(/_/g, ' ')}:</span>
-                      <span className="stat-value">+{String(value)}</span>
-                    </div>
-                  )
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {type === 'spell' && (
-          <>
-            <div className="tooltip-header">
-              <span className="tooltip-name">{data.name}</span>
-              <span className="tooltip-type">Spell</span>
-            </div>
-            <div className="tooltip-description">{data.description}</div>
-            {data.manaCost && (
-              <div className="tooltip-stat">
-                <span className="stat-label">Mana Cost:</span>
-                <span className="stat-value">{data.manaCost}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {type === 'item' && (
-          <>
-            <div className="tooltip-header">
-              <span className="tooltip-name">{data.name}</span>
-              <span className="tooltip-type">Item</span>
-            </div>
-            <div className="tooltip-description">{data.description}</div>
-            {data.onUseEffect && (
-              <div className="tooltip-effect">
-                <strong>Effect:</strong> {data.onUseEffect}
-              </div>
-            )}
-          </>
         )}
       </div>
     );
@@ -329,8 +232,6 @@ export const GearChange: React.FC = () => {
           {overflowInventory.map(item => renderInventoryItem(item))}
         </div>
       </div>
-
-      {renderTooltip()}
     </div>
   );
 };

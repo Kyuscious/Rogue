@@ -30,6 +30,7 @@
   max-height: 100%;
   overflow: hidden;
   background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+  filter: brightness(var(--theme-brightness)) saturate(var(--theme-saturation)) contrast(var(--theme-contrast));
 }
 
 .explore-screen {
@@ -123,14 +124,15 @@
   border-radius: 8px;
 }
 
-.ui-header h1 {
-  font-size: 32px;
+.ui-header h1,
+.ui-header .screen-title {
+  font-size: 24px;
   background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin: 0;
-  text-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+  font-weight: 600;
 }
 
 .header-left {

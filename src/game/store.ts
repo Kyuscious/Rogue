@@ -42,6 +42,45 @@ function getInitialLanguage(): Language {
 }
 
 /**
+ * Load theme settings from localStorage
+ */
+function getInitialThemeSettings() {
+  try {
+    const saved = localStorage.getItem('themeSettings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load theme settings:', e);
+  }
+  return { brightness: 1, saturation: 1, contrast: 1 };
+}
+
+/**
+ * Load audio settings from localStorage
+ */
+function getInitialAudioSettings(): AudioSettings {
+  try {
+    const saved = localStorage.getItem('audioSettings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load audio settings:', e);
+  }
+  return {
+    masterVolume: 70,
+    masterEnabled: true,
+    sfxVolume: 80,
+    sfxEnabled: true,
+    musicVolume: 60,
+    musicEnabled: true,
+    voiceVolume: 75,
+    voiceEnabled: true,
+  };
+}
+
+/**
  * TODO: Implement Region Revisit Penalty System
  * 
  * When a region is visited multiple times in a run:
@@ -243,22 +282,9 @@ export const useGameStore = create<GameStoreState>((set) => ({
     // Language/Settings
     currentLanguage: getInitialLanguage(),
     showSettings: false,
-    audioSettings: {
-      masterVolume: 70,
-      masterEnabled: true,
-      sfxVolume: 80,
-      sfxEnabled: true,
-      musicVolume: 60,
-      musicEnabled: true,
-      voiceVolume: 75,
-      voiceEnabled: true,
-    },
+    audioSettings: getInitialAudioSettings(),
     // Theme customization (prevents extension interference)
-    themeSettings: {
-      brightness: 1,
-      saturation: 1,
-      contrast: 1,
-    },
+    themeSettings: getInitialThemeSettings(),
     // Post-Region Choice System
     showPostRegionChoice: false,
     completedRegion: null,
@@ -1407,6 +1433,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, masterVolume: volume };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1419,6 +1446,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, masterEnabled: !store.state.audioSettings.masterEnabled };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1431,6 +1459,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, sfxVolume: volume };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1443,6 +1472,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, sfxEnabled: !store.state.audioSettings.sfxEnabled };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1455,6 +1485,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, musicVolume: volume };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1467,6 +1498,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, musicEnabled: !store.state.audioSettings.musicEnabled };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1479,6 +1511,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, voiceVolume: volume };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1491,6 +1524,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const newSettings = { ...store.state.audioSettings, voiceEnabled: !store.state.audioSettings.voiceEnabled };
       audioManager.updateSettings(newSettings);
+      localStorage.setItem('audioSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
@@ -1548,13 +1582,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const clamped = Math.max(0.5, Math.min(2, brightness));
       document.documentElement.style.setProperty('--theme-brightness', clamped.toString());
+      const newSettings = { ...store.state.themeSettings, brightness: clamped };
+      localStorage.setItem('themeSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
-          themeSettings: {
-            ...store.state.themeSettings,
-            brightness: clamped,
-          },
+          themeSettings: newSettings,
         },
       };
     }),
@@ -1563,13 +1596,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const clamped = Math.max(0.5, Math.min(1.5, saturation));
       document.documentElement.style.setProperty('--theme-saturation', clamped.toString());
+      const newSettings = { ...store.state.themeSettings, saturation: clamped };
+      localStorage.setItem('themeSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
-          themeSettings: {
-            ...store.state.themeSettings,
-            saturation: clamped,
-          },
+          themeSettings: newSettings,
         },
       };
     }),
@@ -1578,13 +1610,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => {
       const clamped = Math.max(0.5, Math.min(1.5, contrast));
       document.documentElement.style.setProperty('--theme-contrast', clamped.toString());
+      const newSettings = { ...store.state.themeSettings, contrast: clamped };
+      localStorage.setItem('themeSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
-          themeSettings: {
-            ...store.state.themeSettings,
-            contrast: clamped,
-          },
+          themeSettings: newSettings,
         },
       };
     }),
@@ -1594,14 +1625,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
       document.documentElement.style.setProperty('--theme-brightness', '1');
       document.documentElement.style.setProperty('--theme-saturation', '1');
       document.documentElement.style.setProperty('--theme-contrast', '1');
+      const newSettings = { brightness: 1, saturation: 1, contrast: 1 };
+      localStorage.setItem('themeSettings', JSON.stringify(newSettings));
       return {
         state: {
           ...store.state,
-          themeSettings: {
-            brightness: 1,
-            saturation: 1,
-            contrast: 1,
-          },
+          themeSettings: newSettings,
         },
       };
     }),

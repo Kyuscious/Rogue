@@ -20,7 +20,6 @@ interface RegionSelectionProps {
 export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion }) => {
   const store = useGameStore();
   const { state } = store;
-  const [showPathTooltip, setShowPathTooltip] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<Region | null>(null);
   const [selectedAction, setSelectedAction] = useState<PostRegionChoice | null>(null);
   
@@ -111,30 +110,13 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
     return <span className="region-badge">{category}</span>;
   };
   
-  // Format the path taken
-  const formatPath = () => {
-    return state.visitedRegionsThisRun
-      .map(r => getRegionDisplayName(r))
-      .join(' > ');
-  };
-  
   return (
     <div className="region-selection">
       <div className="region-selection-header">
         <h2>Choose Your Next Destination</h2>
         <div className="region-selection-info">
-          <span 
-            onMouseEnter={() => setShowPathTooltip(true)}
-            onMouseLeave={() => setShowPathTooltip(false)}
-            style={{ cursor: 'pointer', position: 'relative' }}
-          >
+          <span>
             Current Region: <strong>{getRegionDisplayName(state.selectedRegion)}</strong>
-            {showPathTooltip && state.visitedRegionsThisRun.length > 1 && (
-              <div className="path-tooltip">
-                <div className="path-title">Your Journey:</div>
-                <div className="path-content">{formatPath()}</div>
-              </div>
-            )}
           </span>
         </div>
       </div>

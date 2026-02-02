@@ -185,7 +185,41 @@
   width: 20px;
   height: 20px;
   cursor: pointer;
-  accent-color: #c89b3c;
+  flex-shrink: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid #c89b3c;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.volume-checkbox:hover:not(:disabled) {
+  background: rgba(200, 155, 60, 0.1);
+  border-color: #f0e6d2;
+}
+
+.volume-checkbox:checked {
+  background: #c89b3c;
+  border-color: #c89b3c;
+}
+
+.volume-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  color: #0f1419;
+  font-size: 16px;
+  font-weight: bold;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.volume-checkbox:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .volume-title {

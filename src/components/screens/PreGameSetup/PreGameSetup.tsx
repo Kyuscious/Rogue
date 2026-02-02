@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Region } from '../../../game/types';
-import { ITEM_DATABASE, getPassiveDescription } from '../../../game/items';
+import { ITEM_DATABASE } from '../../../game/items';
 import { getStarterItemsWithUnlockStatus } from '../../../game/profileUnlocks';
-import { getStarterEquipment, hasStarterEquipment } from '../../../game/starterEquipment';
-import { getWeaponById } from '../../../game/weapons';
-import { getSpellById } from '../../../game/spells';
-import { getWeaponTranslation, getSpellTranslation } from '../../../i18n/helpers';
 import './PreGameSetup.css';
 
 interface PreGameSetupProps {
@@ -24,9 +20,6 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
-  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
-  const [hoveredRegionId, setHoveredRegionId] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [starterItems, setStarterItems] = useState<any[]>([]);
 
   // Load starter items with unlock status
@@ -92,17 +85,6 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                 key={region.id}
                 className={`selection-item ${selectedRegion === region.id ? 'selected' : ''} ${!region.unlocked ? 'locked' : ''}`}
                 onClick={() => handleRegionClick(region.id, region.unlocked)}
-                onMouseMove={(e) => {
-                  if (hasStarterEquipment(region.id as Region)) {
-                    setHoveredRegionId(region.id);
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setTooltipPosition({
-                      x: rect.right + 10,
-                      y: rect.top,
-                    });
-                  }
-                }}
-                onMouseLeave={() => setHoveredRegionId(null)}
               >
                 {!region.unlocked && <div className="lock-icon">🔒</div>}
                 <div className="item-name">{region.name}</div>
@@ -122,15 +104,6 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                   key={item.id}
                   className={`selection-item ${selectedItem === item.id ? 'selected' : ''} ${!item.unlocked ? 'locked' : ''}`}
                   onClick={() => handleItemClick(item.id, item.unlocked)}
-                  onMouseMove={(e) => {
-                    setHoveredItemId(item.id);
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setTooltipPosition({
-                      x: rect.right + 10,
-                      y: rect.top,
-                    });
-                  }}
-                  onMouseLeave={() => setHoveredItemId(null)}
                 >
                 {!item.unlocked && <div className="lock-icon">🔒</div>}
                 {itemData?.imagePath && (
@@ -145,156 +118,6 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
           </div>
         </div>
       </div>
-
-      {/* Region Starter Equipment Tooltip */}
-      {hoveredRegionId && hasStarterEquipment(hoveredRegionId as Region) && (
-        <div className="item-hover-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-          {(() => {
-            const equipment = getStarterEquipment(hoveredRegionId as Region);
-            const weapon = getWeaponById(equipment.weapon);
-            const spell = getSpellById(equipment.spell);
-            const weaponTranslation = weapon ? getWeaponTranslation(weapon.id) : null;
-            const spellTranslation = spell ? getSpellTranslation(spell.id) : null;
-
-            return (
-              <>
-                <h4 className="tooltip-item-name">Starting Equipment</h4>
-                <p className="tooltip-item-description">You will start with these items in this region.</p>
-                
-                {weapon && weaponTranslation && (
-                  <div className="tooltip-starter-item">
-                    <h5 className="tooltip-starter-item-name">⚔️ {weaponTranslation.name}</h5>
-                    <p className="tooltip-starter-item-desc">{weaponTranslation.description}</p>
-                    {weapon.stats && (
-                      <div className="tooltip-item-stats">
-                        {weapon.stats.attackDamage && (
-                          <div className="tooltip-stat">⚔️ AD: +{weapon.stats.attackDamage}</div>
-                        )}
-                        {weapon.stats.attackSpeed && (
-                          <div className="tooltip-stat">⚡ AS: +{weapon.stats.attackSpeed}</div>
-                        )}
-                        {weapon.stats.attackRange && (
-                          <div className="tooltip-stat">📏 Range: +{weapon.stats.attackRange}</div>
-                        )}
-                        {weapon.stats.magicResist && (
-                          <div className="tooltip-stat">🔮 MR: +{weapon.stats.magicResist}</div>
-                        )}
-                        {weapon.stats.movementSpeed && (
-                          <div className="tooltip-stat">👟 Move Speed: +{weapon.stats.movementSpeed}</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {spell && spellTranslation && (
-                  <div className="tooltip-starter-item">
-                    <h5 className="tooltip-starter-item-name">✨ {spellTranslation.name}</h5>
-                    <p className="tooltip-starter-item-desc">{spellTranslation.description}</p>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
-      )}
-
-      {/* Item Tooltip - Show for both unlocked items and locked items with progress */}
-      {hoveredItemId && (
-        <div className="item-hover-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-          {(() => {
-            const starterItem = starterItems.find(item => item.id === hoveredItemId);
-            const isLocked = starterItem && !starterItem.unlocked;
-            
-            if (isLocked && starterItem) {
-              // Show unlock progress for locked items
-              return (
-                <>
-                  <h4 className="tooltip-item-name">{starterItem.name}</h4>
-                  <p className="tooltip-unlock-requirement">
-                    🔒 Locked: {starterItem.requirement.description} ({starterItem.unlockProgress})
-                  </p>
-                  <p className="tooltip-item-description">
-                    {ITEM_DATABASE[hoveredItemId]?.description}
-                  </p>
-                </>
-              );
-            }
-            
-            // Show normal item tooltip for unlocked items
-            return ITEM_DATABASE[hoveredItemId] ? (
-            <>
-              <h4 className="tooltip-item-name">{ITEM_DATABASE[hoveredItemId]?.name}</h4>
-              <p className="tooltip-item-description">{ITEM_DATABASE[hoveredItemId]?.description}</p>
-              <div className="tooltip-item-stats">
-                {ITEM_DATABASE[hoveredItemId]?.stats.attackDamage && (
-                  <div className="tooltip-stat">⚔️ AD: +{ITEM_DATABASE[hoveredItemId]?.stats.attackDamage}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.abilityPower && (
-                  <div className="tooltip-stat">✨ AP: +{ITEM_DATABASE[hoveredItemId]?.stats.abilityPower}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.health && (
-                  <div className="tooltip-stat">❤️ HP: +{ITEM_DATABASE[hoveredItemId]?.stats.health}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.health_regen && (
-                  <div className="tooltip-stat">💚 HP Regen: +{ITEM_DATABASE[hoveredItemId]?.stats.health_regen}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.armor && (
-                  <div className="tooltip-stat">🛡️ Armor: +{ITEM_DATABASE[hoveredItemId]?.stats.armor}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.magicResist && (
-                  <div className="tooltip-stat">🔮 MR: +{ITEM_DATABASE[hoveredItemId]?.stats.magicResist}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.attackSpeed && (
-                  <div className="tooltip-stat">⚡ AS: +{ITEM_DATABASE[hoveredItemId]?.stats.attackSpeed}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.criticalChance && (
-                  <div className="tooltip-stat">🎯 Crit: +{ITEM_DATABASE[hoveredItemId]?.stats.criticalChance}%</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.criticalDamage && (
-                  <div className="tooltip-stat">💥 Crit Dmg: +{ITEM_DATABASE[hoveredItemId]?.stats.criticalDamage}%</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.lifeSteal && (
-                  <div className="tooltip-stat">💉 Lifesteal: +{ITEM_DATABASE[hoveredItemId]?.stats.lifeSteal}%</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.omnivamp && (
-                  <div className="tooltip-stat">🩸 Omnivamp: +{ITEM_DATABASE[hoveredItemId]?.stats.omnivamp}%</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.lethality && (
-                  <div className="tooltip-stat">🗡️ Lethality: +{ITEM_DATABASE[hoveredItemId]?.stats.lethality}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.abilityHaste && (
-                  <div className="tooltip-stat">⏱️ Ability Haste: +{ITEM_DATABASE[hoveredItemId]?.stats.abilityHaste}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.magicPenetration && (
-                  <div className="tooltip-stat">🌟 Magic Pen: +{ITEM_DATABASE[hoveredItemId]?.stats.magicPenetration}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.movementSpeed && (
-                  <div className="tooltip-stat">👟 Move Speed: +{ITEM_DATABASE[hoveredItemId]?.stats.movementSpeed}</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.tenacity && (
-                  <div className="tooltip-stat">💪 Tenacity: +{ITEM_DATABASE[hoveredItemId]?.stats.tenacity}%</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.goldGain && (
-                  <div className="tooltip-stat">💰 Gold Gain: +{ITEM_DATABASE[hoveredItemId]?.stats.goldGain}%</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.xpGain && (
-                  <div className="tooltip-stat">📚 XP Gain: +{ITEM_DATABASE[hoveredItemId]?.stats.xpGain}%</div>
-                )}
-                {ITEM_DATABASE[hoveredItemId]?.stats.magicFind && (
-                  <div className="tooltip-stat">🔍 Magic Find: +{ITEM_DATABASE[hoveredItemId]?.stats.magicFind}%</div>
-                )}
-              </div>
-              {ITEM_DATABASE[hoveredItemId]?.passiveId && getPassiveDescription(ITEM_DATABASE[hoveredItemId].passiveId!) && (
-                <div className="tooltip-item-passive">
-                  <strong>Passive:</strong> {getPassiveDescription(ITEM_DATABASE[hoveredItemId].passiveId!)}
-                </div>
-              )}
-            </>
-            ) : null;
-          })()}
-        </div>
-      )}
 
       {/* Start Button */}
       <div className="start-button-container">

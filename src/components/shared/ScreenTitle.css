@@ -1,0 +1,12 @@
+.screen-title {
+  font-size: 24px;
+  background: linear-gradient(135deg, #4a9eff 0%, #00ffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
