@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './MainMenu.css';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface MainMenuProps {
   username: string;
@@ -11,45 +12,34 @@ interface MainMenuProps {
   onDisclaimer: () => void;
 }
 
-interface Contributor {
-  name: string;
-  link: string;
-  icon: string;
-}
-
-interface CreditsCategory {
-  title: string;
-  contributors: Contributor[];
-}
-
-const CREDITS_DATA: CreditsCategory[] = [
+const CREDITS_DATA_KEYS = [
   {
-    title: 'Developed by',
+    titleKey: 'developedBy' as const,
     contributors: [
       { name: 'Luci', link: 'https://twitter.com/luci930353', icon: '🐦' },
     ],
   },
   {
-    title: 'Arts by',
+    titleKey: 'artsBy' as const,
     contributors: [
       { name: 'MartinStarlove', link: 'https://twitter.com/MartinStarlove', icon: '🎨' },
     ],
   },
   {
-    title: 'Musics by',
+    titleKey: 'musicsBy' as const,
     contributors: [
       // { name: 'Your Name', link: 'https://your-link', icon: '🎵' },
     ],
   },
   {
-    title: 'Tested by',
+    titleKey: 'testedBy' as const,
     contributors: [
       { name: 'ad Raychu', link: 'https://twitter.com/ad_raychu', icon: '🧪' },
       { name: 'Fotok', link: 'https://twitter.com/fotok', icon: '🧪' },
     ],
   },
   {
-    title: 'Supported by',
+    titleKey: 'supportedBy' as const,
     contributors: [
       // { name: 'Your Name', link: 'https://your-link', icon: '❤️' },
     ],
@@ -65,6 +55,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onLogout,
   onDisclaimer,
 }) => {
+  const t = useTranslation();
   const [showCreditsModal, setShowCreditsModal] = useState(false);
 
   const handleDiscordClick = () => {
@@ -86,26 +77,26 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
       {/* Center Content */}
       <div className="center-content">
-        <h1 className="game-title">Runeterrogue</h1>
+        <h1 className="game-title">{t.mainMenu.title}</h1>
         
         <div className="main-actions">
           <button className="action-btn primary-action" onClick={onStart}>
             <span className="btn-icon">▶️</span>
-            <span className="btn-text">Start</span>
+            <span className="btn-text">{t.mainMenu.start}</span>
           </button>
           
           <div className="secondary-actions">
             <button className="action-btn secondary" onClick={onProfiles}>
               <span className="btn-icon">👤</span>
-              <span className="btn-text">Profiles</span>
+              <span className="btn-text">{t.mainMenu.profiles}</span>
             </button>
             <button className="action-btn secondary" onClick={onIndex}>
               <span className="btn-icon">📖</span>
-              <span className="btn-text">Index</span>
+              <span className="btn-text">{t.mainMenu.index}</span>
             </button>
             <button className="action-btn secondary" onClick={onOptions}>
               <span className="btn-icon">⚙️</span>
-              <span className="btn-text">Options</span>
+              <span className="btn-text">{t.mainMenu.options}</span>
             </button>
           </div>
         </div>
@@ -114,18 +105,18 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       {/* Bottom Links */}
       <div className="bottom-links">
         <button className="link-btn" onClick={onDisclaimer}>
-          ⓘ Disclaimer
+          ⓘ {t.mainMenu.disclaimer}
         </button>
         <button className="link-btn" onClick={handleDiscordClick}>
-          💬 Discord
+          💬 {t.mainMenu.discord}
         </button>
         <button 
           className="link-btn" 
           onClick={() => setShowCreditsModal(true)}
         >
-          ✨ Credits
+          ✨ {t.mainMenu.credits}
         </button>
-        <div className="version-tag">v0.0.1</div>
+        <div className="version-tag">{t.mainMenu.version}</div>
       </div>
 
       {/* Credits Modal */}
@@ -133,7 +124,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <div className="credits-modal-overlay" onClick={() => setShowCreditsModal(false)}>
           <div className="credits-modal" onClick={(e) => e.stopPropagation()}>
             <div className="credits-modal-header">
-              <h2>Credits</h2>
+              <h2>{t.credits.title}</h2>
               <button 
                 className="credits-close-btn" 
                 onClick={() => setShowCreditsModal(false)}
@@ -143,9 +134,9 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
 
             <div className="credits-modal-content">
-              {CREDITS_DATA.map((category) => (
-                <div key={category.title} className="credits-section">
-                  <h3 className="credits-category">{category.title}</h3>
+              {CREDITS_DATA_KEYS.map((category) => (
+                <div key={category.titleKey} className="credits-section">
+                  <h3 className="credits-category">{t.credits[category.titleKey]}</h3>
                   {category.contributors.length > 0 ? (
                     <div className="credits-contributors">
                       {category.contributors.map((contributor) => (
@@ -153,7 +144,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                           key={contributor.name}
                           className="contributor-btn"
                           onClick={() => window.open(contributor.link, '_blank')}
-                          title={`Visit ${contributor.name}'s profile`}
+                          title={t.credits.visitProfile.replace('{{name}}', contributor.name)}
                         >
                           <span className="contributor-icon">{contributor.icon}</span>
                           <span className="contributor-name">{contributor.name}</span>
@@ -162,26 +153,26 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                     </div>
                   ) : (
                     <div className="credits-empty">
-                      <p>Coming soon...</p>
+                      <p>{t.credits.comingSoon}</p>
                     </div>
                   )}
                 </div>
               ))}
 
               <div className="credits-footer">
-                <p>Support the development:</p>
+                <p>{t.credits.supportDevelopment}</p>
                 <div className="support-buttons">
                   <button 
                     className="support-btn kofi-btn"
                     onClick={() => window.open('https://ko-fi.com/luci930353', '_blank')}
                   >
-                    ☕ Ko-Fi
+                    {t.credits.kofi}
                   </button>
                   <button 
                     className="support-btn patreon-btn"
                     onClick={() => window.open('https://patreon.com/', '_blank')}
                   >
-                    🎁 Patreon
+                    {t.credits.patreon}
                   </button>
                 </div>
               </div>

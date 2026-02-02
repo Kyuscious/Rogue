@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useGameStore } from '../../../game/store';
 import { getItemById } from '../../../game/items';
+import { getItemName, getItemDescription } from '../../../i18n/helpers';
 import './Shop.css';
 
 interface ShopProps {
@@ -101,14 +102,14 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
         
         <div className="shop-item-icon">
           {item.imagePath ? (
-            <img src={item.imagePath} alt={item.name} className="shop-item-image" />
+            <img src={item.imagePath} alt={getItemName(item)} className="shop-item-image" />
           ) : (
             <span>{item.consumable ? '🧪' : '⚔️'}</span>
           )}
         </div>
         
-        <div className="shop-item-name">{item.name}</div>
-        <div className="shop-item-description">{item.description}</div>
+        <div className="shop-item-name">{getItemName(item)}</div>
+        <div className="shop-item-description">{getItemDescription(item)}</div>
         
         {/* Display stats if not consumable */}
         {!item.consumable && Object.keys(item.stats).length > 0 && (

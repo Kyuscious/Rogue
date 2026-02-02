@@ -8,6 +8,7 @@ import {
   removeCurse 
 } from '../../../game/buildModificationSystem';
 import { getItemById } from '../../../game/itemSystem';
+import { getItemName, getItemDescription } from '../../../i18n/helpers';
 import './BuildModificationScreen.css';
 
 interface BuildModificationScreenProps {
@@ -192,8 +193,8 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                     return (
                       <div key={index} className="inventory-item">
                         <div className="item-info">
-                          <div className="item-name">{item.name}</div>
-                          <div className="item-description">{item.description}</div>
+                          <div className="item-name">{getItemName(item)}</div>
+                          <div className="item-description">{getItemDescription(item)}</div>
                         </div>
                         <div className="item-actions">
                           {item.cursed && (

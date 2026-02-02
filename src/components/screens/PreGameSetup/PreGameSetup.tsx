@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Region } from '../../../game/types';
 import { ITEM_DATABASE } from '../../../game/items';
 import { getStarterItemsWithUnlockStatus } from '../../../game/profileUnlocks';
+import { getRegionDisplayName } from '../../../game/regionGraph';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { getItemName } from '../../../i18n/helpers';
 import './PreGameSetup.css';
 
 interface PreGameSetupProps {
@@ -10,13 +13,14 @@ interface PreGameSetupProps {
   onBack: () => void;
 }
 
-const REGIONS = [
-  { id: 'demacia', name: 'Demacia', unlocked: true, description: 'A strong, lawful kingdom with a prestigious military. Known for its justice and honor.' },
-  { id: 'ionia', name: 'Ionia', unlocked: true, description: 'A land of natural magic and spirituality. Home to ancient traditions and martial arts.' },
-  { id: 'shurima', name: 'Shurima', unlocked: true, description: 'A vast desert empire of ancient power. Ascended warriors and buried treasures await.' },
+const REGIONS: Array<{ id: string; unlocked: boolean; descKey: 'demacia' | 'ionia' | 'shurima' }> = [
+  { id: 'demacia', unlocked: true, descKey: 'demacia' },
+  { id: 'ionia', unlocked: true, descKey: 'ionia' },
+  { id: 'shurima', unlocked: true, descKey: 'shurima' },
 ];
 
 export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMode, onBack }) => {
+  const t = useTranslation();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
@@ -46,39 +50,39 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
 
   const handleStartRun = () => {
     if (!selectedRegion || !selectedItem) {
-      setError('Select a region and an item first!');
+      setError(t.preGameSetup.selectRegionAndItem);
       return;
     }
     onStartRun(selectedRegion as Region, selectedItem);
   };
 
   // Build dynamic title
-  let title = 'Start your adventure';
+  let title = t.preGameSetup.startAdventureAt;
   if (selectedRegion) {
-    const region = REGIONS.find(r => r.id === selectedRegion);
-    title += ` at ${region?.name}`;
+    const regionName = getRegionDisplayName(selectedRegion as Region);
+    title += ` ${regionName}`;
   }
   if (selectedItem) {
     const item = ITEM_DATABASE[selectedItem];
-    title += ` with ${item?.name || selectedItem}`;
+    title += ` ${t.preGameSetup.startAdventureWith} ${item ? getItemName(item) : selectedItem}`;
   }
 
   return (
     <div className="pregame-setup">
       {/* Back to Menu Button */}
       <button className="back-to-menu-btn" onClick={onBack}>
-        ← Back to Menu
+        {t.preGameSetup.backToMenu}
       </button>
 
       {/* Dev Test Button - Hidden in corner */}
-      <button className="dev-test-btn" onClick={onTestMode} title="Test Combat">
+      <button className="dev-test-btn" onClick={onTestMode} title={t.preGameSetup.testCombat}>
         🔬
       </button>
 
       <div className="selection-container">
         {/* Region Selection */}
         <div className="selection-section">
-          <h2 className="section-title">Select Your Region</h2>
+          <h2 className="section-title">{t.preGameSetup.selectRegion}</h2>
           <div className="selection-grid regions">
             {REGIONS.map((region) => (
               <div
@@ -87,7 +91,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                 onClick={() => handleRegionClick(region.id, region.unlocked)}
               >
                 {!region.unlocked && <div className="lock-icon">🔒</div>}
-                <div className="item-name">{region.name}</div>
+                <div className="item-name">{getRegionDisplayName(region.id as Region)}</div>
               </div>
             ))}
           </div>
@@ -95,7 +99,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
 
         {/* Item Selection */}
         <div className="selection-section">
-          <h2 className="section-title">Select Your Starting Item</h2>
+          <h2 className="section-title">{t.preGameSetup.selectStartingItem}</h2>
           <div className="selection-grid items">
             {STARTER_ITEMS.map((item) => {
               const itemData = ITEM_DATABASE[item.id];
@@ -108,10 +112,10 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                 {!item.unlocked && <div className="lock-icon">🔒</div>}
                 {itemData?.imagePath && (
                   <div className="item-image">
-                    <img src={itemData.imagePath} alt={itemData.name} />
+                    <img src={itemData.imagePath} alt={itemData ? getItemName(itemData) : item.name} />
                   </div>
                 )}
-                <div className="item-name">{item.unlocked ? (itemData?.name || item.name) : item.name}</div>
+                <div className="item-name">{itemData ? getItemName(itemData) : item.name}</div>
               </div>
               );
             })}
@@ -123,7 +127,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
       <div className="start-button-container">
         {error && <div className="error-message">{error}</div>}
         <button className="start-run-btn" onClick={handleStartRun}>
-          Start Your Run
+          {t.preGameSetup.startYourRun}
         </button>
       </div>
     </div>

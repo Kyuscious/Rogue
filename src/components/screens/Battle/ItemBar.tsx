@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './ItemBar.css';
 
 interface ItemBarProps {
@@ -9,14 +9,9 @@ interface ItemBarProps {
 }
 
 export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, selectedItemId, canUse }) => {
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   // Filter to only show consumable items (safety check)
   const consumableItems = usableItems.filter(item => item.item?.consumable === true);
-
-  const hideTooltip = () => {
-    setHoveredItem(null);
-  };
 
   // Always show 6 item slots (max inventory)
   const MAX_ITEM_SLOTS = 6;
@@ -49,8 +44,6 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, sel
             <div
               key={item.id}
               className="item-bar-slot"
-              onMouseEnter={() => setHoveredItem(item.id)}
-              onMouseLeave={hideTooltip}
             >
               <button
                 className={`item-bar-btn ${!canUse ? 'disabled' : ''} ${isSelected ? 'selected' : ''} rarity-${item.rarity}`}

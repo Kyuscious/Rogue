@@ -115,3 +115,73 @@ export function useTranslations(): Translations {
       return en;
   }
 }
+
+/**
+ * Get translated item name and description
+ * Use this helper when you have an item object and need its translated properties
+ */
+export function getItemName(item: { id: string; name?: string }): string {
+  const translation = getItemTranslation(item.id);
+  // If translation returns the ID itself, it means no translation exists - use fallback
+  if (translation.name && translation.name !== item.id) {
+    return translation.name;
+  }
+  return item.name || item.id;
+}
+
+export function getItemDescription(item: { id: string; description?: string }): string {
+  const translation = getItemTranslation(item.id);
+  // If translation exists and is not empty, use it
+  if (translation.description && translation.description !== '') {
+    return translation.description;
+  }
+  return item.description || '';
+}
+
+/**
+ * Get translated weapon name
+ * Use this helper when you have a weapon object and need its translated name
+ */
+export function getWeaponName(weapon: { id: string; name?: string }): string {
+  const translation = getWeaponTranslation(weapon.id);
+  // If translation returns the ID itself, it means no translation exists - use fallback
+  if (translation.name && translation.name !== weapon.id) {
+    return translation.name;
+  }
+  return weapon.name || weapon.id;
+}
+
+/**
+ * Get translated weapon description
+ */
+export function getWeaponDescription(weapon: { id: string; description?: string }): string {
+  const translation = getWeaponTranslation(weapon.id);
+  if (translation.description && translation.description !== '') {
+    return translation.description;
+  }
+  return weapon.description || '';
+}
+
+/**
+ * Get translated spell name
+ * Use this helper when you have a spell object and need its translated name
+ */
+export function getSpellName(spell: { id: string; name?: string }): string {
+  const translation = getSpellTranslation(spell.id);
+  // If translation returns the ID itself, it means no translation exists - use fallback
+  if (translation.name && translation.name !== spell.id) {
+    return translation.name;
+  }
+  return spell.name || spell.id;
+}
+
+/**
+ * Get translated spell description
+ */
+export function getSpellDescription(spell: { id: string; description?: string }): string {
+  const translation = getSpellTranslation(spell.id);
+  if (translation.description && translation.description !== '') {
+    return translation.description;
+  }
+  return spell.description || '';
+}

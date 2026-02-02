@@ -8,7 +8,7 @@ interface WeaponSelectorProps {
   attackRange?: number; // For tooltip display
 }
 
-export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect, attackRange }) => {
+export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect }) => {
   const { state, equipWeapon } = useGameStore();
   const { weapons, equippedWeaponIndex } = state;
   const handleSelectWeapon = (index: number) => {

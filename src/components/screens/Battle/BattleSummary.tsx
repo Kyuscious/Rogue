@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { InventoryItem } from '../../../game/types';
 import { getItemById, getPassiveDescription } from '../../../game/items';
+import { getItemName, getItemDescription } from '../../../i18n/helpers';
 import './BattleSummary.css';
 
 interface CombatStats {
@@ -126,12 +127,12 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                         onClick={() => rewardSelection.onSelect(option)}
                       >
                         <div className="reward-card-header">
-                          <h4>{item.name}</h4>
+                          <h4>{getItemName(item)}</h4>
                         </div>
 
                         <div className="reward-card-icon">
                           {item.imagePath ? (
-                            <img src={item.imagePath} alt={item.name} />
+                            <img src={item.imagePath} alt={getItemName(item)} />
                           ) : (
                             <span className="icon-placeholder">{item.consumable ? '🧪' : '⚔️'}</span>
                           )}
@@ -295,7 +296,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
         return createPortal(
           <div className="item-tooltip-portal">
             <div className="item-rarity">{item.rarity.toUpperCase()}</div>
-            <div className="item-description">{item.description}</div>
+            <div className="item-description">{getItemDescription(item)}</div>
             <div className="item-stats">
               {Object.entries(item.stats)
                 .filter(([_, value]) => value && value > 0)

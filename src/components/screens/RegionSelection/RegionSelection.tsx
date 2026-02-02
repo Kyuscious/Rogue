@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Region } from '../../../game/types';
 import { useGameStore } from '../../../game/store';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { 
   getAvailableDestinations, 
   getRegionDisplayName, 
@@ -18,13 +19,14 @@ interface RegionSelectionProps {
 }
 
 export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion }) => {
+  const t = useTranslation();
   const store = useGameStore();
   const { state } = store;
   const [selectedDestination, setSelectedDestination] = useState<Region | null>(null);
   const [selectedAction, setSelectedAction] = useState<PostRegionChoice | null>(null);
   
   if (!state.selectedRegion) {
-    return <div>Error: No current region</div>;
+    return <div>{t.regionSelection.errorNoRegion}</div>;
   }
   
   const availableRegions = getAvailableDestinations(
@@ -78,12 +80,12 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
     const advancedRegions: Region[] = ['bilgewater', 'bandle_city', 'freljord'];
     const startingRegions: Region[] = ['demacia', 'ionia', 'shurima'];
     
-    if (isTravellingRegion(region)) return 'TRAVELLING';
-    if (hardRegions.includes(region)) return 'HARD';
-    if (advancedRegions.includes(region)) return 'ADVANCED';
-    if (region === 'piltover') return 'HUB';
-    if (startingRegions.includes(region)) return 'STARTING';
-    return 'STANDARD';
+    if (isTravellingRegion(region)) return t.regionSelection.categories.travelling;
+    if (hardRegions.includes(region)) return t.regionSelection.categories.hard;
+    if (advancedRegions.includes(region)) return t.regionSelection.categories.advanced;
+    if (region === 'piltover') return t.regionSelection.categories.hub;
+    if (startingRegions.includes(region)) return t.regionSelection.categories.starting;
+    return t.regionSelection.categories.standard;
   };
   
   const getRegionBadge = (region: Region) => {
@@ -100,7 +102,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
     if (isEndGameRegion(region)) {
       return (
         <span className="region-badge endgame">
-          ⚔️ {category} {visited && '✓'}
+          ⚔️ {t.regionSelection.categories.endgame} {visited && '✓'}
         </span>
       );
     }
@@ -113,10 +115,10 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
   return (
     <div className="region-selection">
       <div className="region-selection-header">
-        <h2>Choose Your Next Destination</h2>
+        <h2>{t.regionSelection.chooseDestination}</h2>
         <div className="region-selection-info">
           <span>
-            Current Region: <strong>{getRegionDisplayName(state.selectedRegion)}</strong>
+            {t.regionSelection.currentRegion} <strong>{getRegionDisplayName(state.selectedRegion)}</strong>
           </span>
         </div>
       </div>
@@ -124,8 +126,8 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
       {/* Travel Actions Section */}
       {state.completedRegion && (
         <div className="travel-actions-section">
-          <h3>Choose Travel Action</h3>
-          <p className="travel-actions-subtitle">What will you do while traveling?</p>
+          <h3>{t.regionSelection.chooseTravelAction}</h3>
+          <p className="travel-actions-subtitle">{t.regionSelection.travelActionSubtitle}</p>
           <div className="travel-actions-grid">
             {POST_REGION_CHOICES.map((option) => {
               const isDisabled = option.type === 'event' && 
@@ -142,8 +144,8 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
                   <div className="action-icon">{option.icon}</div>
                   <h4>{option.title}</h4>
                   <p>{option.description}</p>
-                  {isDisabled && <span className="disabled-badge">Unavailable</span>}
-                  {isSelected && <div className="selected-indicator">✓ Selected</div>}
+                  {isDisabled && <span className="disabled-badge">{t.regionSelection.unavailable}</span>}
+                  {isSelected && <div className="selected-indicator">{t.regionSelection.selected}</div>}
                 </button>
               );
             })}
@@ -152,10 +154,10 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
       )}
       
       <div className="regions-container">
-        <h3>Select Destination</h3>
+        <h3>{t.regionSelection.selectDestination}</h3>
         {availableRegions.length === 0 ? (
           <div className="no-regions">
-            <p>No available destinations. This shouldn't happen!</p>
+            <p>{t.regionSelection.noRegionsAvailable}</p>
           </div>
         ) : (
           availableRegions.map((region) => {
@@ -179,9 +181,9 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
                 </div>
                 <p className="region-description">{getRegionDescription(region)}</p>
                 {isTravellingRegion(region) && (
-                  <div className="region-hint">✈️ Long-range travel available</div>
+                  <div className="region-hint">{t.regionSelection.longRangeTravelAvailable}</div>
                 )}
-                {isSelected && <div className="selected-indicator">✓ Selected</div>}
+                {isSelected && <div className="selected-indicator">{t.regionSelection.selected}</div>}
               </button>
             );
           })
@@ -197,12 +199,12 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
             disabled={selectedDestination === null || (!!state.completedRegion && selectedAction === null)}
           >
             {state.completedRegion 
-              ? `Proceed to ${selectedDestination ? getRegionDisplayName(selectedDestination) : '...'}`
-              : 'Begin Journey'
+              ? `${t.regionSelection.proceedTo} ${selectedDestination ? getRegionDisplayName(selectedDestination) : '...'}`
+              : t.regionSelection.beginJourney
             }
           </button>
           {selectedDestination && state.completedRegion && !selectedAction && (
-            <p className="proceed-hint">⚠️ Select a travel action to proceed</p>
+            <p className="proceed-hint">{t.regionSelection.selectActionToProceed}</p>
           )}
         </div>
       )}

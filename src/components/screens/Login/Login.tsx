@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './Login.css';
 import { useGameStore } from '../../../game/store';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface LoginProps {
   onLoginSuccess: () => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+  const t = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +59,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         // Credentials expired or invalid
         localStorage.removeItem('rememberedUsername');
         localStorage.removeItem('rememberedPassword');
-        setError('Saved credentials are invalid. Please login again.');
+        setError(t.login.errors.savedCredentialsInvalid);
         setIsLoading(false);
         return;
       }
@@ -67,7 +69,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       setPlayerName(user);
       onLoginSuccess();
     } catch (err) {
-      setError('Failed to auto-login. Please try again.');
+      setError(t.login.errors.autoLoginFailed);
       setIsLoading(false);
     }
   };
@@ -75,12 +77,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      setError(isSignUp ? 'Please enter username and password' : 'Please enter credentials');
+      setError(isSignUp ? t.login.errors.emptySignUpCredentials : t.login.errors.emptyCredentials);
       return;
     }
 
     if (password.length < 4) {
-      setError('Password must be at least 4 characters');
+      setError(t.login.errors.passwordTooShort);
       return;
     }
 
@@ -98,7 +100,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         // Sign up - check if this exact username/password combo exists
         const existingCredentials = localStorage.getItem(credentialsKey);
         if (existingCredentials) {
-          setError('This account already exists. Try logging in instead!');
+          setError(t.login.errors.accountExists);
           setIsLoading(false);
           return;
         }
@@ -120,7 +122,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         // Login - verify credentials
         const existingCredentials = localStorage.getItem(credentialsKey);
         if (!existingCredentials) {
-          setError('Invalid username or password');
+          setError(t.login.errors.invalidCredentials);
           setIsLoading(false);
           return;
         }
@@ -141,7 +143,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       setPlayerName(username);
       onLoginSuccess();
     } catch (err) {
-      setError('Failed to connect. Please try again.');
+      setError(t.login.errors.connectionFailed);
     } finally {
       setIsLoading(false);
     }
@@ -157,8 +159,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="login-screen">
       <div className="login-container">
         <div className="login-header">
-          <h1>Runeterrogue</h1>
-          <p className="subtitle">Connect to Your Account</p>
+          <h1>{t.login.title}</h1>
+          <p className="subtitle">{t.login.subtitle}</p>
         </div>
 
         <div className="login-tabs">
@@ -167,50 +169,50 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             onClick={() => setIsSignUp(false)}
             disabled={isLoading}
           >
-            Login
+            {t.login.loginTab}
           </button>
           <button
             className={`tab ${isSignUp ? 'active' : ''}`}
             onClick={() => setIsSignUp(true)}
             disabled={isLoading}
           >
-            Sign Up
+            {t.login.signUpTab}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Summoner Name</label>
+            <label htmlFor="username">{t.login.usernameLabel}</label>
             <input
               type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder={t.login.usernamePlaceholder}
               disabled={isLoading}
               maxLength={20}
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">{t.login.passwordLabel}</label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder={t.login.passwordPlaceholder}
               disabled={isLoading}
               maxLength={50}
             />
-            {!isSignUp && <p className="input-hint">At least 4 characters</p>}
+            {!isSignUp && <p className="input-hint">{t.login.passwordHint}</p>}
             {!isSignUp && (
               <button 
                 type="button" 
                 className="forgot-password-link"
-                onClick={() => setError('Password recovery coming soon!')}
+                onClick={() => setError(t.login.errors.forgotPasswordSoon)}
               >
-                Forgot my password?
+                {t.login.forgotPassword}
               </button>
             )}
           </div>
@@ -223,13 +225,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               onChange={(e) => setRememberMe(e.target.checked)}
               disabled={isLoading}
             />
-            <label htmlFor="rememberMe">Remember me on this device</label>
+            <label htmlFor="rememberMe">{t.login.rememberMe}</label>
           </div>
 
           {error && <div className="error-message">{error}</div>}
 
           <button type="submit" disabled={isLoading} className="btn-login">
-            {isLoading ? (isSignUp ? 'Creating Account...' : 'Logging In...') : (isSignUp ? 'Create Account' : 'Login')}
+            {isLoading ? (isSignUp ? t.login.creatingAccount : t.login.loggingIn) : (isSignUp ? t.login.signUpButton : t.login.loginButton)}
           </button>
         </form>
 
@@ -241,13 +243,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             disabled={isLoading}
             className="btn-riot-link"
           >
-            👤 Play as Guest
+            {t.login.playAsGuest}
           </button>
-          <p className="riot-hint">⚠️ Progress will not be saved</p>
+          <p className="riot-hint">{t.login.guestWarning}</p>
         </div>
 
         <p className="login-footer">
-          Your data is stored securely • Password protected
+          {t.login.footer}
         </p>
       </div>
     </div>

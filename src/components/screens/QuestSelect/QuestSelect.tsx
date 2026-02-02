@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { getQuestsByRegion, Quest, QuestPath } from '../../../game/questDatabase';
 import { Region } from '../../../game/types';
 import { useGameStore } from '../../../game/store';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { GearChange } from './GearChange';
 import './QuestSelect.css';
 
@@ -12,6 +13,7 @@ interface QuestSelectProps {
 
 export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }) => {
   const { state, useReroll } = useGameStore();
+  const t = useTranslation();
   
   // Get all available quests for this region
   const allQuests = useMemo(() => getQuestsByRegion(region), [region]);
@@ -50,9 +52,9 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
 
   const renderDifficultyBadge = (difficulty: 'safe' | 'risky') => {
     if (difficulty === 'risky') {
-      return <span className="difficulty-badge risky">⚠️ RISKY</span>;
+      return <span className="difficulty-badge risky">{t.questSelect.risky}</span>;
     }
-    return <span className="difficulty-badge safe">✓ SAFE</span>;
+    return <span className="difficulty-badge safe">{t.questSelect.safe}</span>;
   };
 
   const renderRewardIcon = (lootType: string) => {
@@ -92,10 +94,10 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
                 disabled={state.rerolls <= 0 || allQuests.length <= 3}
                 title={
                   state.rerolls <= 0
-                    ? 'No rerolls remaining'
+                    ? t.questSelect.noRerollsRemaining
                     : allQuests.length <= 3
-                    ? 'No alternative paths available'
-                    : `Reroll this path (${state.rerolls} rerolls left)`
+                    ? t.questSelect.noAlternativePaths
+                    : `${t.questSelect.rerollThisPath} (${state.rerolls} ${t.questSelect.rerollsLeft})`
                 }
               >
                 🔄
@@ -113,7 +115,7 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
                     <div className="header-left">
                       <span className="path-name">{path.name}</span>
                       {renderDifficultyBadge(path.difficulty)}
-                      <span className="reward-icon" title={`Reward: ${path.lootType}`}>{renderRewardIcon(path.lootType)}</span>
+                      <span className="reward-icon" title={`${t.questSelect.reward}: ${path.lootType}`}>{renderRewardIcon(path.lootType)}</span>
                     </div>
                     {path.finalBossId && (
                       <div className="boss-preview-small">

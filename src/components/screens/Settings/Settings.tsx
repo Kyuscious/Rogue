@@ -115,12 +115,12 @@ export const SettingsScreen: React.FC = () => {
         <div className="settings-divider"></div>
 
         <div className="settings-section theme-section">
-          <h3 className="section-title">Display & Theme</h3>
-          <p className="section-description">Customize display settings to prevent browser extensions from affecting your game visuals.</p>
+          <h3 className="section-title">{t.settings.displayTheme}</h3>
+          <p className="section-description">{t.settings.displayThemeDesc}</p>
           
           <div className="theme-control">
             <div className="theme-control-header">
-              <label htmlFor="brightness-slider">Brightness</label>
+              <label htmlFor="brightness-slider">{t.settings.brightness}</label>
               <span className="theme-value">{Math.round(state.themeSettings.brightness * 100)}%</span>
             </div>
             <input
@@ -134,15 +134,15 @@ export const SettingsScreen: React.FC = () => {
               className="theme-slider"
             />
             <div className="theme-markers">
-              <span>Dark</span>
-              <span>Normal</span>
-              <span>Bright</span>
+              <span>{t.settings.brightnessMarkers.dark}</span>
+              <span>{t.settings.brightnessMarkers.normal}</span>
+              <span>{t.settings.brightnessMarkers.bright}</span>
             </div>
           </div>
 
           <div className="theme-control">
             <div className="theme-control-header">
-              <label htmlFor="saturation-slider">Saturation</label>
+              <label htmlFor="saturation-slider">{t.settings.saturation}</label>
               <span className="theme-value">{Math.round(state.themeSettings.saturation * 100)}%</span>
             </div>
             <input
@@ -156,15 +156,15 @@ export const SettingsScreen: React.FC = () => {
               className="theme-slider"
             />
             <div className="theme-markers">
-              <span>Muted</span>
-              <span>Normal</span>
-              <span>Vivid</span>
+              <span>{t.settings.saturationMarkers.muted}</span>
+              <span>{t.settings.saturationMarkers.normal}</span>
+              <span>{t.settings.saturationMarkers.vivid}</span>
             </div>
           </div>
 
           <div className="theme-control">
             <div className="theme-control-header">
-              <label htmlFor="contrast-slider">Contrast</label>
+              <label htmlFor="contrast-slider">{t.settings.contrast}</label>
               <span className="theme-value">{Math.round(state.themeSettings.contrast * 100)}%</span>
             </div>
             <input
@@ -178,14 +178,14 @@ export const SettingsScreen: React.FC = () => {
               className="theme-slider"
             />
             <div className="theme-markers">
-              <span>Low</span>
-              <span>Normal</span>
-              <span>High</span>
+              <span>{t.settings.contrastMarkers.low}</span>
+              <span>{t.settings.contrastMarkers.normal}</span>
+              <span>{t.settings.contrastMarkers.high}</span>
             </div>
           </div>
 
           <button className="reset-theme-btn" onClick={resetTheme}>
-            🔄 Reset to Default
+            {t.settings.resetTheme}
           </button>
         </div>
 
@@ -233,8 +233,7 @@ export const SettingsScreen: React.FC = () => {
 
         <div className="settings-info">
           <p>
-            🌍 Language support is currently in development. Most translations are placeholders marked with [LANG] prefixes.
-            Full translations will be added progressively for all game content including characters, enemies, items, abilities, and UI text.
+            {t.settings.languageInfo}
           </p>
         </div>
 

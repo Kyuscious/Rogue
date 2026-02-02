@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../game/store';
+import { useTranslation } from '../hooks/useTranslation';
 import { CharacterStatus } from './entity/CharacterStatus';
 import { Battle } from './screens/Battle/Battle';
 import { Disclaimer } from './screens/Disclaimer/Disclaimer';
@@ -148,6 +149,7 @@ const ContinueRunModal: React.FC<ContinueRunModalProps> = ({ isOpen, onContinue,
 
 export const App: React.FC = () => {
   const { state, selectRegion, startBattle, selectQuest, selectStartingItem, resetRun, addInventoryItem, travelToRegion, saveRun, clearSavedRun, loadRun } = useGameStore();
+  const t = useTranslation();
   
   // Check localStorage on mount to see if we should skip disclaimer
   const shouldSkipDisclaimer = typeof window !== 'undefined' && localStorage.getItem('skipDisclaimer') === 'true';
@@ -565,7 +567,7 @@ export const App: React.FC = () => {
           <div className="header-left">
             <ScreenTitle scene={scene} />
             {showSavedIndicator && (
-              <span className="saved-indicator">💾 Progress Saved</span>
+              <span className="saved-indicator">{t.uiHeader.progressSaved}</span>
             )}
           </div>
           <div className="ui-stats">
@@ -577,8 +579,8 @@ export const App: React.FC = () => {
             >
               {state.selectedRegion?.toUpperCase()}
             </span>
-            <span>Encounter: {state.currentFloor}</span>
-            <span>Gold: {state.gold}</span>
+            <span>{t.uiHeader.encounter}: {state.currentFloor}</span>
+            <span>{t.uiHeader.gold}: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
@@ -639,21 +641,21 @@ export const App: React.FC = () => {
           <div className="header-left">
             <ScreenTitle scene={scene} />
             {showSavedIndicator && (
-              <span className="saved-indicator">💾 Progress Saved</span>
+              <span className="saved-indicator">{t.uiHeader.progressSaved}</span>
             )}
           </div>
           <div className="ui-stats">
             <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>
-            <span>Encounter: {state.currentFloor}</span>
-            <span>Gold: {state.gold}</span>
+            <span>{t.uiHeader.encounter}: {state.currentFloor}</span>
+            <span>{t.uiHeader.gold}: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
-            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>
               ⚙️
             </button>
             <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-              🔄 Reset
+              🔄 {t.uiHeader.reset}
             </button>
           </div>
         </div>
@@ -681,16 +683,16 @@ export const App: React.FC = () => {
           </div>
           <div className="ui-stats">
             <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>
-            <span>Encounter: {state.currentFloor}</span>
-            <span>Gold: {state.gold}</span>
+            <span>{t.uiHeader.encounter}: {state.currentFloor}</span>
+            <span>{t.uiHeader.gold}: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
-            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>
               ⚙️
             </button>
             <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-              🔄 Reset
+              🔄 {t.uiHeader.reset}
             </button>
           </div>
         </div>
@@ -753,16 +755,16 @@ export const App: React.FC = () => {
           </div>
           <div className="ui-stats">
             <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>
-            <span>Encounter: {state.currentFloor}</span>
-            <span>Gold: {state.gold}</span>
+            <span>{t.uiHeader.encounter}: {state.currentFloor}</span>
+            <span>{t.uiHeader.gold}: {state.gold}</span>
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
-            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+            <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>
               ⚙️
             </button>
             <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-              🔄 Reset
+              🔄 {t.uiHeader.reset}
             </button>
           </div>
         </div>
@@ -801,15 +803,15 @@ export const App: React.FC = () => {
         </div>
         <div className="ui-stats">
           <span className="region-badge">{state.selectedRegion?.toUpperCase()}</span>
-          <span>Encounter: {state.currentFloor}</span>
-          <span>Gold: {state.gold}</span>
+          <span>{t.uiHeader.encounter}: {state.currentFloor}</span>
+          <span>{t.uiHeader.gold}: {state.gold}</span>
         </div>
         <div className="header-actions">
-          <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
+          <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>
             ⚙️
           </button>
           <button className="btn-reset" onClick={() => setShowResetConfirm(true)}>
-            🔄 Reset
+            🔄 {t.uiHeader.reset}
           </button>
         </div>
       </div>

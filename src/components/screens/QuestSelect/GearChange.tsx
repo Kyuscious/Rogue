@@ -3,6 +3,8 @@ import { useGameStore } from '../../../game/store';
 import { getWeaponById } from '../../../game/weapons';
 import { getSpellById } from '../../../game/spells';
 import { getItemById } from '../../../game/items';
+import { useTranslation } from '../../../hooks/useTranslation';
+import { getWeaponName, getSpellName, getItemName } from '../../../i18n/helpers';
 import './GearChange.css';
 
 type EquipmentType = 'weapon' | 'spell' | 'item';
@@ -16,6 +18,7 @@ interface DragData {
 
 export const GearChange: React.FC = () => {
   const { state, equipWeapon, equipSpell, removeWeapon, removeSpell } = useGameStore();
+  const t = useTranslation();
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<DragData | null>(null);
 
@@ -90,7 +93,7 @@ export const GearChange: React.FC = () => {
           <>
             <img
               src={weapon.imagePath || ''}
-              alt={weapon.name}
+              alt={getWeaponName(weapon)}
               draggable
               onDragStart={(e) => handleDragStart(e, { type: 'weapon', id: weaponId, sourceType: 'equipped', sourceIndex: index })}
             />
@@ -120,7 +123,7 @@ export const GearChange: React.FC = () => {
           <>
             <img
               src={spell.imagePath || ''}
-              alt={spell.name}
+              alt={getSpellName(spell)}
               draggable
               onDragStart={(e) => handleDragStart(e, { type: 'spell', id: spellId, sourceType: 'equipped', sourceIndex: index })}
             />
@@ -150,7 +153,7 @@ export const GearChange: React.FC = () => {
           <>
             <img
               src={itemData.imagePath || ''}
-              alt={itemData.name}
+              alt={getItemName(itemData)}
               draggable
               onDragStart={(e) => handleDragStart(e, { type: 'item', id: item.itemId, sourceType: 'equipped', sourceIndex: index })}
             />
@@ -167,16 +170,20 @@ export const GearChange: React.FC = () => {
   const renderInventoryItem = (invItem: (typeof overflowInventory)[0]) => {
     let displayData: any = null;
     let icon = '?';
+    let displayName = '';
 
     if (invItem.type === 'weapon') {
       displayData = getWeaponById(invItem.id);
       icon = '⚔️';
+      displayName = displayData ? getWeaponName(displayData) : invItem.id;
     } else if (invItem.type === 'spell') {
       displayData = getSpellById(invItem.id);
       icon = '✨';
+      displayName = displayData ? getSpellName(displayData) : invItem.id;
     } else if (invItem.type === 'item') {
       displayData = getItemById(invItem.id);
       icon = '🧪';
+      displayName = displayData ? getItemName(displayData) : invItem.id;
     }
 
     return (
@@ -187,7 +194,7 @@ export const GearChange: React.FC = () => {
         onDragStart={(e) => handleDragStart(e, { type: invItem.type, id: invItem.id, sourceType: 'inventory', sourceIndex: invItem.index })}
       >
         {displayData?.imagePath ? (
-          <img src={displayData.imagePath} alt={displayData.name} />
+          <img src={displayData.imagePath} alt={displayName} />
         ) : (
           <span>{icon}</span>
         )}
@@ -201,32 +208,32 @@ export const GearChange: React.FC = () => {
   return (
     <div className="gear-change">
       <div className="equipped-section">
-        <div className="section-title">Equipped Weapons</div>
+        <div className="section-title">{t.gearChange.equippedWeapons}</div>
         <div className="gear-row">
           {Array.from({ length: 3 }).map((_, i) => renderEquippedWeapon(i))}
         </div>
       </div>
 
       <div className="equipped-section">
-        <div className="section-title">Equipped Spells</div>
+        <div className="section-title">{t.gearChange.equippedSpells}</div>
         <div className="gear-row">
           {Array.from({ length: 5 }).map((_, i) => renderEquippedSpell(i))}
         </div>
       </div>
 
       <div className="equipped-section">
-        <div className="section-title">Equipped Items</div>
+        <div className="section-title">{t.gearChange.equippedItems}</div>
         <div className="gear-row">
           {Array.from({ length: 6 }).map((_, i) => renderEquippedItem(i))}
         </div>
       </div>
 
       <div className="inventory-section">
-        <div className="section-title">Inventory</div>
+        <div className="section-title">{t.gearChange.inventory}</div>
         <div className="inventory-grid" onDragOver={handleDragOver} onDrop={handleDropOnInventory}>
           {overflowInventory.length === 0 && (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#666', padding: '20px', fontSize: '12px' }}>
-              Drop items here
+              {t.gearChange.dropItemsHere}
             </div>
           )}
           {overflowInventory.map(item => renderInventoryItem(item))}

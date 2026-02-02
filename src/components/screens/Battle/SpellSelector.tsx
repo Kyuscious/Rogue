@@ -8,7 +8,7 @@ interface SpellSelectorProps {
   attackRange?: number; // For tooltip display
 }
 
-export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect, attackRange }) => {
+export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
   const { state, equipSpell } = useGameStore();
   const { spells, equippedSpellIndex, spellCooldowns } = state;
   const handleSelectSpell = (index: number) => {

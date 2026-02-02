@@ -56,6 +56,28 @@ export interface Translations {
     continue: string;
     settings: string;
     credits: string;
+    start: string;
+    profiles: string;
+    index: string;
+    options: string;
+    disclaimer: string;
+    discord: string;
+    version: string;
+  };
+
+  // Credits
+  credits: {
+    title: string;
+    developedBy: string;
+    artsBy: string;
+    musicsBy: string;
+    testedBy: string;
+    supportedBy: string;
+    comingSoon: string;
+    visitProfile: string;
+    supportDevelopment: string;
+    kofi: string;
+    patreon: string;
   };
 
   // Settings
@@ -76,6 +98,28 @@ export interface Translations {
     sfxVolumeDesc: string;
     musicVolumeDesc: string;
     voiceVolumeDesc: string;
+    displayTheme: string;
+    displayThemeDesc: string;
+    brightness: string;
+    saturation: string;
+    contrast: string;
+    brightnessMarkers: {
+      dark: string;
+      normal: string;
+      bright: string;
+    };
+    saturationMarkers: {
+      muted: string;
+      normal: string;
+      vivid: string;
+    };
+    contrastMarkers: {
+      low: string;
+      normal: string;
+      high: string;
+    };
+    resetTheme: string;
+    languageInfo: string;
   };
 
   // Character Selection
@@ -158,6 +202,76 @@ export interface Translations {
     currentHp: string;
   };
 
+  // Region Selection
+  regionSelection: {
+    errorNoRegion: string;
+    chooseDestination: string;
+    currentRegion: string;
+    chooseTravelAction: string;
+    travelActionSubtitle: string;
+    unavailable: string;
+    selected: string;
+    selectDestination: string;
+    noRegionsAvailable: string;
+    longRangeTravelAvailable: string;
+    proceedTo: string;
+    beginJourney: string;
+    selectActionToProceed: string;
+    categories: {
+      travelling: string;
+      hard: string;
+      advanced: string;
+      hub: string;
+      starting: string;
+      standard: string;
+      endgame: string;
+    };
+  };
+
+  // Pre-Game Setup
+  preGameSetup: {
+    backToMenu: string;
+    testCombat: string;
+    selectRegion: string;
+    selectStartingItem: string;
+    startYourRun: string;
+    selectRegionAndItem: string;
+    startAdventureAt: string;
+    startAdventureWith: string;
+    locked: string;
+    regionDescriptions: {
+      demacia: string;
+      ionia: string;
+      shurima: string;
+    };
+  };
+
+  questSelect: {
+    noRerollsRemaining: string;
+    noAlternativePaths: string;
+    rerollThisPath: string;
+    rerollsLeft: string;
+    reward: string;
+    risky: string;
+    safe: string;
+  };
+
+  gearChange: {
+    equippedWeapons: string;
+    equippedSpells: string;
+    equippedItems: string;
+    inventory: string;
+    dropItemsHere: string;
+  };
+
+  uiHeader: {
+    encounter: string;
+    gold: string;
+    settings: string;
+    reset: string;
+    progressSaved: string;
+  };
+
   // Disclaimer Screen
   disclaimer: {
     title: string;
@@ -173,6 +287,39 @@ export interface Translations {
     legalLinkText: string;
     dontShowAgain: string;
     skip: string;
+  };
+
+  // Login/Auth Screen
+  login: {
+    title: string;
+    subtitle: string;
+    loginTab: string;
+    signUpTab: string;
+    usernameLabel: string;
+    usernamePlaceholder: string;
+    passwordLabel: string;
+    passwordPlaceholder: string;
+    passwordHint: string;
+    forgotPassword: string;
+    rememberMe: string;
+    loginButton: string;
+    signUpButton: string;
+    loggingIn: string;
+    creatingAccount: string;
+    playAsGuest: string;
+    guestWarning: string;
+    footer: string;
+    errors: {
+      emptyCredentials: string;
+      emptySignUpCredentials: string;
+      passwordTooShort: string;
+      accountExists: string;
+      invalidCredentials: string;
+      savedCredentialsInvalid: string;
+      autoLoginFailed: string;
+      connectionFailed: string;
+      forgotPasswordSoon: string;
+    };
   };
 
   // Items (placeholders - will be populated per item)
