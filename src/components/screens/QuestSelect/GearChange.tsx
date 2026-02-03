@@ -5,6 +5,7 @@ import { getSpellById } from '../../../game/spells';
 import { getItemById } from '../../../game/items';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { getWeaponName, getSpellName, getItemName } from '../../../i18n/helpers';
+import { Tooltip } from '../../shared/Tooltip';
 import './GearChange.css';
 
 type EquipmentType = 'weapon' | 'spell' | 'item';
@@ -21,6 +22,11 @@ export const GearChange: React.FC = () => {
   const t = useTranslation();
   const [hoveredSlot, setHoveredSlot] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<DragData | null>(null);
+  const [tooltipData, setTooltipData] = useState<{
+    type: 'weapon' | 'spell' | 'item' | null;
+    id: string | null;
+    position: { x: number; y: number };
+  }>({ type: null, id: null, position: { x: 0, y: 0 } });
 
   const overflowWeapons = state.weapons.slice(3);
   const overflowSpells = state.spells.slice(5);
@@ -38,6 +44,22 @@ export const GearChange: React.FC = () => {
     ...overflowSpells.map((id, idx) => ({ id, type: 'spell' as const, index: 5 + idx })),
     ...overflowUsableItems.map(item => ({ id: item.itemId, type: 'item' as const, quantity: item.quantity })),
   ];
+
+  const handleItemMouseEnter = (e: React.MouseEvent, type: 'weapon' | 'spell' | 'item', id: string) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipData({
+      type,
+      id,
+      position: {
+        x: rect.left + rect.width / 2,
+        y: rect.bottom,
+      },
+    });
+  };
+
+  const handleItemMouseLeave = () => {
+    setTooltipData({ type: null, id: null, position: { x: 0, y: 0 } });
+  };
 
   const handleDragStart = (e: React.DragEvent, data: DragData) => {
     setDraggedItem(data);
@@ -84,8 +106,14 @@ export const GearChange: React.FC = () => {
       <div
         key={`weapon-${index}`}
         className={`gear-slot weapon-slot ${hoveredSlot === `w-${index}` ? 'hovered' : ''}`}
-        onMouseEnter={() => setHoveredSlot(`w-${index}`)}
-        onMouseLeave={() => setHoveredSlot(null)}
+        onMouseEnter={(e) => {
+          setHoveredSlot(`w-${index}`);
+          if (weaponId) handleItemMouseEnter(e, 'weapon', weaponId);
+        }}
+        onMouseLeave={() => {
+          setHoveredSlot(null);
+          handleItemMouseLeave();
+        }}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDropOnEquipped(e, index, 'weapon')}
       >
@@ -114,8 +142,14 @@ export const GearChange: React.FC = () => {
       <div
         key={`spell-${index}`}
         className={`gear-slot spell-slot ${hoveredSlot === `s-${index}` ? 'hovered' : ''}`}
-        onMouseEnter={() => setHoveredSlot(`s-${index}`)}
-        onMouseLeave={() => setHoveredSlot(null)}
+        onMouseEnter={(e) => {
+          setHoveredSlot(`s-${index}`);
+          if (spellId) handleItemMouseEnter(e, 'spell', spellId);
+        }}
+        onMouseLeave={() => {
+          setHoveredSlot(null);
+          handleItemMouseLeave();
+        }}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDropOnEquipped(e, index, 'spell')}
       >
@@ -144,8 +178,14 @@ export const GearChange: React.FC = () => {
       <div
         key={`item-${index}`}
         className={`gear-slot item-slot ${hoveredSlot === `i-${index}` ? 'hovered' : ''}`}
-        onMouseEnter={() => setHoveredSlot(`i-${index}`)}
-        onMouseLeave={() => setHoveredSlot(null)}
+        onMouseEnter={(e) => {
+          setHoveredSlot(`i-${index}`);
+          if (item) handleItemMouseEnter(e, 'item', item.itemId);
+        }}
+        onMouseLeave={() => {
+          setHoveredSlot(null);
+          handleItemMouseLeave();
+        }}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDropOnEquipped(e, index, 'item')}
       >
@@ -192,6 +232,8 @@ export const GearChange: React.FC = () => {
         className="inventory-item"
         draggable
         onDragStart={(e) => handleDragStart(e, { type: invItem.type, id: invItem.id, sourceType: 'inventory', sourceIndex: invItem.index })}
+        onMouseEnter={(e) => handleItemMouseEnter(e, invItem.type, invItem.id)}
+        onMouseLeave={handleItemMouseLeave}
       >
         {displayData?.imagePath ? (
           <img src={displayData.imagePath} alt={displayName} />
@@ -239,6 +281,19 @@ export const GearChange: React.FC = () => {
           {overflowInventory.map(item => renderInventoryItem(item))}
         </div>
       </div>
+
+      {/* Tooltips */}
+      {tooltipData.type && tooltipData.id && (
+        <Tooltip
+          position={tooltipData.position}
+          content={{
+            type: tooltipData.type,
+            weaponId: tooltipData.type === 'weapon' ? tooltipData.id : undefined,
+            spellId: tooltipData.type === 'spell' ? tooltipData.id : undefined,
+            itemId: tooltipData.type === 'item' ? tooltipData.id : undefined,
+          }}
+        />
+      )}
     </div>
   );
 };

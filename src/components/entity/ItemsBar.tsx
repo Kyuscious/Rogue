@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../game/store';
+import { useTranslation } from '../../hooks/useTranslation';
 import { getItemById, getPassiveDescription } from '../../game/items';
 import { InventoryItem } from '../../game/types';
 import './ItemsBar.css';
@@ -11,6 +12,7 @@ interface ItemsBarProps {
 
 export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, isRevealed = true }) => {
   const { state } = useGameStore();
+  const t = useTranslation();
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [showTotalTooltip, setShowTotalTooltip] = useState(false);
@@ -118,62 +120,62 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
       {/* Total Stats Tooltip */}
       {showTotalTooltip && isRevealed && Object.keys(totalStats).length > 0 && (
         <div className="item-tooltip-bar total-tooltip" style={{ left: `${totalTooltipPosition.x}px`, top: `${totalTooltipPosition.y}px` }}>
-          <h4 className="tooltip-item-name">Total Stats</h4>
+          <h4 className="tooltip-item-name">{t.common.totalStats}</h4>
           <p className="tooltip-item-description">Combined stats from all items</p>
           <div className="tooltip-item-stats">
             {totalStats.attackDamage && (
-              <div className="tooltip-stat">⚔️ AD: +{totalStats.attackDamage}</div>
+              <div className="tooltip-stat">⚔️ {t.common.attackDamage}: +{totalStats.attackDamage}</div>
             )}
             {totalStats.abilityPower && (
-              <div className="tooltip-stat">✨ AP: +{totalStats.abilityPower}</div>
+              <div className="tooltip-stat">✨ {t.common.abilityPower}: +{totalStats.abilityPower}</div>
             )}
             {totalStats.armor && (
-              <div className="tooltip-stat">🛡️ Armor: +{totalStats.armor}</div>
+              <div className="tooltip-stat">🛡️ {t.common.armor}: +{totalStats.armor}</div>
             )}
             {totalStats.magicResist && (
-              <div className="tooltip-stat">🔮 MR: +{totalStats.magicResist}</div>
+              <div className="tooltip-stat">🔮 {t.common.magicResist}: +{totalStats.magicResist}</div>
             )}
             {totalStats.health && (
-              <div className="tooltip-stat">❤️ HP: +{totalStats.health}</div>
+              <div className="tooltip-stat">❤️ {t.common.health}: +{totalStats.health}</div>
             )}
             {totalStats.attackSpeed && (
-              <div className="tooltip-stat">⚡ AS: +{totalStats.attackSpeed}</div>
+              <div className="tooltip-stat">⚡ {t.common.attackSpeed}: +{totalStats.attackSpeed}</div>
             )}
             {totalStats.lifeSteal && (
-              <div className="tooltip-stat">💉 Lifesteal: +{totalStats.lifeSteal}%</div>
+              <div className="tooltip-stat">💉 {t.common.lifeSteal}: +{totalStats.lifeSteal}%</div>
             )}
             {totalStats.omnivamp && (
-              <div className="tooltip-stat">🩸 Omnivamp: +{totalStats.omnivamp}%</div>
+              <div className="tooltip-stat">🩸 {t.common.omnivamp}: +{totalStats.omnivamp}%</div>
             )}
             {totalStats.health_regen && (
-              <div className="tooltip-stat">💚 HP Regen: +{totalStats.health_regen}</div>
+              <div className="tooltip-stat">💚 {t.common.healthRegen}: +{totalStats.health_regen}</div>
             )}
             {totalStats.criticalChance && (
-              <div className="tooltip-stat">🎯 Crit Chance: +{totalStats.criticalChance}%</div>
+              <div className="tooltip-stat">🎯 {t.common.criticalChance}: +{totalStats.criticalChance}%</div>
             )}
             {totalStats.criticalDamage && (
-              <div className="tooltip-stat">💥 Crit Dmg: +{totalStats.criticalDamage}%</div>
+              <div className="tooltip-stat">💥 {t.common.criticalDamage}: +{totalStats.criticalDamage}%</div>
             )}
             {totalStats.lethality && (
-              <div className="tooltip-stat">🗡️ Lethality: +{totalStats.lethality}</div>
+              <div className="tooltip-stat">🗡️ {t.common.lethality}: +{totalStats.lethality}</div>
             )}
             {totalStats.abilityHaste && (
-              <div className="tooltip-stat">⏱️ Ability Haste: +{totalStats.abilityHaste}</div>
+              <div className="tooltip-stat">⏱️ {t.common.abilityHaste}: +{totalStats.abilityHaste}</div>
             )}
             {totalStats.magicPenetration && (
-              <div className="tooltip-stat">🔹 Magic Pen: +{totalStats.magicPenetration}</div>
+              <div className="tooltip-stat">🔹 {t.common.magicPenetration}: +{totalStats.magicPenetration}</div>
             )}
             {totalStats.heal_shield_power && (
-              <div className="tooltip-stat">💫 Heal/Shield: +{totalStats.heal_shield_power}%</div>
+              <div className="tooltip-stat">💫 {t.common.healShieldPower}: +{totalStats.heal_shield_power}%</div>
             )}
             {totalStats.movementSpeed && (
-              <div className="tooltip-stat">👟 Move Speed: +{totalStats.movementSpeed}</div>
+              <div className="tooltip-stat">👟 {t.common.movementSpeed}: +{totalStats.movementSpeed}</div>
             )}
             {totalStats.attackRange && (
-              <div className="tooltip-stat">🎯 Range: +{totalStats.attackRange}</div>
+              <div className="tooltip-stat">🎯 {t.common.attackRange}: +{totalStats.attackRange}</div>
             )}
             {totalStats.tenacity && (
-              <div className="tooltip-stat">💪 Tenacity: +{totalStats.tenacity}%</div>
+              <div className="tooltip-stat">💪 {t.common.tenacity}: +{totalStats.tenacity}%</div>
             )}
             {totalStats.healingOnHit && (
               <div className="tooltip-stat">💝 Healing on Hit: +{totalStats.healingOnHit}</div>
@@ -182,10 +184,10 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
               <div className="tooltip-stat">⚡ True Damage: +{totalStats.trueDamage}</div>
             )}
             {totalStats.xpGain && (
-              <div className="tooltip-stat">📚 XP Gain: +{totalStats.xpGain}</div>
+              <div className="tooltip-stat">📚 {t.common.xpGain}: +{totalStats.xpGain}</div>
             )}
             {totalStats.goldGain && (
-              <div className="tooltip-stat">💰 Gold Gain: +{totalStats.goldGain}</div>
+              <div className="tooltip-stat">💰 {t.common.goldGain}: +{totalStats.goldGain}</div>
             )}
             {totalStats.magicFind && (
               <div className="tooltip-stat">🔮 Magic Find: +{totalStats.magicFind}%</div>

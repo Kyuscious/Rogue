@@ -110,6 +110,8 @@
   transition: all 0.3s ease;
   text-align: left;
   box-sizing: border-box;
+  position: relative;
+  overflow: visible;
 }
 
 .region-card:hover {
@@ -319,6 +321,7 @@
   transition: all 0.3s ease;
   text-align: center;
   position: relative;
+  overflow: visible;
 }
 
 .travel-action-card:hover:not(.disabled) {

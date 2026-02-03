@@ -38,19 +38,21 @@ interface ResetConfirmModalProps {
 }
 
 const ResetConfirmModal: React.FC<ResetConfirmModalProps> = ({ isOpen, onConfirm, onCancel }) => {
+  const t = useTranslation();
+  
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
-        <h2>Reset Run?</h2>
-        <p>Are you sure you want to reset your current run? You will return to region selection.</p>
+        <h2>{t.resetConfirm.title}</h2>
+        <p>{t.resetConfirm.message}</p>
         <div className="modal-buttons">
           <button className="btn-cancel" onClick={onCancel}>
-            Cancel
+            {t.resetConfirm.cancel}
           </button>
           <button className="btn-confirm" onClick={onConfirm}>
-            Reset Run
+            {t.resetConfirm.confirm}
           </button>
         </div>
       </div>

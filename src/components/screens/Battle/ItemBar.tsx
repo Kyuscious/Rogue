@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Tooltip } from '../../shared/Tooltip';
 import './ItemBar.css';
 
 interface ItemBarProps {
@@ -9,6 +10,19 @@ interface ItemBarProps {
 }
 
 export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, selectedItemId, canUse }) => {
+  const [tooltipData, setTooltipData] = useState<{ itemId: string; position: { x: number; y: number } } | null>(null);
+
+  const handleItemMouseEnter = (itemId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltipData({
+      itemId,
+      position: { x: rect.left + rect.width / 2, y: rect.bottom }
+    });
+  };
+
+  const handleItemMouseLeave = () => {
+    setTooltipData(null);
+  };
 
   // Filter to only show consumable items (safety check)
   const consumableItems = usableItems.filter(item => item.item?.consumable === true);
@@ -48,6 +62,8 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, sel
               <button
                 className={`item-bar-btn ${!canUse ? 'disabled' : ''} ${isSelected ? 'selected' : ''} rarity-${item.rarity}`}
                 onClick={() => onSelectItem(item.id)}
+                onMouseEnter={(e) => handleItemMouseEnter(item.id, e)}
+                onMouseLeave={handleItemMouseLeave}
               >
                 <div className="item-icon">
                   {item.imagePath ? (
@@ -62,6 +78,13 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, sel
           );
         })}
       </div>
+      
+      {tooltipData && (
+        <Tooltip
+          content={{ type: 'item', itemId: tooltipData.itemId }}
+          position={tooltipData.position}
+        />
+      )}
     </div>
   );
 };

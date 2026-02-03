@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '../../../game/store';
 import { getSpellById } from '../../../game/spells';
+import { Tooltip } from '../../shared/Tooltip';
 import './SpellSelector.css';
 
 interface SpellSelectorProps {
@@ -11,11 +12,24 @@ interface SpellSelectorProps {
 export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
   const { state, equipSpell } = useGameStore();
   const { spells, equippedSpellIndex, spellCooldowns } = state;
+  const [tooltipData, setTooltipData] = useState<{ spellId: string; position: { x: number; y: number } } | null>(null);
   const handleSelectSpell = (index: number) => {
     if (index < spells.length) {
       equipSpell(index);
       onSelect?.();
     }
+  };
+
+  const handleSpellMouseEnter = (spellId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltipData({
+      spellId,
+      position: { x: rect.left + rect.width / 2, y: rect.bottom }
+    });
+  };
+
+  const handleSpellMouseLeave = () => {
+    setTooltipData(null);
   };
 
   // Always show 5 slots
@@ -33,9 +47,8 @@ export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
         className={`spell-slot ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''} ${isOnCooldown ? 'on-cooldown' : ''}`}
         onClick={() => handleSelectSpell(i)}
         disabled={!isAvailable}
-        title={spell ? `${spell.name}${isOnCooldown ? ` (Cooldown: ${cooldown} turn${cooldown > 1 ? 's' : ''})` : ''}` : 'Empty Slot'}
-        onMouseEnter={() => {}}
-        onMouseLeave={() => {}}
+        onMouseEnter={(e) => spell && handleSpellMouseEnter(spell.id, e)}
+        onMouseLeave={handleSpellMouseLeave}
       >
         {spell ? (
           <>
@@ -58,6 +71,13 @@ export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
     <div className="spell-selector">
       <div className="spell-selector-label">Spells:</div>
       <div className="spell-slots">{slots}</div>
+      
+      {tooltipData && (
+        <Tooltip
+          content={{ type: 'spell', spellId: tooltipData.spellId }}
+          position={tooltipData.position}
+        />
+      )}
     </div>
   );
 };

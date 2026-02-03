@@ -74,6 +74,8 @@
   color: #fff;
   text-align: left;
   min-height: clamp(60px, 10vh, 100px);
+  position: relative;
+  overflow: visible;
 }
 
 .post-region-choice-btn:hover:not(.disabled) {

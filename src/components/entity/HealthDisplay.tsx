@@ -2,12 +2,14 @@ import React from 'react';
 import { Character } from '../../game/types';
 import { getScaledStats } from '../../game/statsSystem';
 import { getTotalShield } from '../../game/shieldSystem';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface HealthDisplayProps {
   character: Character;
 }
 
 export const HealthDisplay: React.FC<HealthDisplayProps> = ({ character }) => {
+  const t = useTranslation();
   // For enemies, stats are already fully scaled at spawn (includes items + class bonuses)
   // For players, we need to calculate scaled stats with class bonuses and passives
   const maxHp = character.role === 'enemy' 
@@ -39,7 +41,7 @@ export const HealthDisplay: React.FC<HealthDisplayProps> = ({ character }) => {
           )}
         </div>
         <span className="hp-text">
-          {Math.round(character.hp)}/{Math.round(maxHp)} HP
+          {Math.round(character.hp)}/{Math.round(maxHp)} {t.common.hp}
           {shield > 0 && <span className="shield-text"> +{Math.round(shield)}</span>}
         </span>
       </div>

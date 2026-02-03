@@ -1,0 +1,321 @@
+/* Tooltip Styles */
+.game-tooltip {
+  position: fixed;
+  background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(30, 30, 50, 0.98) 100%);
+  border: 1.5px solid rgba(74, 158, 255, 0.6);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 10000;
+  pointer-events: none;
+  max-width: 320px;
+  box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  animation: tooltipFadeIn 0.15s ease forwards;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tooltip-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 0 8px currentColor;
+}
+
+.tooltip-title.weapon {
+  color: #ff6b6b;
+}
+
+.tooltip-title.spell {
+  color: #4a9eff;
+}
+
+.tooltip-title.item {
+  color: #d4af37;
+}
+
+.tooltip-title.item.rarity-common {
+  color: #9d9d9d;
+}
+
+.tooltip-title.item.rarity-epic {
+  color: #a335ee;
+}
+
+.tooltip-title.item.rarity-legendary {
+  color: #ff8000;
+}
+
+.tooltip-title.item.rarity-transcendent {
+  color: #ffffff;
+}
+
+.tooltip-description {
+  margin: 0;
+  color: #ccc;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.tooltip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.tooltip-stat {
+  background: rgba(74, 158, 255, 0.08);
+  border-left: 2px solid rgba(74, 158, 255, 0.4);
+  padding: 4px 6px;
+  border-radius: 3px;
+  color: #4a9eff;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.tooltip-cooldown {
+  background: rgba(139, 92, 246, 0.1);
+  border-left: 2px solid rgba(139, 92, 246, 0.5);
+  padding: 4px 6px;
+  border-radius: 3px;
+  color: #8b5cf6;
+  font-size: 10px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.tooltip-passive {
+  background: rgba(212, 175, 55, 0.1);
+  border-left: 2px solid rgba(212, 175, 55, 0.5);
+  padding: 6px 8px;
+  border-radius: 3px;
+  color: #d4af37;
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.tooltip-passive strong {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+/* Region Tooltip Specific Styles */
+.tooltip-content.region-tooltip {
+  gap: 12px;
+}
+
+.tooltip-section-title {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: bold;
+  color: #4a9eff;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(74, 158, 255, 0.3);
+  padding-bottom: 6px;
+}
+
+.tooltip-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(74, 158, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(74, 158, 255, 0.2);
+}
+
+.tooltip-section-label {
+  font-size: 11px;
+  font-weight: bold;
+  color: #4a9eff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.tooltip-section .tooltip-title {
+  font-size: 12px;
+}
+
+.tooltip-section .tooltip-description {
+  font-size: 10px;
+}
+
+.tooltip-section .tooltip-stats {
+  gap: 2px;
+}
+
+.tooltip-section .tooltip-stat {
+  font-size: 9px;
+  padding: 3px 5px;
+}
+
+/* Locked Item Tooltip Styles */
+.tooltip-content.locked-tooltip {
+  border: 1.5px solid rgba(255, 68, 68, 0.4);
+}
+
+.tooltip-title.locked {
+  color: #ff6b6b;
+  opacity: 0.8;
+}
+
+.tooltip-locked-info {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 6px;
+  padding: 8px;
+  margin: 8px 0;
+}
+
+.tooltip-locked-label {
+  font-size: 10px;
+  font-weight: bold;
+  color: #ff6b6b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.tooltip-requirement {
+  font-size: 11px;
+  color: #ffb3b3;
+  margin-bottom: 6px;
+}
+
+.tooltip-progress {
+  margin-top: 6px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4a9eff 0%, #00ffff 100%);
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8px rgba(74, 158, 255, 0.5);
+}
+
+.progress-text {
+  font-size: 10px;
+  color: #4a9eff;
+  text-align: center;
+  font-weight: bold;
+}
+
+.tooltip-stats.locked,
+.tooltip-passive.locked {
+  opacity: 0.6;
+}
+
+.tooltip-stats-label {
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 4px;
+  font-style: italic;
+}
+
+/* Tooltip Effects Section */
+.tooltip-effects {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 8px;
+  background: rgba(74, 158, 255, 0.08);
+  border-radius: 4px;
+  border-left: 2px solid rgba(74, 158, 255, 0.4);
+}
+
+.tooltip-effect {
+  font-size: 11px;
+  color: #4a9eff;
+  line-height: 1.4;
+}
+
+.tooltip-effect strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.tooltip-bonus {
+  color: #ffd700;
+  font-size: 10px;
+  font-style: italic;
+}
+
+.tooltip-use-effect {
+  background: rgba(139, 92, 246, 0.1);
+  border-left: 2px solid rgba(139, 92, 246, 0.5);
+  padding: 6px 8px;
+  border-radius: 3px;
+  color: #a78bfa;
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 6px 0;
+}
+
+.tooltip-use-effect strong {
+  color: #c4b5fd;
+  font-weight: 600;
+}
+
+.tooltip-active {
+  background: rgba(139, 92, 246, 0.1);
+  border-left: 2px solid rgba(139, 92, 246, 0.5);
+  padding: 6px 8px;
+  border-radius: 3px;
+  color: #a78bfa;
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 6px 0;
+}
+
+.tooltip-active strong {
+  color: #c4b5fd;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.tooltip-active .tooltip-cooldown,
+.tooltip-active .tooltip-range {
+  margin-top: 4px;
+  font-size: 10px;
+}
+
+.tooltip-range {
+  background: rgba(74, 158, 255, 0.1);
+  border-left: 2px solid rgba(74, 158, 255, 0.5);
+  padding: 4px 6px;
+  border-radius: 3px;
+  color: #4a9eff;
+  font-size: 10px;
+  font-weight: 500;
+  margin-top: 4px;
+}

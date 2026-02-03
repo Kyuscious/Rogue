@@ -166,6 +166,25 @@ export const ui = {
       standard: 'STANDARD',
       endgame: 'ENDGAME',
     },
+    regionDescriptions: {
+      demacia: 'A strong, lawful kingdom with a prestigious military.',
+      ionia: 'A land of natural magic and spirituality.',
+      shurima: 'A vast desert empire of ancient power.',
+      noxus: 'A brutal expansionist empire.',
+      freljord: 'A harsh, frozen tundra of warring tribes.',
+      zaun: 'The undercity of chemtech and experimentation.',
+      ixtal: 'A jungle nation of elemental magic.',
+      bandle_city: 'A whimsical yordle haven.',
+      bilgewater: 'A lawless port city of pirates.',
+      piltover: 'The City of Progress - Hub of connections.',
+      shadow_isles: 'A cursed land of undeath.',
+      void: 'An unknowable dimension of horror.',
+      targon: 'A mystical mountain realm.',
+      camavor: 'A cursed kingdom of ruin and shadow. Gateway to many lands.',
+      marai_territory: 'The depths of the ocean. Connects distant shores.',
+      ice_sea: 'Frozen waters between continents. A treacherous passage.',
+      runeterra: 'The world of Runeterra. All regions converge here.',
+    },
   },
 
   preGameSetup: {
@@ -209,6 +228,13 @@ export const ui = {
     settings: 'Settings',
     reset: 'Reset',
     progressSaved: '💾 Progress Saved',
+  },
+
+  resetConfirm: {
+    title: 'Reset Run?',
+    message: 'Are you sure you want to reset your current run? You will return to region selection.',
+    cancel: 'Cancel',
+    confirm: 'Reset Run',
   },
 
   disclaimer: {

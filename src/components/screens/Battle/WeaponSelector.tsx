@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGameStore } from '../../../game/store';
 import { getWeaponById } from '../../../game/weapons';
+import { Tooltip } from '../../shared/Tooltip';
 import './WeaponSelector.css';
 
 interface WeaponSelectorProps {
@@ -11,11 +12,25 @@ interface WeaponSelectorProps {
 export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect }) => {
   const { state, equipWeapon } = useGameStore();
   const { weapons, equippedWeaponIndex } = state;
+  const [tooltipData, setTooltipData] = useState<{ weaponId: string; position: { x: number; y: number } } | null>(null);
   const handleSelectWeapon = (index: number) => {
     if (index < weapons.length) {
       equipWeapon(index);
       onSelect?.();
     }
+  };
+
+  const handleWeaponMouseEnter = (weaponId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    console.log('🎯 Weapon button rect:', rect);
+    setTooltipData({
+      weaponId,
+      position: { x: rect.left + rect.width / 2, y: rect.bottom }
+    });
+  };
+
+  const handleWeaponMouseLeave = () => {
+    setTooltipData(null);
   };
 
   // Always show 3 slots
@@ -31,9 +46,8 @@ export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect }) => {
         className={`weapon-slot ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''}`}
         onClick={() => handleSelectWeapon(i)}
         disabled={!isAvailable}
-        title={weapon ? weapon.name : 'Empty Slot'}
-        onMouseEnter={() => {}}
-        onMouseLeave={() => {}}
+        onMouseEnter={(e) => weapon && handleWeaponMouseEnter(weapon.id, e)}
+        onMouseLeave={handleWeaponMouseLeave}
       >
         {weapon ? (
           <>
@@ -55,6 +69,13 @@ export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect }) => {
     <div className="weapon-selector">
       <div className="weapon-selector-label">Weapons:</div>
       <div className="weapon-slots">{slots}</div>
+      
+      {tooltipData && (
+        <Tooltip
+          content={{ type: 'weapon', weaponId: tooltipData.weaponId }}
+          position={tooltipData.position}
+        />
+      )}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../game/store';
+import { useTranslation } from '../../hooks/useTranslation';
 import { HealthDisplay } from './HealthDisplay';
 import { LevelDisplay } from './LevelDisplay';
 import { BuffsDisplay } from './BuffsDisplay';
@@ -20,34 +21,6 @@ const CLASS_ICONS: Record<string, string> = {
   enchanter: '✨',
 };
 
-const CLASS_NAMES: Record<string, string> = {
-  mage: 'Mage',
-  vanguard: 'Vanguard',
-  warden: 'Warden',
-  juggernaut: 'Juggernaut',
-  skirmisher: 'Skirmisher',
-  assassin: 'Assassin',
-  marksman: 'Marksman',
-  enchanter: 'Enchanter',
-};
-
-const STAT_DISPLAY_NAMES: Record<string, string> = {
-  health: 'HP',
-  attackDamage: 'Attack Damage',
-  abilityPower: 'Ability Power',
-  armor: 'Armor',
-  magicResist: 'Magic Resist',
-  attackSpeed: 'Attack Speed',
-  attackRange: 'Attack Range',
-  criticalChance: 'Crit Chance',
-  criticalDamage: 'Crit Damage',
-  abilityHaste: 'Ability Haste',
-  lifeSteal: 'Life Steal',
-  omnivamp: 'Omnivamp',
-  movementSpeed: 'Movement Speed',
-  tenacity: 'Tenacity',
-};
-
 export const CharacterStatus: React.FC<{ 
   characterId?: string; 
   combatBuffs?: CombatBuff[];
@@ -55,8 +28,45 @@ export const CharacterStatus: React.FC<{
   isRevealed?: boolean; // For stealth/control ward mechanic - enemy visibility
 }> = ({ characterId, combatBuffs, combatDebuffs, isRevealed = true }) => {
   const { state } = useGameStore();
+  const t = useTranslation();
   const [hoveredClass, setHoveredClass] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  
+  // Map class names to translations
+  const getClassName = (classType: string): string => {
+    const classMap: Record<string, keyof typeof t.common> = {
+      mage: 'mage',
+      vanguard: 'vanguard',
+      warden: 'warden',
+      juggernaut: 'juggernaut',
+      skirmisher: 'skirmisher',
+      assassin: 'assassin',
+      marksman: 'marksman',
+      enchanter: 'enchanter',
+    };
+    return t.common[classMap[classType]] || classType;
+  };
+
+  // Map stat names to translated names
+  const getStatDisplayName = (statName: string): string => {
+    const statMap: Record<string, keyof typeof t.common> = {
+      health: 'health',
+      attackDamage: 'attackDamage',
+      abilityPower: 'abilityPower',
+      armor: 'armor',
+      magicResist: 'magicResist',
+      attackSpeed: 'attackSpeed',
+      attackRange: 'attackRange',
+      criticalChance: 'criticalChance',
+      criticalDamage: 'criticalDamage',
+      abilityHaste: 'abilityHaste',
+      lifeSteal: 'lifeSteal',
+      omnivamp: 'omnivamp',
+      movementSpeed: 'movementSpeed',
+      tenacity: 'tenacity',
+    };
+    return t.common[statMap[statName]] || statName;
+  };
   
   const character = characterId
     ? state.enemyCharacters.find((c) => c.id === characterId)
@@ -127,13 +137,13 @@ export const CharacterStatus: React.FC<{
           onMouseLeave={() => setHoveredClass(false)}
         >
           <span className="class-icon">{CLASS_ICONS[character.class]}</span>
-          {isRevealed && <span className="class-name">{CLASS_NAMES[character.class]}</span>}
+          {isRevealed && <span className="class-name">{getClassName(character.class)}</span>}
         </div>
         
         {/* Class tooltip */}
         {hoveredClass && isRevealed && (
           <div className="class-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-            <div className="tooltip-title">{CLASS_NAMES[character.class]} (Lvl {character.level})</div>
+            <div className="tooltip-title">{getClassName(character.class)} (Lvl {character.level})</div>
             {(() => {
               const classBonuses = getClassStatBonuses(character.class, character.level);
               return (
@@ -142,7 +152,7 @@ export const CharacterStatus: React.FC<{
                     .filter(([_, value]) => value && value !== 0)
                     .map(([stat, value]) => (
                       <div key={stat} className="tooltip-stat">
-                        +{Math.round(value as number)} {STAT_DISPLAY_NAMES[stat] || stat}
+                        +{Math.round(value as number)} {getStatDisplayName(stat)}
                       </div>
                     ))}
                 </div>

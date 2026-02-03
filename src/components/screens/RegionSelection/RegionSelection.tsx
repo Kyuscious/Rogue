@@ -4,8 +4,7 @@ import { useGameStore } from '../../../game/store';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { 
   getAvailableDestinations, 
-  getRegionDisplayName, 
-  getRegionDescription,
+  getRegionDisplayName,
   isEndGameRegion,
   isTravellingRegion,
   hasVisitedRegion
@@ -134,6 +133,21 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
                 (!state.completedRegion || !hasRegionEvents(state.completedRegion));
               const isSelected = selectedAction === option.type;
 
+              // Get translated text based on option type
+              const getTitle = () => {
+                if (option.type === 'rest') return t.postRegion.restTitle;
+                if (option.type === 'trade') return t.postRegion.modifyBuildTitle;
+                if (option.type === 'event') return t.postRegion.exploreTitle;
+                return '';
+              };
+
+              const getDescription = () => {
+                if (option.type === 'rest') return t.postRegion.restDescription;
+                if (option.type === 'trade') return t.postRegion.modifyBuildDescription;
+                if (option.type === 'event') return t.postRegion.exploreDescription;
+                return '';
+              };
+
               return (
                 <button
                   key={option.type}
@@ -142,8 +156,8 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
                   disabled={isDisabled}
                 >
                   <div className="action-icon">{option.icon}</div>
-                  <h4>{option.title}</h4>
-                  <p>{option.description}</p>
+                  <h4>{getTitle()}</h4>
+                  <p>{getDescription()}</p>
                   {isDisabled && <span className="disabled-badge">{t.regionSelection.unavailable}</span>}
                   {isSelected && <div className="selected-indicator">{t.regionSelection.selected}</div>}
                 </button>
@@ -169,6 +183,12 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
               visited ? 'visited-region' : ''
             } ${isSelected ? 'selected' : ''}`;
             
+            // Get translated region description
+            const getRegionDescription = (): string => {
+              const descriptions = t.regionSelection.regionDescriptions;
+              return descriptions[region] || '';
+            };
+            
             return (
               <button
                 key={region}
@@ -179,7 +199,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
                   <h3>{getRegionDisplayName(region)}</h3>
                   {getRegionBadge(region)}
                 </div>
-                <p className="region-description">{getRegionDescription(region)}</p>
+                <p className="region-description">{getRegionDescription()}</p>
                 {isTravellingRegion(region) && (
                   <div className="region-hint">{t.regionSelection.longRangeTravelAvailable}</div>
                 )}

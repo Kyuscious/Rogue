@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Region } from '../../../game/types';
 import { ITEM_DATABASE } from '../../../game/items';
-import { getStarterItemsWithUnlockStatus } from '../../../game/profileUnlocks';
+import { getStarterItemsWithUnlockStatus, getUnlockProgress } from '../../../game/profileUnlocks';
 import { getRegionDisplayName } from '../../../game/regionGraph';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { getItemName } from '../../../i18n/helpers';
+import { getStarterEquipment } from '../../../game/starterEquipment';
+import { Tooltip } from '../../shared/Tooltip';
 import './PreGameSetup.css';
 
 interface PreGameSetupProps {
@@ -25,6 +27,9 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
   const [starterItems, setStarterItems] = useState<any[]>([]);
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
   // Load starter items with unlock status
   useEffect(() => {
@@ -41,11 +46,39 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
     }
   };
 
+  const handleRegionMouseEnter = (regionId: string, unlocked: boolean, e: React.MouseEvent) => {
+    if (unlocked) {
+      setHoveredRegion(regionId);
+      const rect = e.currentTarget.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.bottom,
+      });
+    }
+  };
+
+  const handleRegionMouseLeave = () => {
+    setHoveredRegion(null);
+  };
+
   const handleItemClick = (itemId: string, unlocked: boolean) => {
     if (unlocked) {
       setSelectedItem(itemId);
       setError('');
     }
+  };
+
+  const handleItemMouseEnter = (itemId: string, _unlocked: boolean, e: React.MouseEvent) => {
+    setHoveredItem(itemId);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTooltipPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.bottom,
+    });
+  };
+
+  const handleItemMouseLeave = () => {
+    setHoveredItem(null);
   };
 
   const handleStartRun = () => {
@@ -89,6 +122,8 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                 key={region.id}
                 className={`selection-item ${selectedRegion === region.id ? 'selected' : ''} ${!region.unlocked ? 'locked' : ''}`}
                 onClick={() => handleRegionClick(region.id, region.unlocked)}
+                onMouseEnter={(e) => handleRegionMouseEnter(region.id, region.unlocked, e)}
+                onMouseLeave={handleRegionMouseLeave}
               >
                 {!region.unlocked && <div className="lock-icon">🔒</div>}
                 <div className="item-name">{getRegionDisplayName(region.id as Region)}</div>
@@ -108,6 +143,8 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
                   key={item.id}
                   className={`selection-item ${selectedItem === item.id ? 'selected' : ''} ${!item.unlocked ? 'locked' : ''}`}
                   onClick={() => handleItemClick(item.id, item.unlocked)}
+                  onMouseEnter={(e) => handleItemMouseEnter(item.id, item.unlocked, e)}
+                  onMouseLeave={handleItemMouseLeave}
                 >
                 {!item.unlocked && <div className="lock-icon">🔒</div>}
                 {itemData?.imagePath && (
@@ -130,6 +167,51 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
           {t.preGameSetup.startYourRun}
         </button>
       </div>
+
+      {/* Tooltips */}
+      {hoveredRegion && (() => {
+        const equipment = getStarterEquipment(hoveredRegion as Region);
+        return (
+          <Tooltip
+            position={tooltipPosition}
+            content={{
+              type: 'region',
+              regionWeaponId: equipment.weapon,
+              regionSpellId: equipment.spell,
+            }}
+          />
+        );
+      })()}
+
+      {hoveredItem && (() => {
+        const item = STARTER_ITEMS.find(i => i.id === hoveredItem);
+        if (!item) return null;
+        
+        if (item.unlocked) {
+          return (
+            <Tooltip
+              position={tooltipPosition}
+              content={{
+                type: 'item',
+                itemId: hoveredItem,
+              }}
+            />
+          );
+        } else {
+          const progress = getUnlockProgress(hoveredItem);
+          return (
+            <Tooltip
+              position={tooltipPosition}
+              content={{
+                type: 'locked-item',
+                lockedItemId: hoveredItem,
+                unlockRequirement: item.requirement.description,
+                unlockProgress: progress || undefined,
+              }}
+            />
+          );
+        }
+      })()}
     </div>
   );
 };

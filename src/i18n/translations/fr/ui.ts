@@ -166,6 +166,25 @@ export const ui = {
       standard: 'STANDARD',
       endgame: 'FIN DE PARTIE',
     },
+    regionDescriptions: {
+      demacia: 'Un royaume fort et légal avec une armée prestigieuse.',
+      ionia: 'Une terre de magie naturelle et de spiritualité.',
+      shurima: 'Un vaste empire désertique de pouvoir ancien.',
+      noxus: 'Un empire expansionniste brutal.',
+      freljord: 'Une toundra gelée impitoyable de tribus en guerre.',
+      zaun: 'La ville souterraine de la chimtechnologie et de l\'expérimentation.',
+      ixtal: 'Une nation jungle de magie élémentaire.',
+      bandle_city: 'Un havre yordle fantaisiste.',
+      bilgewater: 'Une ville portuaire sans foi ni loi de pirates.',
+      piltover: 'La Cité du Progrès - Plaque tournante de connexions.',
+      shadow_isles: 'Une terre maudite de mort-vivants.',
+      void: 'Une dimension inconnaissable d\'horreur.',
+      targon: 'Un royaume montagneux mystique.',
+      camavor: 'Un royaume maudit de ruine et d\'ombre. Porte d\'entrée vers de nombreuses terres.',
+      marai_territory: 'Les profondeurs de l\'océan. Relie des rivages distants.',
+      ice_sea: 'Eaux gelées entre les continents. Un passage périlleux.',
+      runeterra: 'Le monde de Runeterra. Toutes les régions convergent ici.',
+    },
   },
 
   preGameSetup: {
@@ -209,6 +228,13 @@ export const ui = {
     settings: 'Paramètres',
     reset: 'Réinitialiser',
     progressSaved: '💾 Progression Sauvegardée',
+  },
+
+  resetConfirm: {
+    title: 'Réinitialiser la Partie ?',
+    message: 'Êtes-vous sûr de vouloir réinitialiser votre partie actuelle ? Vous retournerez à la sélection de région.',
+    cancel: 'Annuler',
+    confirm: 'Réinitialiser',
   },
 
   disclaimer: {

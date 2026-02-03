@@ -39,6 +39,7 @@ export interface Translations {
     gold: string;
     floor: string;
     hp: string;
+    hpFull: string;
     damage: string;
     armor: string;
     magicResist: string;
@@ -47,6 +48,41 @@ export interface Translations {
     health: string;
     mana: string;
     energy: string;
+    // Additional stats
+    attackSpeed: string;
+    attackRange: string;
+    criticalChance: string;
+    criticalDamage: string;
+    abilityHaste: string;
+    lifeSteal: string;
+    spellVamp: string;
+    omnivamp: string;
+    movementSpeed: string;
+    tenacity: string;
+    goldGain: string;
+    xpGain: string;
+    lethality: string;
+    magicPenetration: string;
+    healShieldPower: string;
+    healthRegen: string;
+    healOverTime: string;
+    // Class names
+    mage: string;
+    vanguard: string;
+    warden: string;
+    juggernaut: string;
+    skirmisher: string;
+    assassin: string;
+    marksman: string;
+    enchanter: string;
+    // UI labels
+    totalStats: string;
+    classBonuses: string;
+    survivalStats: string;
+    attackStats: string;
+    spellStats: string;
+    mobilityStats: string;
+    miscStats: string;
   };
 
   // Main Menu
@@ -226,6 +262,25 @@ export interface Translations {
       standard: string;
       endgame: string;
     };
+    regionDescriptions: {
+      demacia: string;
+      ionia: string;
+      shurima: string;
+      noxus: string;
+      freljord: string;
+      zaun: string;
+      ixtal: string;
+      bandle_city: string;
+      bilgewater: string;
+      piltover: string;
+      shadow_isles: string;
+      void: string;
+      targon: string;
+      camavor: string;
+      marai_territory: string;
+      ice_sea: string;
+      runeterra: string;
+    };
   };
 
   // Pre-Game Setup
@@ -270,6 +325,13 @@ export interface Translations {
     settings: string;
     reset: string;
     progressSaved: string;
+  };
+
+  resetConfirm: {
+    title: string;
+    message: string;
+    cancel: string;
+    confirm: string;
   };
 
   // Disclaimer Screen

@@ -249,6 +249,26 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     setSelectedItemId(null); // Reset selected item for new encounter
     setEnemyDebuffs([]); // Reset enemy debuffs for new encounter
     
+    // Reduce buff durations by 1 when transitioning to new encounter
+    setPlayerBuffs((prevBuffs) => {
+      const updatedBuffs = prevBuffs
+        .map(buff => ({
+          ...buff,
+          duration: buff.duration - 1,
+        }))
+        .filter(buff => buff.duration > 0); // Remove expired buffs
+      
+      if (updatedBuffs.length !== prevBuffs.length) {
+        console.log('🕐 Buffs reduced for new encounter:', {
+          before: prevBuffs.map(b => ({ name: b.name, duration: b.duration })),
+          after: updatedBuffs.map(b => ({ name: b.name, duration: b.duration })),
+          expired: prevBuffs.length - updatedBuffs.length,
+        });
+      }
+      
+      return updatedBuffs;
+    });
+    
     // Log cooldown reductions from previous encounter
     const activeCooldowns = Object.entries(state.spellCooldowns);
     if (activeCooldowns.length > 0) {
@@ -1019,7 +1039,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             name: 'For Demacia!',
             stat: 'attackDamage',
             amount: adBonus,
-            duration: 2, // 2 turns: current turn + next turn
+            duration: 1, // 1 turn: expires at next turn boundary
             durationType: 'turns',
           };
           setPlayerBuffs(prev => [...prev, combatBuff]);

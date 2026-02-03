@@ -12,28 +12,23 @@ export type PostRegionChoice = 'rest' | 'trade' | 'event';
 
 export interface PostRegionChoiceOption {
   type: PostRegionChoice;
-  title: string;
-  description: string;
   icon: string;
+  // Note: title and description are now handled via i18n
+  // See: t.postRegion.restTitle, t.postRegion.modifyBuildTitle, t.postRegion.exploreTitle
+  // and their corresponding description keys
 }
 
 export const POST_REGION_CHOICES: PostRegionChoiceOption[] = [
   {
     type: 'rest',
-    title: 'Rest',
-    description: 'Heal to full HP and restore all resources. Safe and reliable.',
     icon: '🛏️',
   },
   {
     type: 'trade',
-    title: 'Trade',
-    description: 'Visit a merchant or trading outpost. Combine items, change class, or discard items.',
     icon: '🛍️',
   },
   {
     type: 'event',
-    title: 'Explore',
-    description: 'Trigger a random event from this region. Risk and reward!',
     icon: '🎲',
   },
 ];
