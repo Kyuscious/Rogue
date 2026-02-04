@@ -20,7 +20,7 @@ export const CAMAVOR_MINIONS: Character[] = [
       health: 50,
       attackDamage: 12,
       movementSpeed: 140,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
   },
 ];
@@ -45,7 +45,7 @@ export const CAMAVOR_ELITES: Character[] = [
       attackDamage: 45,
       armor: 25,
       magicResist: 15,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
 ];
@@ -70,7 +70,7 @@ export const CAMAVOR_BOSSES: Character[] = [
       attackDamage: 60,
       armor: 30,
       magicResist: 30,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];

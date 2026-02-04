@@ -13,7 +13,7 @@ const STAT_CAPS = {
   abilityPower: 500,
   armor: 300,
   magicResist: 300,
-  attackSpeed: 3.0,
+  speed: 3.0,
   movementSpeed: 600,
   criticalChance: 100,
   criticalDamage: 300,
@@ -70,7 +70,7 @@ export function modifyStatPoints(character: Character, modifications: {
   abilityPower?: number;
   armor?: number;
   magicResist?: number;
-  attackSpeed?: number;
+  speed?: number;
   movementSpeed?: number;
 }): boolean {
   console.log('[BUILD SYSTEM] Applying stat modifications:', modifications);

@@ -69,8 +69,8 @@ export const Tooltip: React.FC<TooltipProps> = ({ content }) => {
             {weapon.stats.abilityPower && (
               <div className="tooltip-stat">✨ AP: +{weapon.stats.abilityPower}</div>
             )}
-            {weapon.stats.attackSpeed && (
-              <div className="tooltip-stat">⚡ AS: +{weapon.stats.attackSpeed}</div>
+            {weapon.stats.speed && (
+              <div className="tooltip-stat">⚡ AS: +{weapon.stats.speed}</div>
             )}
             {weapon.stats.attackRange && (
               <div className="tooltip-stat">🎯 Range: +{weapon.stats.attackRange}</div>
@@ -206,8 +206,8 @@ export const Tooltip: React.FC<TooltipProps> = ({ content }) => {
             {item.stats.health && (
               <div className="tooltip-stat">❤️ HP: +{item.stats.health}</div>
             )}
-            {item.stats.attackSpeed && (
-              <div className="tooltip-stat">⚡ AS: +{item.stats.attackSpeed}</div>
+            {item.stats.speed && (
+              <div className="tooltip-stat">⚡ AS: +{item.stats.speed}</div>
             )}
             {item.stats.lifeSteal && (
               <div className="tooltip-stat">💉 Lifesteal: +{item.stats.lifeSteal}%</div>
@@ -227,8 +227,8 @@ export const Tooltip: React.FC<TooltipProps> = ({ content }) => {
             {item.stats.lethality && (
               <div className="tooltip-stat">🗡️ Lethality: +{item.stats.lethality}</div>
             )}
-            {item.stats.abilityHaste && (
-              <div className="tooltip-stat">⏱️ Ability Haste: +{item.stats.abilityHaste}</div>
+            {item.stats.haste && (
+              <div className="tooltip-stat">⏱️ Haste: +{item.stats.haste}</div>
             )}
             {item.stats.magicPenetration && (
               <div className="tooltip-stat">🔹 Magic Pen: +{item.stats.magicPenetration}</div>
@@ -316,8 +316,8 @@ export const Tooltip: React.FC<TooltipProps> = ({ content }) => {
             {item.stats.health && (
               <div className="tooltip-stat">❤️ HP: +{item.stats.health}</div>
             )}
-            {item.stats.attackSpeed && (
-              <div className="tooltip-stat">⚡ AS: +{item.stats.attackSpeed}</div>
+            {item.stats.speed && (
+              <div className="tooltip-stat">⚡ AS: +{item.stats.speed}</div>
             )}
             {item.stats.lifeSteal && (
               <div className="tooltip-stat">💉 Lifesteal: +{item.stats.lifeSteal}%</div>

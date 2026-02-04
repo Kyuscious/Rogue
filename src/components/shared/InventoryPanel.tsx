@@ -67,8 +67,8 @@ export const InventoryPanel: React.FC = () => {
                 {getItemById(hoveredItemId)?.stats.health && (
                   <div className="tooltip-stat">❤️ HP: +{getItemById(hoveredItemId)?.stats.health}</div>
                 )}
-                {getItemById(hoveredItemId)?.stats.attackSpeed && (
-                  <div className="tooltip-stat">⚡ AS: +{getItemById(hoveredItemId)?.stats.attackSpeed}</div>
+                {getItemById(hoveredItemId)?.stats.speed && (
+                  <div className="tooltip-stat">⚡ AS: +{getItemById(hoveredItemId)?.stats.speed}</div>
                 )}
                 {getItemById(hoveredItemId)?.stats.lifeSteal && (
                   <div className="tooltip-stat">💉 Lifesteal: +{getItemById(hoveredItemId)?.stats.lifeSteal}</div>

@@ -21,7 +21,7 @@ export const ICE_SEA_MINIONS: Character[] = [
       attackDamage: 8,
       armor: 6,
       magicResist: 3,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
     inventory: [
       { itemId: 'longsword', quantity: 1 },
@@ -46,7 +46,7 @@ export const ICE_SEA_MINIONS: Character[] = [
       attackDamage: 6,
       abilityPower: 11,
       magicResist: 4,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
   },
   {
@@ -67,7 +67,7 @@ export const ICE_SEA_MINIONS: Character[] = [
       attackDamage: 10,
       movementSpeed: 135,
       magicResist: 2,
-      attackSpeed: 0.75,
+      speed: 0.75,
     },
   },
 ];
@@ -92,7 +92,7 @@ export const ICE_SEA_ELITES: Character[] = [
       attackDamage: 13,
       armor: 12,
       magicResist: 7,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
     inventory: [
       { itemId: 'cloth_armor', quantity: 2 },
@@ -118,7 +118,7 @@ export const ICE_SEA_ELITES: Character[] = [
       abilityPower: 20,
       armor: 2,
       magicResist: 8,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
     inventory: [
       { itemId: 'mana_crystal', quantity: 2 },
@@ -147,7 +147,7 @@ export const ICE_SEA_BOSSES: Character[] = [
       attackDamage: 19,
       armor: 18,
       magicResist: 12,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
     inventory: [
       { itemId: 'thornmail', quantity: 1 },
@@ -173,7 +173,7 @@ export const ICE_SEA_BOSSES: Character[] = [
       abilityPower: 28,
       armor: 6,
       magicResist: 15,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
     inventory: [
       { itemId: 'mana_crystal', quantity: 3 },

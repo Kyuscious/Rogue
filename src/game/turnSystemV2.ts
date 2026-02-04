@@ -19,8 +19,8 @@
 export interface TurnEntity {
   id: string;
   name: string;
-  attackSpeed: number;
-  abilityHaste: number;
+  speed: number;
+  haste: number;
 }
 
 export interface TurnAction {
@@ -39,24 +39,24 @@ export interface TurnAction {
 /**
  * Calculate attack increment based on attack speed
  */
-function getAttackIncrement(attackSpeed: number): number {
-  if (attackSpeed >= 1.0) {
+function getAttackIncrement(speed: number): number {
+  if (speed >= 1.0) {
     // 1 / AS (attacks start at 1.0)
-    return 1.0 / attackSpeed;
+    return 1.0 / speed;
   } else {
     // 2 - AS (attacks start at 2-AS)
-    return 2.0 - attackSpeed;
+    return 2.0 - speed;
   }
 }
 
 /**
  * Calculate first attack time
  */
-function getFirstAttackTime(attackSpeed: number): number {
-  if (attackSpeed >= 1.0) {
+function getFirstAttackTime(speed: number): number {
+  if (speed >= 1.0) {
     return 1.0; // Always start at 1.0 for fast attacks
   } else {
-    return 2.0 - attackSpeed; // Same as increment for slow attacks
+    return 2.0 - speed; // Same as increment for slow attacks
   }
 }
 
@@ -64,8 +64,8 @@ function getFirstAttackTime(attackSpeed: number): number {
  * Calculate spell cooldown based on ability haste
  * Base cooldown is 1.0, reduced by haste/1000
  */
-function getSpellCooldown(abilityHaste: number): number {
-  const cappedHaste = Math.min(abilityHaste, 500);
+function getSpellCooldown(haste: number): number {
+  const cappedHaste = Math.min(haste, 500);
   return 1.0 - (cappedHaste / 1000.0);
 }
 
@@ -80,14 +80,14 @@ export function generateTurnSequence(
   const actions: TurnAction[] = [];
   
   // Calculate attack parameters
-  const playerAttackIncrement = getAttackIncrement(playerEntity.attackSpeed);
-  const playerFirstAttack = getFirstAttackTime(playerEntity.attackSpeed);
-  const enemyAttackIncrement = getAttackIncrement(enemyEntity.attackSpeed);
-  const enemyFirstAttack = getFirstAttackTime(enemyEntity.attackSpeed);
+  const playerAttackIncrement = getAttackIncrement(playerEntity.speed);
+  const playerFirstAttack = getFirstAttackTime(playerEntity.speed);
+  const enemyAttackIncrement = getAttackIncrement(enemyEntity.speed);
+  const enemyFirstAttack = getFirstAttackTime(enemyEntity.speed);
   
   // Calculate spell parameters
-  const playerSpellCooldown = getSpellCooldown(playerEntity.abilityHaste);
-  const enemySpellCooldown = getSpellCooldown(enemyEntity.abilityHaste);
+  const playerSpellCooldown = getSpellCooldown(playerEntity.haste);
+  const enemySpellCooldown = getSpellCooldown(enemyEntity.haste);
   
   // Generate actions for each turn
   for (let turn = 1; turn <= maxTurns; turn++) {
@@ -224,7 +224,7 @@ export function stunEntity(entity: TurnEntity): TurnEntity {
 export function chillEntity(entity: TurnEntity, amount: number): TurnEntity {
   return {
     ...entity,
-    attackSpeed: Math.max(0.1, entity.attackSpeed * (1 - amount / 100)),
+    speed: Math.max(0.1, entity.speed * (1 - amount / 100)),
   };
 }
 

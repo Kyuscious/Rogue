@@ -14,7 +14,7 @@
 }
 
 .stats-panel-container.enemy-stats {
-  flex-direction: row-reverse;
+  flex-direction: row;
 }
 
 .stats-button {
@@ -55,6 +55,19 @@
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.quick-stats-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.quick-stat-separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(74, 158, 255, 0.4);
+  margin: 0 4px;
 }
 
 /* Hidden quick stats - show invisible icon instead */

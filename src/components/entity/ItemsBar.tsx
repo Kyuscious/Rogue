@@ -138,8 +138,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
             {totalStats.health && (
               <div className="tooltip-stat">❤️ {t.common.health}: +{totalStats.health}</div>
             )}
-            {totalStats.attackSpeed && (
-              <div className="tooltip-stat">⚡ {t.common.attackSpeed}: +{totalStats.attackSpeed}</div>
+            {totalStats.speed && (
+              <div className="tooltip-stat">⚡ {t.common.speed}: +{totalStats.speed}</div>
             )}
             {totalStats.lifeSteal && (
               <div className="tooltip-stat">💉 {t.common.lifeSteal}: +{totalStats.lifeSteal}%</div>
@@ -159,8 +159,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
             {totalStats.lethality && (
               <div className="tooltip-stat">🗡️ {t.common.lethality}: +{totalStats.lethality}</div>
             )}
-            {totalStats.abilityHaste && (
-              <div className="tooltip-stat">⏱️ {t.common.abilityHaste}: +{totalStats.abilityHaste}</div>
+            {totalStats.haste && (
+              <div className="tooltip-stat">⏱️ {t.common.haste}: +{totalStats.haste}</div>
             )}
             {totalStats.magicPenetration && (
               <div className="tooltip-stat">🔹 {t.common.magicPenetration}: +{totalStats.magicPenetration}</div>
@@ -225,8 +225,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
                 {itemData?.stats.health && (
                   <div className="tooltip-stat">❤️ HP: +{itemData.stats.health}</div>
                 )}
-                {itemData?.stats.attackSpeed && (
-                  <div className="tooltip-stat">⚡ AS: +{itemData.stats.attackSpeed}</div>
+                {itemData?.stats.speed && (
+                  <div className="tooltip-stat">⚡ AS: +{itemData.stats.speed}</div>
                 )}
                 {itemData?.stats.lifeSteal && (
                   <div className="tooltip-stat">💉 Lifesteal: +{itemData.stats.lifeSteal}%</div>
@@ -246,8 +246,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
                 {itemData?.stats.lethality && (
                   <div className="tooltip-stat">🗡️ Lethality: +{itemData.stats.lethality}</div>
                 )}
-                {itemData?.stats.abilityHaste && (
-                  <div className="tooltip-stat">⏱️ Ability Haste: +{itemData.stats.abilityHaste}</div>
+                {itemData?.stats.haste && (
+                  <div className="tooltip-stat">⏱️ Haste: +{itemData.stats.haste}</div>
                 )}
                 {itemData?.stats.magicPenetration && (
                   <div className="tooltip-stat">🔹 Magic Pen: +{itemData.stats.magicPenetration}</div>
@@ -308,8 +308,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
                   {itemData?.stats.health && (
                     <div className="tooltip-stat">❤️ HP: +{itemData.stats.health * quantity}</div>
                   )}
-                  {itemData?.stats.attackSpeed && (
-                    <div className="tooltip-stat">⚡ AS: +{itemData.stats.attackSpeed * quantity}</div>
+                  {itemData?.stats.speed && (
+                    <div className="tooltip-stat">⚡ AS: +{itemData.stats.speed * quantity}</div>
                   )}
                   {itemData?.stats.lifeSteal && (
                     <div className="tooltip-stat">💉 Lifesteal: +{itemData.stats.lifeSteal * quantity}%</div>
@@ -329,8 +329,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
                   {itemData?.stats.lethality && (
                     <div className="tooltip-stat">🗡️ Lethality: +{itemData.stats.lethality * quantity}</div>
                   )}
-                  {itemData?.stats.abilityHaste && (
-                    <div className="tooltip-stat">⏱️ Ability Haste: +{itemData.stats.abilityHaste * quantity}</div>
+                  {itemData?.stats.haste && (
+                    <div className="tooltip-stat">⏱️ Haste: +{itemData.stats.haste * quantity}</div>
                   )}
                   {itemData?.stats.magicPenetration && (
                     <div className="tooltip-stat">🔹 Magic Pen: +{itemData.stats.magicPenetration * quantity}</div>

@@ -24,7 +24,7 @@ export const RUNETERRA_MINIONS: Character[] = [
       attackDamage: 12,
       armor: 5,
       movementSpeed: 145,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
   },
   {
@@ -44,7 +44,7 @@ export const RUNETERRA_MINIONS: Character[] = [
       health: 48,
       attackDamage: 11,
       armor: 6,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -65,7 +65,7 @@ export const RUNETERRA_MINIONS: Character[] = [
       attackDamage: 13,
       abilityPower: 8,
       movementSpeed: 140,
-      attackSpeed: 0.75,
+      speed: 0.75,
     },
   },
   {
@@ -87,7 +87,7 @@ export const RUNETERRA_MINIONS: Character[] = [
       abilityPower: 10,
       armor: 7,
       magicResist: 7,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -108,7 +108,7 @@ export const RUNETERRA_MINIONS: Character[] = [
       attackDamage: 5,
       abilityPower: 14,
       magicResist: 8,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];
@@ -134,7 +134,7 @@ export const RUNETERRA_ELITES: Character[] = [
       abilityPower: 30,
       armor: 20,
       magicResist: 20,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -156,7 +156,7 @@ export const RUNETERRA_ELITES: Character[] = [
       abilityPower: 25,
       armor: 12,
       movementSpeed: 155,
-      attackSpeed: 0.75,
+      speed: 0.75,
     },
   },
   {
@@ -177,7 +177,7 @@ export const RUNETERRA_ELITES: Character[] = [
       attackDamage: 38,
       armor: 18,
       magicResist: 10,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];
@@ -203,7 +203,7 @@ export const RUNETERRA_BOSSES: Character[] = [
       abilityPower: 50,
       armor: 32,
       magicResist: 32,
-      attackSpeed: 0.55,
+      speed: 0.55,
     },
   },
   {
@@ -225,7 +225,7 @@ export const RUNETERRA_BOSSES: Character[] = [
       abilityPower: 60,
       armor: 25,
       magicResist: 25,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -246,7 +246,7 @@ export const RUNETERRA_BOSSES: Character[] = [
       attackDamage: 70,
       armor: 22,
       movementSpeed: 165,
-      attackSpeed: 0.8,
+      speed: 0.8,
     },
   },
 ];
@@ -273,7 +273,7 @@ export const RUNETERRA_CHAMPIONS: Character[] = [
       armor: 28,
       magicResist: 38,
       movementSpeed: 155,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -295,7 +295,7 @@ export const RUNETERRA_CHAMPIONS: Character[] = [
       abilityPower: 95,
       armor: 25,
       magicResist: 32,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -317,7 +317,7 @@ export const RUNETERRA_CHAMPIONS: Character[] = [
       abilityPower: 90,
       armor: 30,
       magicResist: 35,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
 ];

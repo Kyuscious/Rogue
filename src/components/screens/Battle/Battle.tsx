@@ -204,15 +204,15 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     const pEntity: TurnEntity = {
       id: 'player',
       name: getCharacterName(playerChar),
-      attackSpeed: freshPlayerStats.attackSpeed,
-      abilityHaste: freshPlayerStats.abilityHaste,
+      speed: freshPlayerStats.speed,
+      haste: freshPlayerStats.haste,
     };
 
     const eEntity: TurnEntity = {
       id: 'enemy',
       name: getCharacterName(enemyChar),
-      attackSpeed: freshEnemyStats.attackSpeed,
-      abilityHaste: freshEnemyStats.abilityHaste,
+      speed: freshEnemyStats.speed,
+      haste: freshEnemyStats.haste,
     };
 
     setPlayerEntity(pEntity);

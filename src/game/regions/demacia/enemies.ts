@@ -22,7 +22,7 @@ export const DEMACIA_MINIONS: Character[] = [
       attackDamage: 8,
       abilityPower: 6,
       armor: 5,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
     inventory: [
       { itemId: 'longsword', quantity: 1 },
@@ -47,7 +47,7 @@ export const DEMACIA_MINIONS: Character[] = [
       attackDamage: 10,
       abilityPower: 4,
       movementSpeed: 150,
-      attackSpeed: 0.8,
+      speed: 0.8,
     },
   },
   {
@@ -69,7 +69,7 @@ export const DEMACIA_MINIONS: Character[] = [
       attackDamage: 10,
       armor: 10,
       magicResist: 5,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   //Faction : Demacia's beasts
@@ -92,7 +92,7 @@ export const DEMACIA_MINIONS: Character[] = [
       abilityPower: 0,
       armor: 8,
       movementSpeed: 100,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
   },
 
@@ -116,7 +116,7 @@ export const DEMACIA_ELITES: Character[] = [
       attackDamage: 40,
       armor: 20,
       magicResist: 10,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   {
@@ -137,7 +137,7 @@ export const DEMACIA_ELITES: Character[] = [
       attackDamage: 30,
       abilityPower: 35,
       armor: 12,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
 
@@ -160,7 +160,7 @@ export const DEMACIA_ELITES: Character[] = [
       attackDamage: 35,
       armor: 15,
       magicResist: 15,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   ];
@@ -187,7 +187,7 @@ export const DEMACIA_BOSSES: Character[] = [
       abilityPower: 10,
       armor: 30,
       magicResist: 20,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   {
@@ -209,7 +209,7 @@ export const DEMACIA_BOSSES: Character[] = [
       abilityPower: 80,
       armor: 15,
       magicResist: 25,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   {
@@ -230,7 +230,7 @@ export const DEMACIA_BOSSES: Character[] = [
       attackDamage: 55,
       armor: 25,
       magicResist: 15,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
 ];
@@ -255,7 +255,7 @@ export const DEMACIA_CHAMPIONS: Character[] = [
       attackDamage: 70,
       armor: 40,
       magicResist: 30,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];

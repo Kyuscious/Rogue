@@ -49,11 +49,11 @@ export interface Translations {
     mana: string;
     energy: string;
     // Additional stats
-    attackSpeed: string;
+    speed: string;
     attackRange: string;
     criticalChance: string;
     criticalDamage: string;
-    abilityHaste: string;
+    haste: string;
     lifeSteal: string;
     spellVamp: string;
     omnivamp: string;

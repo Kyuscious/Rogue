@@ -20,11 +20,11 @@ export const common = {
   mana: 'Mana',
   energy: 'Énergie',
   // Additional stats
-  attackSpeed: 'Vitesse d\'Attaque',
+  speed: 'Vitesse',
   attackRange: 'Portée d\'Attaque',
   criticalChance: 'Chance Critique',
   criticalDamage: 'Dégâts Critiques',
-  abilityHaste: 'Hâte des Capacités',
+  haste: 'Hâte',
   lifeSteal: 'Vol de Vie',
   spellVamp: 'Vampirisme de Sort',
   omnivamp: 'Omnivampirisme',

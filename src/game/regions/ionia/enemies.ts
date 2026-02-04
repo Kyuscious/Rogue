@@ -22,7 +22,7 @@ export const IONIA_MINIONS: Character[] = [
       attackDamage: 5,
       abilityPower: 12,
       magicResist: 8,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
   },
   {
@@ -43,7 +43,7 @@ export const IONIA_MINIONS: Character[] = [
       attackDamage: 12,
       abilityPower: 8,
       movementSpeed: 160,
-      attackSpeed: 0.9,
+      speed: 0.9,
     },
   },
   {
@@ -64,7 +64,7 @@ export const IONIA_MINIONS: Character[] = [
       attackDamage: 10,
       abilityPower: 6,
       movementSpeed: 140,
-      attackSpeed: 0.8,
+      speed: 0.8,
     },
   },
   // Faction: Vastayan (animal-like magical creatures)
@@ -86,7 +86,7 @@ export const IONIA_MINIONS: Character[] = [
       attackDamage: 11,
       abilityPower: 5,
       movementSpeed: 145,
-      attackSpeed: 0.85,
+      speed: 0.85,
     },
   },
   {
@@ -107,7 +107,7 @@ export const IONIA_MINIONS: Character[] = [
       attackDamage: 4,
       abilityPower: 14,
       magicResist: 10,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];
@@ -133,7 +133,7 @@ export const IONIA_ELITES: Character[] = [
       abilityPower: 20,
       armor: 10,
       movementSpeed: 150,
-      attackSpeed: 0.75,
+      speed: 0.75,
     },
   },
   {
@@ -154,7 +154,7 @@ export const IONIA_ELITES: Character[] = [
       attackDamage: 15,
       abilityPower: 45,
       magicResist: 20,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -176,7 +176,7 @@ export const IONIA_ELITES: Character[] = [
       abilityPower: 25,
       armor: 15,
       magicResist: 15,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];
@@ -202,7 +202,7 @@ export const IONIA_BOSSES: Character[] = [
       abilityPower: 40,
       armor: 20,
       movementSpeed: 170,
-      attackSpeed: 0.85,
+      speed: 0.85,
     },
   },
   {
@@ -224,7 +224,7 @@ export const IONIA_BOSSES: Character[] = [
       abilityPower: 85,
       armor: 15,
       magicResist: 30,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   {
@@ -246,7 +246,7 @@ export const IONIA_BOSSES: Character[] = [
       abilityPower: 30,
       armor: 25,
       movementSpeed: 155,
-      attackSpeed: 0.8,
+      speed: 0.8,
     },
   },
 ];
@@ -272,7 +272,7 @@ export const IONIA_CHAMPIONS: Character[] = [
       abilityPower: 40,
       armor: 35,
       movementSpeed: 160,
-      attackSpeed: 0.9,
+      speed: 0.9,
     },
   },
   {
@@ -295,7 +295,7 @@ export const IONIA_CHAMPIONS: Character[] = [
       armor: 25,
       magicResist: 35,
       movementSpeed: 150,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
   },
 ];

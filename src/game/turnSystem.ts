@@ -19,8 +19,8 @@ export interface TurnEntity {
   id: string;
   name: string;
   nextTurnTime: number;
-  attackSpeed: number; // How often can attack (higher = more often)
-  abilityHaste: number; // Cooldown reduction in % (0-100)
+  speed: number; // How often can attack (higher = more often)
+  haste: number; // Cooldown reduction in % (0-100)
   isStuned: boolean;
   stunDuration: number;
   isSlowed: boolean;
@@ -39,7 +39,7 @@ export interface TurnAction {
  * Calculate the next turn time for an entity after they act
  */
 export function getNextTurnIncrement(entity: TurnEntity): number {
-  let baseIncrement = 1 / Math.max(0.1, entity.attackSpeed); // Inverse of attack speed
+  let baseIncrement = 1 / Math.max(0.1, entity.speed); // Inverse of attack speed
   
   // Apply slow effect
   if (entity.isSlowed) {
@@ -61,7 +61,7 @@ export function getNextSpellIncrement(entity: TurnEntity): number {
   let baseIncrement = 2; // Base spell cooldown is 2 units (longer than attacks)
   
   // Ability Haste reduces cooldown (max 100% reduction = 50% of base)
-  const cooldownReduction = Math.min(entity.abilityHaste, 100) / 100;
+  const cooldownReduction = Math.min(entity.haste, 100) / 100;
   baseIncrement = baseIncrement * (1 - cooldownReduction * 0.5); // Max 50% reduction
   
   // Apply slow effect to ability cooldown as well

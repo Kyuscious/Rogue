@@ -275,7 +275,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                   </div>
                   <div className="stat-input-row">
                     <label>Attack Speed:</label>
-                    <input type="number" step="0.01" value={playerStats.attackSpeed} onChange={(e) => handlePlayerStatChange('attackSpeed', parseFloat(e.target.value))} />
+                    <input type="number" step="0.01" value={playerStats.speed} onChange={(e) => handlePlayerStatChange('speed', parseFloat(e.target.value))} />
                   </div>
                   <div className="stat-input-row">
                     <label>Critical Chance:</label>
@@ -331,7 +331,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                   </div>
                   <div className="stat-input-row">
                     <label>Ability Haste:</label>
-                    <input type="number" value={playerStats.abilityHaste} onChange={(e) => handlePlayerStatChange('abilityHaste', parseFloat(e.target.value))} />
+                    <input type="number" value={playerStats.haste} onChange={(e) => handlePlayerStatChange('haste', parseFloat(e.target.value))} />
                   </div>
                   <div className="stat-input-row">
                     <label>Magic Penetration:</label>
@@ -467,7 +467,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                   </div>
                   <div className="stat-input-row">
                     <label>Attack Speed:</label>
-                    <input type="number" step="0.01" value={enemyStats.attackSpeed} onChange={(e) => handleEnemyStatChange('attackSpeed', parseFloat(e.target.value))} />
+                    <input type="number" step="0.01" value={enemyStats.speed} onChange={(e) => handleEnemyStatChange('speed', parseFloat(e.target.value))} />
                   </div>
                   <div className="stat-input-row">
                     <label>Critical Chance:</label>
@@ -523,7 +523,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                   </div>
                   <div className="stat-input-row">
                     <label>Ability Haste:</label>
-                    <input type="number" value={enemyStats.abilityHaste} onChange={(e) => handleEnemyStatChange('abilityHaste', parseFloat(e.target.value))} />
+                    <input type="number" value={enemyStats.haste} onChange={(e) => handleEnemyStatChange('haste', parseFloat(e.target.value))} />
                   </div>
                   <div className="stat-input-row">
                     <label>Magic Penetration:</label>

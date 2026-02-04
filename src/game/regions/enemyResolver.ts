@@ -23,7 +23,7 @@ export const PLACEHOLDER_MINION: Character = {
     health: 100,
     attackDamage: 10,
     armor: 5,
-    attackSpeed: 0.6,
+    speed: 0.6,
   },
   inventory: [],
 };
@@ -46,7 +46,7 @@ export const PLACEHOLDER_ELITE: Character = {
     attackDamage: 25,
     armor: 15,
     magicResist: 10,
-    attackSpeed: 0.5,
+    speed: 0.5,
   },
   inventory: [],
 };
@@ -69,7 +69,7 @@ export const PLACEHOLDER_BOSS: Character = {
     attackDamage: 40,
     armor: 25,
     magicResist: 20,
-    attackSpeed: 0.5,
+    speed: 0.5,
   },
   inventory: [],
 };

@@ -22,7 +22,7 @@ export const SHURIMA_MINIONS: Character[] = [
       attackDamage: 9,
       abilityPower: 7,
       armor: 6,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -44,7 +44,7 @@ export const SHURIMA_MINIONS: Character[] = [
       abilityPower: 8,
       armor: 8,
       magicResist: 6,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   {
@@ -65,7 +65,7 @@ export const SHURIMA_MINIONS: Character[] = [
       attackDamage: 11,
       abilityPower: 4,
       movementSpeed: 140,
-      attackSpeed: 0.8,
+      speed: 0.8,
     },
   },
   // Faction: Beast (desert creatures)
@@ -87,7 +87,7 @@ export const SHURIMA_MINIONS: Character[] = [
       attackDamage: 10,
       armor: 5,
       movementSpeed: 135,
-      attackSpeed: 0.75,
+      speed: 0.75,
     },
   },
   {
@@ -108,7 +108,7 @@ export const SHURIMA_MINIONS: Character[] = [
       attackDamage: 5,
       abilityPower: 13,
       magicResist: 8,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];
@@ -134,7 +134,7 @@ export const SHURIMA_ELITES: Character[] = [
       abilityPower: 25,
       armor: 18,
       magicResist: 12,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -156,7 +156,7 @@ export const SHURIMA_ELITES: Character[] = [
       abilityPower: 48,
       armor: 12,
       magicResist: 20,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -178,7 +178,7 @@ export const SHURIMA_ELITES: Character[] = [
       abilityPower: 10,
       armor: 14,
       movementSpeed: 145,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
   },
 ];
@@ -204,7 +204,7 @@ export const SHURIMA_BOSSES: Character[] = [
       abilityPower: 55,
       armor: 28,
       magicResist: 25,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
   {
@@ -226,7 +226,7 @@ export const SHURIMA_BOSSES: Character[] = [
       abilityPower: 30,
       armor: 30,
       movementSpeed: 140,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -248,7 +248,7 @@ export const SHURIMA_BOSSES: Character[] = [
       abilityPower: 88,
       armor: 18,
       magicResist: 32,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
 ];
@@ -274,7 +274,7 @@ export const SHURIMA_CHAMPIONS: Character[] = [
       abilityPower: 50,
       armor: 45,
       magicResist: 35,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -296,7 +296,7 @@ export const SHURIMA_CHAMPIONS: Character[] = [
       abilityPower: 95,
       armor: 30,
       magicResist: 40,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
 ];

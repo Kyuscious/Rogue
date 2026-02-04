@@ -24,7 +24,7 @@ export interface Item {
     // Attack
     attackRange?: number;
     attackDamage?: number;
-    attackSpeed?: number;
+    speed?: number;
     criticalChance?: number;
     criticalDamage?: number;
     lethality?: number;
@@ -33,7 +33,7 @@ export interface Item {
     
     // Spell
     abilityPower?: number;
-    abilityHaste?: number;
+    haste?: number;
     magicPenetration?: number;
     heal_shield_power?: number;
     omnivamp?: number;
@@ -212,7 +212,7 @@ export interface SummonerStats {
   armor: number;
   magicResist: number;
   abilityPower: number;
-  attackSpeed: number;
+  haste: number;
 }
 
 // Default starting items (always available)
@@ -481,7 +481,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     rarity: 'common',
     price: 250,
     classes: ['assassin', 'skirmisher', 'marksman'],
-    stats: { attackSpeed: 0.1 },
+    stats: { speed: 0.1 },
   },
   rejuvenation_bead: {
     id: 'rejuvenation_bead',
@@ -597,7 +597,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     rarity: 'legendary',
     price: 210,
     classes: ['mage'],
-    stats: { abilityPower: 60, attackSpeed: 0.5, health: 200 },
+    stats: { abilityPower: 60, speed: 0.5, health: 200 },
   },
 
   // Mythic Items
@@ -610,7 +610,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {
       attackDamage: 80,
       health: 250,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
 
@@ -648,7 +648,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Empowers your next attack after using an ability',
     rarity: 'transcendent',
     price: 450,
-    stats: { abilityPower: 80, attackSpeed: 0.3, health: 200 },
+    stats: { abilityPower: 80, speed: 0.3, health: 200 },
     passive: 'After using an ability, your next basic attack deals bonus magic damage',
   },
   //Ultimate Items

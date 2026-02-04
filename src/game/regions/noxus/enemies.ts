@@ -21,7 +21,7 @@ export const NOXUS_MINIONS: Character[] = [
       health: 58,
       attackDamage: 11,
       armor: 7,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -42,7 +42,7 @@ export const NOXUS_MINIONS: Character[] = [
       attackDamage: 13,
       armor: 5,
       movementSpeed: 145,
-      attackSpeed: 0.75,
+      speed: 0.75,
     },
   },
   {
@@ -62,7 +62,7 @@ export const NOXUS_MINIONS: Character[] = [
       health: 42,
       attackDamage: 14,
       movementSpeed: 150,
-      attackSpeed: 0.8,
+      speed: 0.8,
     },
   },
   {
@@ -83,7 +83,7 @@ export const NOXUS_MINIONS: Character[] = [
       attackDamage: 6,
       abilityPower: 15,
       armor: 4,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -104,7 +104,7 @@ export const NOXUS_MINIONS: Character[] = [
       attackDamage: 9,
       armor: 9,
       magicResist: 5,
-      attackSpeed: 0.5,
+      speed: 0.5,
     },
   },
 ];
@@ -129,7 +129,7 @@ export const NOXUS_ELITES: Character[] = [
       attackDamage: 40,
       armor: 20,
       magicResist: 12,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -151,7 +151,7 @@ export const NOXUS_ELITES: Character[] = [
       abilityPower: 50,
       armor: 10,
       magicResist: 18,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -172,7 +172,7 @@ export const NOXUS_ELITES: Character[] = [
       attackDamage: 35,
       armor: 22,
       magicResist: 15,
-      attackSpeed: 0.55,
+      speed: 0.55,
     },
   },
 ];
@@ -197,7 +197,7 @@ export const NOXUS_BOSSES: Character[] = [
       attackDamage: 68,
       armor: 30,
       magicResist: 20,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
   },
   {
@@ -218,7 +218,7 @@ export const NOXUS_BOSSES: Character[] = [
       attackDamage: 70,
       armor: 28,
       magicResist: 18,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -239,7 +239,7 @@ export const NOXUS_BOSSES: Character[] = [
       attackDamage: 75,
       armor: 20,
       movementSpeed: 170,
-      attackSpeed: 0.85,
+      speed: 0.85,
     },
   },
 ];
@@ -264,7 +264,7 @@ export const NOXUS_CHAMPIONS: Character[] = [
       attackDamage: 85,
       armor: 48,
       magicResist: 32,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
   },
   {
@@ -286,7 +286,7 @@ export const NOXUS_CHAMPIONS: Character[] = [
       abilityPower: 55,
       armor: 30,
       movementSpeed: 165,
-      attackSpeed: 0.9,
+      speed: 0.9,
     },
   },
 ];

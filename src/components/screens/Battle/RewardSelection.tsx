@@ -93,16 +93,16 @@ export const RewardSelection: React.FC<RewardSelectionProps> = ({
                         <span className="stat-value">+{item.stats.magicResist}</span>
                       </div>
                     )}
-                    {item.stats.attackSpeed && item.stats.attackSpeed > 0 && (
+                    {item.stats.speed && item.stats.speed > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">⚡ Attack Speed:</span>
-                        <span className="stat-value">+{item.stats.attackSpeed}</span>
+                        <span className="stat-label">⚡ Speed:</span>
+                        <span className="stat-value">+{item.stats.speed}</span>
                       </div>
                     )}
-                    {item.stats.abilityHaste && item.stats.abilityHaste > 0 && (
+                    {item.stats.haste && item.stats.haste > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">💫 Ability Haste:</span>
-                        <span className="stat-value">+{item.stats.abilityHaste}</span>
+                        <span className="stat-label">💫 Haste:</span>
+                        <span className="stat-value">+{item.stats.haste}</span>
                       </div>
                     )}
                     {item.stats.criticalChance && item.stats.criticalChance > 0 && (

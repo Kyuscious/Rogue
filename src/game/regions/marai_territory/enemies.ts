@@ -20,7 +20,7 @@ export const MARAI_MINIONS: Character[] = [
       health: 50,
       attackDamage: 7,
       abilityPower: 12,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
     inventory: [
       { itemId: 'mana_crystal', quantity: 1 },
@@ -43,7 +43,7 @@ export const MARAI_MINIONS: Character[] = [
       health: 65,
       attackDamage: 9,
       armor: 4,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
     inventory: [
       { itemId: 'longsword', quantity: 1 },
@@ -66,7 +66,7 @@ export const MARAI_MINIONS: Character[] = [
       health: 45,
       attackDamage: 11,
       movementSpeed: 140,
-      attackSpeed: 0.8,
+      speed: 0.8,
     },
   },
 ];
@@ -92,7 +92,7 @@ export const MARAI_ELITES: Character[] = [
       abilityPower: 18,
       armor: 3,
       magicResist: 5,
-      attackSpeed: 0.75,
+      speed: 0.75,
     },
     inventory: [
       { itemId: 'mana_crystal', quantity: 2 },
@@ -117,7 +117,7 @@ export const MARAI_ELITES: Character[] = [
       attackDamage: 12,
       armor: 10,
       magicResist: 6,
-      attackSpeed: 0.6,
+      speed: 0.6,
     },
     inventory: [
       { itemId: 'cloth_armor', quantity: 2 },
@@ -147,7 +147,7 @@ export const MARAI_BOSSES: Character[] = [
       abilityPower: 25,
       armor: 5,
       magicResist: 8,
-      attackSpeed: 0.7,
+      speed: 0.7,
     },
     inventory: [
       { itemId: 'mana_crystal', quantity: 3 },
@@ -172,7 +172,7 @@ export const MARAI_BOSSES: Character[] = [
       attackDamage: 18,
       armor: 15,
       magicResist: 10,
-      attackSpeed: 0.65,
+      speed: 0.65,
     },
     inventory: [
       { itemId: 'thornmail', quantity: 1 },

@@ -33,7 +33,7 @@ export interface Weapon {
     // Attack
     attackRange?: number;
     attackDamage?: number;
-    attackSpeed?: number;
+    speed?: number;
     // Spell
     abilityPower?: number;
     // Mobility
@@ -104,7 +104,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       },
     ],
     stats: {
-      attackSpeed: 0.2,
+      speed: 0.2,
       attackRange: 100,
     },
     cooldown: 0,

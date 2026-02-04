@@ -23,7 +23,7 @@ export interface CombatBuffStats {
   health: number;
   armor: number;
   magicResist: number;
-  attackSpeed: number;
+  speed: number;
   tenacity: number; // TODO: Implement - reduces crowd control duration
   movementSpeed: number;
   magicFind: number;
@@ -41,7 +41,7 @@ export function getItemById(itemId: string) {
 
 /**
  * Get the primary buff stat from an item's stats
- * Prioritize in order: attackDamage, abilityPower, health, armor, magicResist, attackSpeed
+ * Prioritize in order: attackDamage, abilityPower, health, armor, magicResist, speed
  */
 export function getPrimaryStatFromItem(itemId: string): { stat: keyof CombatBuffStats; amount: number } | null {
   const item = getItemById(itemId);
@@ -54,7 +54,7 @@ export function getPrimaryStatFromItem(itemId: string): { stat: keyof CombatBuff
     'health',
     'armor',
     'magicResist',
-    'attackSpeed',
+    'speed',
   ];
 
   for (const stat of statPriority) {

@@ -31,7 +31,7 @@ export interface CharacterStats {
   //Attack
   attackRange: number,
   attackDamage: number,
-  attackSpeed: number,
+  speed: number,
   criticalChance: number,
   criticalDamage: number,
   lethality: number,
@@ -40,7 +40,7 @@ export interface CharacterStats {
 
   //Spell
   abilityPower: number,
-  abilityHaste: number,
+  haste: number,
   magicPenetration: number,
   heal_shield_power: number,
   omnivamp: number,
@@ -69,7 +69,7 @@ export const DEFAULT_STATS: CharacterStats = {
   //Attack
   attackRange: 125,
   attackDamage: 50,
-  attackSpeed: 0.7,
+  speed: 0.7,
   criticalChance: 0,
   criticalDamage: 200,
   lethality: 0,
@@ -78,7 +78,7 @@ export const DEFAULT_STATS: CharacterStats = {
 
   //Spell
   abilityPower: 30,
-  abilityHaste: 0,
+  haste: 0,
   magicPenetration: 0,
   heal_shield_power: 0,
   omnivamp: 0,
@@ -104,7 +104,7 @@ export const CLASS_STAT_MULTIPLIERS: Record<CharacterClass, Partial<CharacterSta
     abilityPower: 1.8,
     health: 1.2,
     magicResist: 1.2,
-    abilityHaste: 0.2,
+    haste: 0.2,
   },
   vanguard: {
     health: 1.8,
@@ -129,7 +129,7 @@ export const CLASS_STAT_MULTIPLIERS: Record<CharacterClass, Partial<CharacterSta
   skirmisher: {
     attackDamage: 1.3,
     abilityPower: 1.0,
-    attackSpeed: 0.1,
+    speed: 0.1,
     movementSpeed: 1.2,
     health: 1.2,
   },
@@ -142,7 +142,7 @@ export const CLASS_STAT_MULTIPLIERS: Record<CharacterClass, Partial<CharacterSta
   },
   marksman: {
     attackDamage: 1.7,
-    attackSpeed: 0.1,
+    speed: 0.1,
     criticalChance: 0.35,
     criticalDamage: 2.5,
     attackRange: 1.5,
@@ -216,7 +216,7 @@ export function getScaledStats(
   passiveIds: PassiveId[] = []
 ): CharacterStats {
   const scaledStats: CharacterStats = { ...baseStats };
-  const decimalStats = ['attackSpeed', 'lifeSteal', 'spellVamp', 'omnivamp', 'tenacity', 'goldGain', 'xpGain', 'criticalChance', 'criticalDamage', 'abilityHaste', 'health_regen', 'heal_shield_power', 'magicFind'];
+  const decimalStats = ['speed', 'lifeSteal', 'spellVamp', 'omnivamp', 'tenacity', 'goldGain', 'xpGain', 'criticalChance', 'criticalDamage', 'haste', 'health_regen', 'heal_shield_power', 'magicFind'];
   const classBonuses = getClassStatBonuses(characterClass, level);
   
   // NO LONGER APPLY 5% LEVEL MULTIPLIER - This was causing exponential stat growth

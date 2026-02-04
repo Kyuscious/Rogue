@@ -119,7 +119,7 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
             {item.stats.armor && <span>+{item.stats.armor} Armor</span>}
             {item.stats.magicResist && <span>+{item.stats.magicResist} MR</span>}
             {item.stats.health && <span>+{item.stats.health} HP</span>}
-            {item.stats.attackSpeed && <span>+{(item.stats.attackSpeed * 100).toFixed(0)}% AS</span>}
+            {item.stats.speed && <span>+{(item.stats.speed * 100).toFixed(0)}% AS</span>}
             {item.stats.lifeSteal && <span>+{item.stats.lifeSteal}% LS</span>}
             {item.stats.omnivamp && <span>+{item.stats.omnivamp}% Omnivamp</span>}
           </div>
