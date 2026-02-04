@@ -35,7 +35,7 @@ import {
 import { generateRewardOptions } from '../../../game/rewardPool';
 import { checkLevelUp } from '../../../game/experienceSystem';
 import { incrementEnemiesKilled } from '../../../game/profileSystem';
-import { ItemBar } from './ItemBar';
+import { ItemBar } from './ItemSelector';
 import { BattleSummary } from './BattleSummary';
 import { WeaponSelector } from './WeaponSelector';
 import { SpellSelector } from './SpellSelector';
@@ -246,28 +246,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // handleSummaryContinue will reset it after processing victory/defeat
     setBattleLog([{ message: 'Battle started!' }, { message: '---' }]);
     setLastLoggedTurn(0);
-    setSelectedItemId(null); // Reset selected item for new encounter
+    setSelectedItemId(null); // Will be auto-selected by useEffect watching inventory
     setEnemyDebuffs([]); // Reset enemy debuffs for new encounter
-    
-    // Reduce buff durations by 1 when transitioning to new encounter
-    setPlayerBuffs((prevBuffs) => {
-      const updatedBuffs = prevBuffs
-        .map(buff => ({
-          ...buff,
-          duration: buff.duration - 1,
-        }))
-        .filter(buff => buff.duration > 0); // Remove expired buffs
-      
-      if (updatedBuffs.length !== prevBuffs.length) {
-        console.log('🕐 Buffs reduced for new encounter:', {
-          before: prevBuffs.map(b => ({ name: b.name, duration: b.duration })),
-          after: updatedBuffs.map(b => ({ name: b.name, duration: b.duration })),
-          expired: prevBuffs.length - updatedBuffs.length,
-        });
-      }
-      
-      return updatedBuffs;
-    });
     
     // Log cooldown reductions from previous encounter
     const activeCooldowns = Object.entries(state.spellCooldowns);
@@ -330,6 +310,26 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     exp: number;
     items: InventoryItem[];
   } | null>(null);
+
+  // Auto-select first available item whenever inventory changes
+  useEffect(() => {
+    const usableItemsList = getUsableItems(state.inventory);
+    
+    // If currently selected item still exists in inventory with quantity > 0, keep it
+    if (selectedItemId) {
+      const currentItemExists = usableItemsList.some(item => item.item.id === selectedItemId);
+      if (currentItemExists) {
+        return; // Keep current selection
+      }
+    }
+    
+    // Otherwise, auto-select first available item
+    if (usableItemsList.length > 0) {
+      setSelectedItemId(usableItemsList[0].item.id);
+    } else {
+      setSelectedItemId(null);
+    }
+  }, [state.inventory, selectedItemId]);
 
   // Log component render after all state is declared
   console.log('⚙️ COMPONENT RENDER:', {
@@ -1039,7 +1039,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             name: 'For Demacia!',
             stat: 'attackDamage',
             amount: adBonus,
-            duration: 1, // 1 turn: expires at next turn boundary
+            duration: 2, // 2 turns: current turn + next turn
             durationType: 'turns',
           };
           setPlayerBuffs(prev => [...prev, combatBuff]);
@@ -1329,8 +1329,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       consumeInventoryItem(selectedItemId);
     }
     
-    // Clear selected item after using
-    setSelectedItemId(null);
+    // Auto-selection will be handled by the inventory change useEffect
     
     // Advance to next action in sequence (using item counts as an action)
     setSequenceIndex((prev) => prev + 1);

@@ -1,13 +1,16 @@
 /* Tooltip Styles */
 .game-tooltip {
   position: fixed;
+  top: 70%;
+  left: 50%;
   background: linear-gradient(135deg, rgba(20, 20, 35, 0.98) 0%, rgba(30, 30, 50, 0.98) 100%);
   border: 1.5px solid rgba(74, 158, 255, 0.6);
   border-radius: 8px;
   padding: 12px;
   z-index: 10000;
   pointer-events: none;
-  max-width: 320px;
+  max-width: 50vw;
+  max-height: 50vh;
   box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
   backdrop-filter: blur(10px);
   opacity: 0;

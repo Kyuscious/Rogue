@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Tooltip } from '../../shared/Tooltip';
-import './ItemBar.css';
+import './ItemSelector.css';
 
 interface ItemBarProps {
   usableItems: Array<{ itemId: string; item: any; quantity: number }>;

@@ -385,11 +385,6 @@ export const Tooltip: React.FC<TooltipProps> = ({ content }) => {
     <div
       ref={tooltipRef}
       className="game-tooltip"
-      style={{
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)',
-      }}
     >
       {getTooltipContent()}
     </div>
