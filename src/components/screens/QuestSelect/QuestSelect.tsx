@@ -3,6 +3,7 @@ import { getQuestsByRegion, Quest, QuestPath } from '../../../game/questDatabase
 import { Region } from '../../../game/types';
 import { useGameStore } from '../../../game/store';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { isPathCompleted } from '../../../game/questPathSystem';
 import { GearChange } from './GearChange';
 import './QuestSelect.css';
 
@@ -18,9 +19,17 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
   // Get all available quests for this region
   const allQuests = useMemo(() => getQuestsByRegion(region), [region]);
   
+  // Filter out paths that have already been completed
+  const availableQuests = useMemo(() => {
+    return allQuests.map(quest => ({
+      ...quest,
+      paths: quest.paths.filter(path => !isPathCompleted(state.completedQuestPaths, quest.id, path.id)),
+    })).filter(quest => quest.paths.length > 0);
+  }, [allQuests, state.completedQuestPaths]);
+  
   // Initialize with 3 random quests from the available pool
   const [displayedQuests, setDisplayedQuests] = useState<Quest[]>(() => {
-    const shuffled = [...allQuests].sort(() => Math.random() - 0.5);
+    const shuffled = [...availableQuests].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 3);
   });
 
@@ -35,14 +44,14 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
     // Get IDs of currently displayed quests
     const displayedIds = displayedQuests.map(q => q.id);
     
-    // Find quests that aren't currently displayed
-    const availableQuests = allQuests.filter(q => !displayedIds.includes(q.id));
+    // Find quests that aren't currently displayed (from available quests)
+    const alternativeQuests = availableQuests.filter(q => !displayedIds.includes(q.id));
     
     // If no alternatives available, don't reroll
-    if (availableQuests.length === 0) return;
+    if (alternativeQuests.length === 0) return;
     
     // Pick a random alternative
-    const newQuest = availableQuests[Math.floor(Math.random() * availableQuests.length)];
+    const newQuest = alternativeQuests[Math.floor(Math.random() * alternativeQuests.length)];
     
     // Replace the quest at the specified index
     const newDisplayedQuests = [...displayedQuests];
@@ -91,11 +100,11 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
               <button
                 className="reroll-quest-button"
                 onClick={() => handleReroll(index)}
-                disabled={state.rerolls <= 0 || allQuests.length <= 3}
+                disabled={state.rerolls <= 0 || availableQuests.length <= 3}
                 title={
                   state.rerolls <= 0
                     ? t.questSelect.noRerollsRemaining
-                    : allQuests.length <= 3
+                    : availableQuests.length <= 3
                     ? t.questSelect.noAlternativePaths
                     : `${t.questSelect.rerollThisPath} (${state.rerolls} ${t.questSelect.rerollsLeft})`
                 }
@@ -111,19 +120,19 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
                   className={`quest-path ${path.difficulty}`}
                   onClick={() => onSelectPath(quest.id, path.id)}
                 >
-                  <div className="path-header">
-                    <div className="header-left">
+                  <div className="path-content">
+                    <div className="path-info">
                       <span className="path-name">{path.name}</span>
+                      <p className="path-description">{path.description}</p>
+                    </div>
+                    <div className="path-icons">
                       {renderDifficultyBadge(path.difficulty)}
                       <span className="reward-icon" title={`${t.questSelect.reward}: ${path.lootType}`}>{renderRewardIcon(path.lootType)}</span>
-                    </div>
-                    {path.finalBossId && (
-                      <div className="boss-preview-small">
-                        <div className="boss-image-small">👑</div>
+                      <div className="boss-icon">
+                        {path.finalBossId ? '👑' : '?'}
                       </div>
-                    )}
+                    </div>
                   </div>
-                  <p className="path-description">{path.description}</p>
                 </button>
               ))}
             </div>

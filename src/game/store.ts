@@ -150,6 +150,8 @@ export interface GameStoreState {
     spellCooldowns: Record<string, number>; // Spell ID -> turns remaining until usable
     // Revealed enemies tracking (for stealth/control ward mechanic)
     revealedEnemies: Record<string, number>; // Enemy ID -> encounters remaining where they stay revealed (0 = not revealed, 1 = stealth_ward effect, 5+ = control_ward effect)
+    // Quest Path Completion Tracking
+    completedQuestPaths: string[]; // Track completed paths this run (format: "questId:pathId")
     // Post-Region Choice System
     showPostRegionChoice: boolean; // Show post-region choice UI after completing region
     completedRegion: Region | null; // Region just completed (for random events)
@@ -172,6 +174,7 @@ export interface GameStoreState {
   selectStartingItem: (itemId: string) => void;
   selectQuest: (questId: string, pathId: string) => void;
   clearQuestSelection: () => void;
+  markQuestPathCompleted: (questId: string, pathId: string) => void; // Mark a quest path as completed in this run
   resetFloor: () => void; // Reset floor counter when starting a new quest
   setCurrentFloor: (floor: number) => void;
   startBattle: (enemies: Character[]) => void;
@@ -180,7 +183,7 @@ export interface GameStoreState {
   addRerolls: (amount: number) => void;
   useReroll: () => boolean; // Returns true if successful, false if no rerolls left
   addInventoryItem: (item: InventoryItem) => void;
-  removeInventoryItem: (itemId: string) => void; // Remove item from inventory
+  removeInventoryItem: (itemId: string, quantity?: number) => void; // Remove item from inventory (default 1 unit)
   consumeInventoryItem: (itemId: string) => void;
   addExperience: (amount: number) => void;
   setUsername: (username: string) => void;
@@ -279,6 +282,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
     equippedSpellIndex: 0, // First spell equipped
     spellCooldowns: {}, // Track spell cooldowns
     revealedEnemies: {}, // Track which enemies are revealed (stealth/control ward mechanic)
+    // Quest Path Completion Tracking
+    completedQuestPaths: [], // Track completed paths this run (format: "questId:pathId")
     // Language/Settings
     currentLanguage: getInitialLanguage(),
     showSettings: false,
@@ -412,6 +417,24 @@ export const useGameStore = create<GameStoreState>((set) => ({
         selectedQuest: null,
       },
     })),
+
+  markQuestPathCompleted: (questId: string, pathId: string) =>
+    set((store) => {
+      // Generate unique path identifier
+      const pathId_full = `${questId}:${pathId}`;
+      
+      // Add to completed paths if not already there
+      const updatedCompletedPaths = store.state.completedQuestPaths.includes(pathId_full)
+        ? store.state.completedQuestPaths
+        : [...store.state.completedQuestPaths, pathId_full];
+
+      return {
+        state: {
+          ...store.state,
+          completedQuestPaths: updatedCompletedPaths,
+        },
+      };
+    }),
 
   resetFloor: () =>
     set((store) => ({
@@ -556,7 +579,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
       };
     }),
 
-  removeInventoryItem: (itemId: string) =>
+  removeInventoryItem: (itemId: string, quantity: number = 1) =>
     set((store) => {
       const itemData = ITEM_DATABASE[itemId];
       if (!itemData) return store;
@@ -567,8 +590,13 @@ export const useGameStore = create<GameStoreState>((set) => ({
       // Remove item using battle system
       const updatedCharacter = removeItemFromPlayer(store.state.playerCharacter, itemId);
 
-      // Remove item from inventory
-      const updatedInventory = store.state.inventory.filter((i) => i.itemId !== itemId);
+      // Remove item from inventory (decrease quantity or remove entirely)
+      const updatedInventory = store.state.inventory.map(i => {
+        if (i.itemId === itemId) {
+          return { ...i, quantity: Math.max(0, i.quantity - quantity) };
+        }
+        return i;
+      }).filter(i => i.quantity > 0);
 
       return {
         state: {
@@ -705,6 +733,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           equippedSpellIndex: 0,
           spellCooldowns: {},
           revealedEnemies: {},
+          completedQuestPaths: [], // Reset completed paths for new run
           showPostRegionChoice: false,
           postRegionChoiceComplete: false,
           completedRegion: null,

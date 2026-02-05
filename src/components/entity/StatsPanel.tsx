@@ -169,6 +169,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
         </button>
         
         {(character.role === 'player' || isRevealed) ? (
+
+          
           <div className={`quick-stats ${character.role === 'player' ? 'player-quick-stats' : 'enemy-quick-stats'}`}>
             <div className="quick-stat" title={t.common.attackDamage}>
               <span className="quick-stat-icon">⚔️</span>

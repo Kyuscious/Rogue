@@ -22,7 +22,7 @@ const CREDITS_DATA_KEYS = [
   {
     titleKey: 'artsBy' as const,
     contributors: [
-      { name: 'MartinStarlove', link: 'https://twitter.com/MartinStarlove', icon: '🎨' },
+      { name: 'MartinStarlove', link: 'https://purelyhuman.xyz/artists/MartinStarlove', icon: '🎨' },
     ],
   },
   {

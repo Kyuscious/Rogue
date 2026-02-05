@@ -1,42 +1,43 @@
 .shop-container {
   width: 100%;
   height: 100vh;
-  max-height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  padding: 1rem;
+  padding: 0.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   color: white;
   box-sizing: border-box;
+  gap: 0.5rem;
 }
 
 .shop-header {
   width: 100%;
-  max-width: 1200px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
-  padding: 0.8rem;
+  padding: 0.4rem 0.6rem;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 2px solid rgba(255, 215, 0, 0.3);
   flex-shrink: 0;
+  gap: 1rem;
 }
 
 .shop-header h2 {
-  font-size: 1.6rem;
+  font-size: 1.1rem;
   margin: 0;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  flex-shrink: 0;
 }
 
 .shop-info {
   display: flex;
-  gap: 2rem;
-  font-size: 1.1rem;
+  gap: 1.2rem;
+  font-size: 0.85rem;
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .shop-gold {
@@ -49,72 +50,307 @@
   text-shadow: 0 0 8px rgba(192, 132, 252, 0.6);
 }
 
-.shop-grid {
-  width: 100%;
-  max-width: 1200px;
+/* Section Container */
+.shop-section {
+  background: rgba(20, 20, 40, 0.6);
+  border: 2px solid rgba(100, 100, 150, 0.3);
+  border-radius: 8px;
+  padding: 0.6rem;
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
-  margin-bottom: 0.5rem;
-  align-items: center;
+  gap: 0.4rem;
+  flex: 0 1 auto;
+  overflow-y: auto;
+  max-height: 200px;
 }
 
-.shop-title {
-  font-size: 1.2rem;
-  margin: 0 0 1.5rem 0;
-  color: #ffd700;
-  text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+.shop-section-divider {
+  border-bottom: 2px solid rgba(100, 100, 150, 0.3);
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.shop-buy-section {
+  width: 100%;
+  background: rgba(20, 20, 40, 0.6);
+  border: 2px solid rgba(100, 100, 150, 0.3);
+  border-radius: 8px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 0 1 auto;
+  overflow-y: auto;
 }
 
-.shop-slots-merged {
+.shop-buy-grid {
   display: flex;
   flex-direction: row;
-  gap: 1rem;
+  
+
+  gap: 0.6rem;
+}
+
+.shop-sell-section {
+  width: 100%;
+  background: rgba(20, 20, 40, 0.6);
+  border: 2px solid rgba(100, 100, 150, 0.3);
+  border-radius: 8px;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 0 1 auto;
+  overflow-y: auto;
+}
+
+.shop-section-title {
+  font-size: 1rem;
+  margin: 0 0 0.3rem 0;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+  flex-shrink: 0;
+}
+
+/* SELL SECTION - Icon based */
+.shop-sell-icons-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.sell-item-icon {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, rgba(30, 30, 60, 0.8), rgba(20, 20, 40, 0.9));
+  border: 2px solid rgba(100, 100, 150, 0.6);
+  border-radius: 6px;
+  padding: 0;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  align-items: flex-end;
-  padding-top: 2rem;
-  padding-bottom: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
 }
 
-/* Position 1: Equipment at baseline */
-.shop-slots-merged > :nth-child(1) {
-  transform: translateY(0);
+.sell-item-icon:hover {
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  transform: scale(1.08);
 }
 
-/* Position 2: Consumable elevated */
-.shop-slots-merged > :nth-child(2) {
-  transform: translateY(-3rem);
+.sell-item-icon.selected {
+  border-color: rgba(100, 200, 255, 0.9);
+  box-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
+  background: linear-gradient(135deg, rgba(50, 100, 150, 0.9), rgba(30, 70, 120, 0.9));
 }
 
-/* Position 3: Equipment at baseline */
-.shop-slots-merged > :nth-child(3) {
-  transform: translateY(0);
+.sell-item-image {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.3));
 }
 
-/* Position 4: Consumable elevated */
-.shop-slots-merged > :nth-child(4) {
-  transform: translateY(-3rem);
+.sell-item-emoji {
+  font-size: 1.5rem;
 }
 
-/* Position 5: Equipment at baseline */
-.shop-slots-merged > :nth-child(5) {
-  transform: translateY(0);
+.sell-qty-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: rgba(255, 215, 0, 0.95);
+  color: #000;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: bold;
 }
 
+.sell-item-checkmark {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: rgba(100, 200, 255, 0.9);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+  box-shadow: 0 0 10px rgba(100, 200, 255, 0.6);
+}
+
+/* Sell tooltip */
+.sell-tooltip {
+  position: fixed;
+  background: rgba(20, 20, 40, 0.95);
+  border: 2px solid rgba(100, 150, 255, 0.6);
+  border-radius: 6px;
+  padding: 0.8rem;
+  max-width: 200px;
+  z-index: 1000;
+  color: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.tooltip-item-name {
+  font-size: 0.9rem;
+  margin: 0 0 0.2rem 0;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.tooltip-item-description {
+  font-size: 0.75rem;
+  color: #b8b8d1;
+  margin: 0 0 0.3rem 0;
+}
+
+.tooltip-sell-price {
+  font-size: 0.85rem;
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+/* Sell actions */
+.shop-sell-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.3rem;
+  flex-shrink: 0;
+}
+
+.shop-multi-sell-button {
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 200px;
+}
+
+.shop-multi-sell-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+.shop-multi-sell-button:disabled {
+  background: linear-gradient(135deg, #555, #333);
+  cursor: not-allowed;
+  color: #999;
+}
+
+.shop-slot.sell-slot {
+  border-color: rgba(100, 150, 255, 0.6);
+}
+
+.shop-slot.sell-slot:hover {
+  border-color: rgba(100, 150, 255, 1);
+  box-shadow: 0 10px 30px rgba(100, 150, 255, 0.5);
+}
+
+.sell-price {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.shop-sell-button {
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.8rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.shop-sell-button:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+}
+
+/* BUY SECTION */
+.shop-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  background: rgba(30, 30, 60, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(100, 100, 150, 0.2);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.shop-subsection-title {
+  font-size: 0.85rem;
+  margin: 0;
+  color: #b8b8d1;
+  text-shadow: 0 0 6px rgba(184, 184, 209, 0.3);
+  flex-shrink: 0;
+}
+
+.shop-use-items-container {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  justify-items: center;
+}
+
+.shop-normal-items-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  justify-items: center;
+}
+
+.shop-empty-message {
+  text-align: center;
+  color: #999;
+  padding: 1rem;
+  font-style: italic;
+}
+
+/* Shop Slot Base Styles */
 .shop-slot {
   position: relative;
-  width: 200px;
+  width: 140px;
   background: linear-gradient(135deg, rgba(30, 30, 60, 0.8), rgba(20, 20, 40, 0.9));
   border: 2px solid rgba(100, 100, 150, 0.4);
-  border-radius: 12px;
-  padding: 1rem;
+  border-radius: 8px;
+  padding: 0.6rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.3rem;
   transition: all 0.3s ease;
   cursor: pointer;
-  /* Remove transform from hover, handle it per position below */
+  font-size: 0.85rem;
 }
 
 .shop-slot:hover {
@@ -122,17 +358,13 @@
   box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
 }
 
-/* Maintain baseline position on hover for equipment */
-.shop-slots-merged > :nth-child(1):hover,
-.shop-slots-merged > :nth-child(3):hover,
-.shop-slots-merged > :nth-child(5):hover {
-  transform: translateY(0);
+.shop-slot.buy-slot {
+  border-color: rgba(100, 100, 150, 0.4);
 }
 
-/* Maintain elevated position on hover for consumables */
-.shop-slots-merged > :nth-child(2):hover,
-.shop-slots-merged > :nth-child(4):hover {
-  transform: translateY(-3rem);
+.shop-slot.buy-slot:hover {
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
 }
 
 .shop-slot.usable-slot {
@@ -160,8 +392,8 @@
 }
 
 .shop-slot.unaffordable:hover {
-  transform: none;
   box-shadow: none;
+  border-color: rgba(100, 100, 150, 0.4);
 }
 
 .shop-slot.sold-out {
@@ -222,13 +454,13 @@
 }
 
 .shop-item-icon {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
+  font-size: 2rem;
+  margin-bottom: 0.2rem;
 }
 
 .shop-item-icon .shop-item-image {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
 }
@@ -238,41 +470,119 @@
 }
 
 .shop-item-name {
-  font-size: 1.2rem;
+  font-size: 0.8rem;
   font-weight: bold;
   color: #ffd700;
   text-align: center;
+  line-height: 1;
 }
 
 .shop-item-description {
-  font-size: 0.85rem;
+  font-size: 0.65rem;
   color: #b8b8d1;
   text-align: center;
-  min-height: 2.5rem;
+  min-height: 1.5rem;
+  line-height: 1.1;
 }
 
 .shop-item-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.3rem;
   justify-content: center;
-  margin-top: 0.5rem;
+  margin-top: 0.3rem;
 }
 
 .shop-item-stats span {
   background: rgba(100, 100, 200, 0.3);
-  padding: 0.3rem 0.6rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
   color: #fff;
 }
 
 .shop-item-effect {
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   color: #90ee90;
   text-align: center;
   font-style: italic;
-  margin-top: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.shop-item-quantity {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(255, 215, 0, 0.9);
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+/* Rarity-based colors */
+.rarity-starter {
+  border-color: rgba(200, 200, 200, 0.6) !important;
+  background: linear-gradient(135deg, rgba(80, 80, 100, 0.8), rgba(60, 60, 80, 0.9)) !important;
+}
+
+.rarity-common {
+  border-color: rgba(150, 150, 150, 0.6) !important;
+}
+
+.rarity-epic {
+  border-color: rgba(100, 150, 255, 0.8) !important;
+  box-shadow: 0 0 10px rgba(100, 150, 255, 0.4) !important;
+}
+
+.rarity-epic:hover {
+  box-shadow: 0 0 20px rgba(100, 150, 255, 0.6) !important;
+}
+
+.rarity-legendary {
+  border-color: rgba(255, 100, 100, 0.8) !important;
+  box-shadow: 0 0 10px rgba(255, 100, 100, 0.4) !important;
+}
+
+.rarity-legendary:hover {
+  box-shadow: 0 0 20px rgba(255, 100, 100, 0.6) !important;
+}
+
+.rarity-mythic {
+  border-color: rgba(200, 100, 255, 0.8) !important;
+  box-shadow: 0 0 10px rgba(200, 100, 255, 0.4) !important;
+}
+
+.rarity-mythic:hover {
+  box-shadow: 0 0 20px rgba(200, 100, 255, 0.6) !important;
+}
+
+.rarity-ultimate {
+  border-color: rgba(255, 200, 0, 0.8) !important;
+  box-shadow: 0 0 10px rgba(255, 200, 0, 0.4) !important;
+}
+
+.rarity-ultimate:hover {
+  box-shadow: 0 0 20px rgba(255, 200, 0, 0.6) !important;
+}
+
+.rarity-exalted {
+  border-color: rgba(100, 255, 150, 0.8) !important;
+  box-shadow: 0 0 10px rgba(100, 255, 150, 0.4) !important;
+}
+
+.rarity-exalted:hover {
+  box-shadow: 0 0 20px rgba(100, 255, 150, 0.6) !important;
+}
+
+.rarity-transcendent {
+  border-color: rgba(255, 100, 200, 0.8) !important;
+  box-shadow: 0 0 10px rgba(255, 100, 200, 0.4) !important;
+}
+
+.rarity-transcendent:hover {
+  box-shadow: 0 0 20px rgba(255, 100, 200, 0.6) !important;
 }
 
 .shop-item-price {
@@ -280,16 +590,18 @@
   align-items: center;
   gap: 0.8rem;
   margin-top: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .original-price {
-  font-size: 1rem;
+  font-size: 0.75rem;
   color: #888;
   text-decoration: line-through;
 }
 
 .final-price {
-  font-size: 1.3rem;
+  font-size: 0.9rem;
   font-weight: bold;
   color: #ffd700;
 }
@@ -300,14 +612,14 @@
 }
 
 .shop-buy-button {
-  margin-top: 0.5rem;
-  padding: 0.7rem 1.5rem;
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.8rem;
   background: linear-gradient(135deg, #4ade80, #22c55e);
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   color: white;
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.3s ease;
   width: 100%;
@@ -315,7 +627,7 @@
 
 .shop-buy-button:hover:not(:disabled) {
   background: linear-gradient(135deg, #22c55e, #16a34a);
-  transform: scale(1.05);
+  transform: scale(1.03);
   box-shadow: 0 4px 12px rgba(74, 222, 128, 0.4);
 }
 
@@ -327,22 +639,22 @@
 
 .shop-actions {
   width: 100%;
-  max-width: 1200px;
+  max-width: 900px;
   display: flex;
   justify-content: center;
-  gap: 1rem;
-  padding: 0.5rem 0;
+  gap: 0.8rem;
+  padding: 0.4rem 0;
   flex-shrink: 0;
 }
 
 .shop-reroll-button {
-  padding: 0.7rem 1.5rem;
+  padding: 0.5rem 1rem;
   background: linear-gradient(135deg, #c084fc, #9333ea);
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   color: white;
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(192, 132, 252, 0.4);
@@ -350,7 +662,7 @@
 
 .shop-reroll-button:hover:not(:disabled) {
   background: linear-gradient(135deg, #9333ea, #7e22ce);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(192, 132, 252, 0.6);
 }
 
@@ -362,13 +674,13 @@
 }
 
 .shop-back-button {
-  padding: 0.7rem 1.5rem;
+  padding: 0.5rem 1rem;
   background: linear-gradient(135deg, #64748b, #475569);
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   color: white;
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
@@ -376,7 +688,7 @@
 
 .shop-back-button:hover {
   background: linear-gradient(135deg, #475569, #334155);
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(100, 116, 139, 0.6);
 }
 
@@ -384,44 +696,124 @@
 @media (max-width: 1024px) {
   .shop-header {
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.8rem;
   }
   
-  .shop-slots {
-    gap: 1rem;
+  .shop-buy-item-slot {
+    width: 150px;
   }
   
-  .shop-slot {
-    width: 200px;
+  .shop-buy-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .shop-sell-section {
+    max-height: 140px;
+  }
+  
+  .sell-item-icon {
+    width: 55px;
+    height: 55px;
   }
 }
 
 @media (max-width: 768px) {
   .shop-container {
-    padding: 1rem;
+    padding: 0.8rem;
   }
   
   .shop-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
   
   .shop-info {
-    gap: 1rem;
-    font-size: 1.1rem;
+    gap: 0.8rem;
+    font-size: 0.95rem;
   }
   
-  .shop-slot {
-    width: 180px;
-    padding: 1rem;
+  .shop-header {
+    padding: 0.8rem;
+  }
+  
+  .shop-buy-item-slot {
+    width: 140px;
+    padding: 0.7rem;
+    font-size: 0.85rem;
   }
   
   .shop-actions {
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.8rem;
   }
   
   .shop-reroll-button,
   .shop-back-button {
     width: 100%;
+  }
+  
+  .shop-sell-section {
+    max-height: 130px;
+  }
+  
+  .sell-item-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .sell-qty-badge {
+    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+  }
+  
+  .shop-multi-sell-button {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .shop-container {
+    padding: 0.5rem;
+  }
+  
+  .shop-header {
+    padding: 0.5rem;
+  }
+  
+  .shop-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .shop-info {
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .shop-buy-item-slot {
+    width: 120px;
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .shop-sell-section {
+    max-height: 120px;
+  }
+  
+  .sell-item-icon {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .sell-qty-badge {
+    font-size: 0.65rem;
+    width: 16px;
+    height: 16px;
+  }
+  
+  .shop-multi-sell-button {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
   }
 }

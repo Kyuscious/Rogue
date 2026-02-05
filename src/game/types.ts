@@ -91,6 +91,7 @@ export interface GameState {
   selectedRegion: Region | null;
   completedRegions: Region[];
   visitedRegionsThisRun: Region[]; // Track path taken during this run (in order)
+  completedQuestPaths: string[]; // Track completed paths this run (format: "questId:pathId")
   currentTier: EnemyTier;
   playerCharacter: Character;
   enemyCharacters: Character[];

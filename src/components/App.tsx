@@ -359,6 +359,11 @@ export const App: React.FC = () => {
   const handleQuestComplete = () => {
     if (!state.selectedRegion) return;
     
+    // Mark the completed quest path
+    if (state.selectedQuest) {
+      useGameStore.getState().markQuestPathCompleted(state.selectedQuest.questId, state.selectedQuest.pathId);
+    }
+    
     // Go to region selection to choose next destination
     setScene('regionSelection');
   };
