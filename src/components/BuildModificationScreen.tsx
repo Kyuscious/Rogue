@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Character } from '../game/types';
 import { getAvailableClasses, canModifyBuild, discardItem } from '../game/buildModificationSystem';
+import { getItemById } from '../game/items';
+import { ITEM_TRADES } from '../game/trades';
 import '../styles/BuildModificationScreen.css';
 
 interface BuildModificationScreenProps {
@@ -16,6 +18,7 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
 }) => {
   const [tab, setTab] = useState<'class' | 'items' | 'stats'>('class');
   const [selectedClass, setSelectedClass] = useState(character.class);
+  const [showTrades, setShowTrades] = useState(false);
 
   if (!canModifyBuild(character)) {
     return (
@@ -98,6 +101,99 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
             <p className="description">
               Discard items you don't need or remove cursed equipment.
             </p>
+
+            {/* Combine Items Section */}
+            <div className="combine-items-section">
+              <div className="combine-header">
+                <h3>Combine Items</h3>
+                <button 
+                  className="trade-list-button"
+                  onClick={() => setShowTrades(!showTrades)}
+                  title="View all possible trades"
+                >
+                  Trade List
+                </button>
+              </div>
+              <p className="trade-description">
+                Common → Rare → Epic → Legendary → Mythic
+              </p>
+            </div>
+
+            {/* Trade List Modal */}
+            {showTrades && (
+              <div className="trade-modal-overlay" onClick={() => setShowTrades(false)}>
+                <div className="trade-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header">
+                    <h2>All Available Trades</h2>
+                    <button 
+                      className="modal-close"
+                      onClick={() => setShowTrades(false)}
+                      title="Close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="trades-grid">
+                    {ITEM_TRADES.map((trade) => {
+                      const toItem = getItemById(trade.toItem.itemId);
+                      
+                      return (
+                        <div key={trade.id} className="trade-card">
+                          <div className="trade-formula">
+                            {trade.fromItems.map((from, idx) => {
+                              const item = getItemById(from.itemId);
+                              const showQuantity = from.quantity > 1;
+                              
+                              return (
+                                <div key={idx} className="trade-component">
+                                  {item?.imagePath && (
+                                    <img 
+                                      className="item-icon" 
+                                      src={item.imagePath} 
+                                      alt={item.name || from.itemId}
+                                      title={item.name || from.itemId}
+                                    />
+                                  )}
+                                  {(!item?.imagePath || showQuantity) && (
+                                    <span className="item-name-small">
+                                      {showQuantity && <span className="quantity">{from.quantity}×</span>}
+                                      {item?.name || from.itemId}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            
+                            <div className="trade-arrow">→</div>
+                            
+                            <div className="trade-component result">
+                              {toItem?.imagePath && (
+                                <img 
+                                  className="item-icon" 
+                                  src={toItem.imagePath} 
+                                  alt={toItem.name || trade.toItem.itemId}
+                                  title={toItem.name || trade.toItem.itemId}
+                                />
+                              )}
+                              {(!toItem?.imagePath || trade.toItem.quantity > 1) && (
+                                <span className="item-name-small">
+                                  {trade.toItem.quantity > 1 && <span className="quantity">{trade.toItem.quantity}×</span>}
+                                  {toItem?.name || trade.toItem.itemId}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Inventory List */}
+            <h3 className="inventory-header">Your Inventory</h3>
 
             {character.inventory && character.inventory.length > 0 ? (
               <div className="inventory-list">

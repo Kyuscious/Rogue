@@ -13,9 +13,9 @@
 
 export interface StatusEffect {
   id: string;
-  type: 'stun' | 'slow' | 'root' | 'silence' | 'buff' | 'debuff';
+  type: 'stun' | 'slow' | 'root' | 'silence' | 'buff' | 'debuff' | 'burn';
   duration: number; // Duration in turns
-  value?: number; // Optional value (e.g., slow percentage)
+  value?: number; // Optional value (e.g., slow percentage, burn stacks, etc.)
   appliedAt: number; // Timeline time when applied
   castTime?: number; // Optional cast time before effect applies
   source: 'player' | 'enemy';
@@ -193,3 +193,149 @@ export function isRooted(
   );
 }
 
+/**
+ * Burn Effect System - Bami's Cinder Immolate Passive
+ * 
+ * Mechanics:
+ * - Every physical attack or when attacked, apply burn stacks to target
+ * - Each burn stack deals 15 damage per turn
+ * - Burn lasts 2 turns with the current stacks
+ * - When new stacks are added, duration refreshes to 2 turns
+ * - Multiple Bami's Cinder items stack additively (2 items = 2 stacks per hit)
+ * 
+ * Example:
+ * Turn 1: Player attacks with 1 Bami's Cinder → Applies 1 burn stack (2 turn duration)
+ * Turn 2: Burn deals 1 * 15 = 15 damage. Player attacks again → 2 burn stacks (duration refreshes to 2 turns)
+ * Turn 3: Burn deals 2 * 15 = 30 damage. Enemy doesn't attack → 2 turns pass
+ * Turn 4: Burn has 1 turn left
+ * Turn 5: Burn expires (0 turns left)
+ */
+
+/**
+ * Create or update a burn effect on a target
+ * Burn stacks additively and refreshes duration when new stacks are added
+ * @param effects Current status effects
+ * @param targetId The entity to apply burn to
+ * @param stacksToAdd Number of burn stacks to add (based on item count)
+ * @param currentTime Current timeline time
+ * @param source Who applied the burn
+ * @returns Updated effects array with new/updated burn
+ */
+export function applyBurn(
+  effects: StatusEffect[],
+  targetId: string,
+  stacksToAdd: number,
+  currentTime: number,
+  source: 'player' | 'enemy'
+): StatusEffect[] {
+  const burnDuration = 2; // 2 turns
+  const existingBurn = effects.find(
+    (effect) =>
+      effect.type === 'burn' &&
+      effect.targetId === targetId &&
+      currentTime < effect.appliedAt + effect.duration
+  );
+
+  if (existingBurn) {
+    // Update existing burn: add stacks and refresh duration
+    return effects.map((effect) =>
+      effect.id === existingBurn.id
+        ? {
+            ...effect,
+            value: (effect.value || 0) + stacksToAdd,
+            duration: burnDuration, // Reset duration to 2 turns
+            appliedAt: currentTime, // Update apply time so duration resets
+          }
+        : effect
+    );
+  }
+
+  // Create new burn effect
+  return [
+    ...effects,
+    {
+      id: `burn_${targetId}_${Date.now()}`,
+      type: 'burn',
+      duration: burnDuration,
+      value: stacksToAdd,
+      appliedAt: currentTime,
+      source,
+      targetId,
+    },
+  ];
+}
+
+/**
+ * Get total burn damage to apply at turn start
+ * Each burn stack deals 15 damage per turn
+ * @param effects Current status effects
+ * @param entityId The entity to check
+ * @param currentTime Current timeline time
+ * @returns Total burn damage (stackCount * 15)
+ */
+export function getBurnDamage(
+  effects: StatusEffect[],
+  entityId: string,
+  currentTime: number
+): number {
+  const activeBurn = effects.find(
+    (effect) =>
+      effect.type === 'burn' &&
+      effect.targetId === entityId &&
+      currentTime >= effect.appliedAt &&
+      currentTime < effect.appliedAt + effect.duration
+  );
+
+  if (!activeBurn) return 0;
+
+  const stackCount = activeBurn.value || 1;
+  return stackCount * 15; // 15 damage per stack
+}
+
+/**
+ * Get the number of active burn stacks on an entity
+ * @param effects Current status effects
+ * @param entityId The entity to check
+ * @param currentTime Current timeline time
+ * @returns Number of active burn stacks
+ */
+export function getBurnStacks(
+  effects: StatusEffect[],
+  entityId: string,
+  currentTime: number
+): number {
+  const activeBurn = effects.find(
+    (effect) =>
+      effect.type === 'burn' &&
+      effect.targetId === entityId &&
+      currentTime >= effect.appliedAt &&
+      currentTime < effect.appliedAt + effect.duration
+  );
+
+  return activeBurn ? activeBurn.value || 1 : 0;
+}
+
+/**
+ * Get remaining turns on burn effect
+ * @param effects Current status effects
+ * @param entityId The entity to check
+ * @param currentTime Current timeline time
+ * @returns Remaining turns (or 0 if no active burn)
+ */
+export function getBurnDuration(
+  effects: StatusEffect[],
+  entityId: string,
+  currentTime: number
+): number {
+  const activeBurn = effects.find(
+    (effect) =>
+      effect.type === 'burn' &&
+      effect.targetId === entityId &&
+      currentTime >= effect.appliedAt &&
+      currentTime < effect.appliedAt + effect.duration
+  );
+
+  if (!activeBurn) return 0;
+
+  return activeBurn.duration - (currentTime - activeBurn.appliedAt);
+}

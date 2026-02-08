@@ -277,6 +277,16 @@
   flex-direction: column;
   gap: 8px;
   margin-bottom: 10px;
+  align-items: center;
+}
+
+.discard-info .item-quantity {
+  background: rgba(233, 69, 96, 0.3);
+  color: #e94560;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
 .item-rarity {
@@ -336,6 +346,204 @@
 .continue-btn:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(46, 213, 115, 0.4);
+}
+
+/* Trade Header with Trade List Button */
+.trade-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.trade-header-top h2 {
+  margin: 0;
+}
+
+.trade-list-btn {
+  background: linear-gradient(135deg, #e94560, #d63450);
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.trade-list-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+}
+
+/* All Trades Modal */
+.all-trades-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeInTrades 0.3s ease-in;
+}
+
+@keyframes fadeInTrades {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.all-trades-modal {
+  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+  border: 2px solid rgba(233, 69, 96, 0.4);
+  border-radius: 15px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+  animation: slideUpTrades 0.3s ease-in;
+}
+
+@keyframes slideUpTrades {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.all-trades-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+}
+
+.all-trades-modal .modal-header h2 {
+  color: #ffffff;
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #e94560;
+  font-size: 1.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.modal-close:hover {
+  background: rgba(233, 69, 96, 0.2);
+  transform: rotate(90deg);
+}
+
+.all-trades-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.all-trade-card {
+  background: rgba(16, 52, 96, 0.6);
+  border: 1px solid rgba(233, 69, 96, 0.25);
+  border-radius: 10px;
+  padding: 15px;
+  transition: all 0.3s ease;
+}
+
+.all-trade-card:hover {
+  background: rgba(16, 52, 96, 0.9);
+  border-color: rgba(233, 69, 96, 0.5);
+  box-shadow: 0 5px 20px rgba(233, 69, 96, 0.2);
+  transform: translateY(-2px);
+}
+
+.all-trade-formula {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.all-trade-component {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.all-trade-component.result {
+  margin-left: 6px;
+}
+
+.all-trade-icon {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 5px rgba(233, 69, 96, 0.3));
+  transition: all 0.3s ease;
+}
+
+.all-trade-icon:hover {
+  filter: drop-shadow(0 0 10px rgba(233, 69, 96, 0.6));
+  transform: scale(1.15);
+}
+
+.all-trade-label {
+  font-size: 0.75rem;
+  color: #b0b0b0;
+  text-align: center;
+  max-width: 70px;
+  word-break: break-word;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.trade-qty {
+  font-weight: bold;
+  color: #e94560;
+  font-size: 0.9rem;
+}
+
+.all-trade-arrow {
+  color: #e94560;
+  font-size: 1.8rem;
+  font-weight: bold;
+  padding: 0 6px;
+  text-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
 }
 
 @media (max-width: 768px) {

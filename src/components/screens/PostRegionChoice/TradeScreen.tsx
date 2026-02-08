@@ -3,6 +3,7 @@ import { useGameStore } from '../../../game/store';
 import { CharacterClass } from '../../../game/types';
 import { getItemById } from '../../../game/items';
 import { getClassDescription } from '../../../game/statsSystem';
+import { ITEM_TRADES } from '../../../game/trades';
 import {
   getOfferedTrades,
   getAvailableClassSwaps,
@@ -29,6 +30,7 @@ export const TradeScreen: React.FC<TradeScreenProps> = ({ completedRegion, nextR
   const [selectedItemToDiscard, setSelectedItemToDiscard] = useState<string | null>(null);
   const [classChanged, setClassChanged] = useState(false);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [showAllTrades, setShowAllTrades] = useState(false);
 
   // Initialize offered trades and classes on mount
   useEffect(() => {
@@ -127,7 +129,16 @@ export const TradeScreen: React.FC<TradeScreenProps> = ({ completedRegion, nextR
         {activeTab === 'trades' && (
           <div className="trade-tab-content">
             <div className="trade-header">
-              <h2>Combine Items</h2>
+              <div className="trade-header-top">
+                <h2>Combine Items</h2>
+                <button
+                  className="trade-list-btn"
+                  onClick={() => setShowAllTrades(!showAllTrades)}
+                  title="View all possible trades"
+                >
+                  📋 View All Trades
+                </button>
+              </div>
               <p className="trade-description">
                 Combine common items into rarer ones. Common → Rare → Epic → Legendary → Mythic
               </p>
@@ -140,6 +151,74 @@ export const TradeScreen: React.FC<TradeScreenProps> = ({ completedRegion, nextR
                 🔄 Reroll Trades ({state.rerolls})
               </button>
             </div>
+
+            {/* All Trades Modal */}
+            {showAllTrades && (
+              <div className="all-trades-modal-overlay" onClick={() => setShowAllTrades(false)}>
+                <div className="all-trades-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="modal-header">
+                    <h2>All Available Trades</h2>
+                    <button 
+                      className="modal-close"
+                      onClick={() => setShowAllTrades(false)}
+                      title="Close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="all-trades-grid">
+                    {ITEM_TRADES.map((trade) => {
+                      const toItem = getItemById(trade.toItem.itemId);
+                      return (
+                        <div key={trade.id} className="all-trade-card">
+                          <div className="all-trade-formula">
+                            {trade.fromItems.map((from, idx) => {
+                              const item = getItemById(from.itemId);
+                              const showQuantity = from.quantity > 1;
+                              return (
+                                <div key={idx} className="all-trade-component">
+                                  {item?.imagePath && (
+                                    <img
+                                      className="all-trade-icon"
+                                      src={item.imagePath}
+                                      alt={item.name || from.itemId}
+                                      title={item.name || from.itemId}
+                                    />
+                                  )}
+                                  {(!item?.imagePath || showQuantity) && (
+                                    <span className="all-trade-label">
+                                      {showQuantity && <span className="trade-qty">{from.quantity}×</span>}
+                                      {item?.name || from.itemId}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            <div className="all-trade-arrow">→</div>
+                            <div className="all-trade-component result">
+                              {toItem?.imagePath && (
+                                <img
+                                  className="all-trade-icon"
+                                  src={toItem.imagePath}
+                                  alt={toItem.name || trade.toItem.itemId}
+                                  title={toItem.name || trade.toItem.itemId}
+                                />
+                              )}
+                              {(!toItem?.imagePath || trade.toItem.quantity > 1) && (
+                                <span className="all-trade-label">
+                                  {trade.toItem.quantity > 1 && <span className="trade-qty">{trade.toItem.quantity}×</span>}
+                                  {toItem?.name || trade.toItem.itemId}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="trades-list">
               {offeredTrades.length > 0 ? (
