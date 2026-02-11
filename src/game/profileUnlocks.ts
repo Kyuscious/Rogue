@@ -75,7 +75,13 @@ export const UNLOCKABLES: Record<string, UnlockableItem> = {
       value: 100,
       description: 'Win 100 battles',
     },
-    isUnlocked: (stats) => (stats.battlesWon || 0) >= 100,
+    isUnlocked: (stats) => {
+      // Check if achievements disabled OR in unlockedItems OR requirement met
+      if (stats.achievementsDisabled) return true;
+      const unlockedItems = stats.unlockedItems || [];
+      if (unlockedItems.includes('cull')) return true;
+      return (stats.battlesWon || 0) >= 100;
+    },
     getProgress: (stats) => ({ 
       current: stats.battlesWon || 0, 
       required: 100
@@ -91,7 +97,13 @@ export const UNLOCKABLES: Record<string, UnlockableItem> = {
       value: 14,
       description: 'Visit all 14 regions',
     },
-    isUnlocked: (stats) => (stats.visitedRegions?.length || 0) >= 14,
+    isUnlocked: (stats) => {
+      // Check if achievements disabled OR in unlockedItems OR requirement met
+      if (stats.achievementsDisabled) return true;
+      const unlockedItems = stats.unlockedItems || [];
+      if (unlockedItems.includes('world_atlas')) return true;
+      return (stats.visitedRegions?.length || 0) >= 10;
+    },
     getProgress: (stats) => ({ 
       current: stats.visitedRegions?.length || 0, 
       required: 14 
@@ -108,7 +120,8 @@ export const UNLOCKABLES: Record<string, UnlockableItem> = {
       description: 'Reach 150 Ability Power in a single run',
     },
     isUnlocked: (stats) => {
-      // Check if item is in the unlockedItems array
+      // Check if achievements disabled OR in unlockedItems
+      if (stats.achievementsDisabled) return true;
       const unlockedItems = stats.unlockedItems || [];
       return unlockedItems.includes('dark_seal');
     },
@@ -133,7 +146,8 @@ export const UNLOCKABLES: Record<string, UnlockableItem> = {
       description: 'Reach level 1000 in a single run',
     },
     isUnlocked: (stats) => {
-      // Check if item is in the unlockedItems array
+      // Check if achievements disabled OR in unlockedItems
+      if (stats.achievementsDisabled) return true;
       const unlockedItems = stats.unlockedItems || [];
       return unlockedItems.includes('tear_of_the_goddess');
     },

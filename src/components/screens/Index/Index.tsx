@@ -5,8 +5,23 @@ import { ITEM_DATABASE, ItemRarity, getPassiveDescription } from '../../../game/
 import { REGION_GRAPH } from '../../../game/regionGraph';
 import { getQuestsByRegion } from '../../../game/questDatabase';
 import { Region } from '../../../game/types';
-import { DEMACIA_MINIONS, DEMACIA_ELITES, DEMACIA_BOSSES } from '../../../game/regions/demacia/enemies';
-import { CAMAVOR_MINIONS, CAMAVOR_ELITES, CAMAVOR_BOSSES } from '../../../game/regions/camavor/enemies';
+import { DEMACIA_MINIONS, DEMACIA_ELITES, DEMACIA_BOSSES, DEMACIA_CHAMPIONS, DEMACIA_LEGENDS } from '../../../game/regions/demacia/enemies';
+import { CAMAVOR_MINIONS, CAMAVOR_ELITES, CAMAVOR_BOSSES, CAMAVOR_CHAMPIONS, CAMAVOR_LEGENDS } from '../../../game/regions/camavor/enemies';
+import { IONIA_MINIONS, IONIA_ELITES, IONIA_BOSSES, IONIA_CHAMPIONS, IONIA_LEGENDS } from '../../../game/regions/ionia/enemies';
+import { SHURIMA_MINIONS, SHURIMA_ELITES, SHURIMA_BOSSES, SHURIMA_CHAMPIONS, SHURIMA_LEGENDS } from '../../../game/regions/shurima/enemies';
+import { NOXUS_MINIONS, NOXUS_ELITES, NOXUS_BOSSES, NOXUS_CHAMPIONS, NOXUS_LEGENDS } from '../../../game/regions/noxus/enemies';
+import { FRELJORD_MINIONS, FRELJORD_ELITES, FRELJORD_BOSSES } from '../../../game/regions/freljord/enemies';
+import { ZAUN_MINIONS, ZAUN_ELITES, ZAUN_BOSSES } from '../../../game/regions/zaun/enemies';
+import { IXTAL_MINIONS, IXTAL_ELITES, IXTAL_BOSSES } from '../../../game/regions/ixtal/enemies';
+import { BANDLE_CITY_MINIONS, BANDLE_CITY_ELITES, BANDLE_CITY_BOSSES } from '../../../game/regions/bandle_city/enemies';
+import { BILGEWATER_MINIONS, BILGEWATER_ELITES, BILGEWATER_BOSSES } from '../../../game/regions/bilgewater/enemies';
+import { PILTOVER_MINIONS, PILTOVER_ELITES, PILTOVER_BOSSES } from '../../../game/regions/piltover/enemies';
+import { SHADOW_ISLES_MINIONS, SHADOW_ISLES_ELITES, SHADOW_ISLES_BOSSES } from '../../../game/regions/shadow_isles/enemies';
+import { VOID_MINIONS, VOID_ELITES, VOID_BOSSES } from '../../../game/regions/void/enemies';
+import { TARGON_MINIONS, TARGON_ELITES, TARGON_BOSSES } from '../../../game/regions/targon/enemies';
+import { MARAI_MINIONS, MARAI_ELITES, MARAI_BOSSES } from '../../../game/regions/marai_territory/enemies';
+import { ICE_SEA_MINIONS, ICE_SEA_ELITES, ICE_SEA_BOSSES } from '../../../game/regions/ice_sea/enemies';
+import { RUNETERRA_MINIONS, RUNETERRA_ELITES, RUNETERRA_BOSSES, RUNETERRA_CHAMPIONS, RUNETERRA_LEGENDS } from '../../../game/regions/runeterra/enemies';
 import './Index.css';
 
 interface IndexProps {
@@ -179,12 +194,23 @@ export const Index: React.FC<IndexProps> = ({ onBack }) => {
   const renderEnemies = () => {
     // Collect all enemies from all regions
     const allEnemies = [
-      ...DEMACIA_MINIONS,
-      ...DEMACIA_ELITES,
-      ...DEMACIA_BOSSES,
-      ...CAMAVOR_MINIONS,
-      ...CAMAVOR_ELITES,
-      ...CAMAVOR_BOSSES,
+      ...DEMACIA_MINIONS, ...DEMACIA_ELITES, ...DEMACIA_BOSSES, ...DEMACIA_CHAMPIONS, ...DEMACIA_LEGENDS,
+      ...CAMAVOR_MINIONS, ...CAMAVOR_ELITES, ...CAMAVOR_BOSSES, ...CAMAVOR_CHAMPIONS, ...CAMAVOR_LEGENDS,
+      ...IONIA_MINIONS, ...IONIA_ELITES, ...IONIA_BOSSES, ...IONIA_CHAMPIONS, ...IONIA_LEGENDS,
+      ...SHURIMA_MINIONS, ...SHURIMA_ELITES, ...SHURIMA_BOSSES, ...SHURIMA_CHAMPIONS, ...SHURIMA_LEGENDS,
+      ...NOXUS_MINIONS, ...NOXUS_ELITES, ...NOXUS_BOSSES, ...NOXUS_CHAMPIONS, ...NOXUS_LEGENDS,
+      ...FRELJORD_MINIONS, ...FRELJORD_ELITES, ...FRELJORD_BOSSES,
+      ...ZAUN_MINIONS, ...ZAUN_ELITES, ...ZAUN_BOSSES,
+      ...IXTAL_MINIONS, ...IXTAL_ELITES, ...IXTAL_BOSSES,
+      ...BANDLE_CITY_MINIONS, ...BANDLE_CITY_ELITES, ...BANDLE_CITY_BOSSES,
+      ...BILGEWATER_MINIONS, ...BILGEWATER_ELITES, ...BILGEWATER_BOSSES,
+      ...PILTOVER_MINIONS, ...PILTOVER_ELITES, ...PILTOVER_BOSSES,
+      ...SHADOW_ISLES_MINIONS, ...SHADOW_ISLES_ELITES, ...SHADOW_ISLES_BOSSES,
+      ...VOID_MINIONS, ...VOID_ELITES, ...VOID_BOSSES,
+      ...TARGON_MINIONS, ...TARGON_ELITES, ...TARGON_BOSSES,
+      ...MARAI_MINIONS, ...MARAI_ELITES, ...MARAI_BOSSES,
+      ...ICE_SEA_MINIONS, ...ICE_SEA_ELITES, ...ICE_SEA_BOSSES,
+      ...RUNETERRA_MINIONS, ...RUNETERRA_ELITES, ...RUNETERRA_BOSSES, ...RUNETERRA_CHAMPIONS, ...RUNETERRA_LEGENDS,
     ];
 
     // Group enemies by faction

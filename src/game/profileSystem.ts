@@ -346,27 +346,28 @@ export function unlockAllContent(profileId: number): void {
   const profile = profiles.find(p => p.id === profileId);
   if (!profile) return;
 
-  // Get all item IDs from ITEM_DATABASE
+  // Get all item IDs from ITEM_DATABASE (complete list of 87 items)
   const allItemIds = [
     // Starter items
-    'dorans_blade', 'dorans_ring', 'dorans_shield',
+    'dorans_blade', 'dorans_shield', 'dorans_ring', 'cull', 'world_atlas', 'dark_seal', 'tear_of_the_goddess',
+    // Consumables
+    'health_potion', 'flashbomb_trap', 'stealth_ward', 'control_ward', 'oracle_lens', 'farsight_alteration', 'poro_snax',
     // Common items
-    'health_potion', 'cloth_armor', 'amplifying_tome', 'long_sword', 'ruby_crystal',
-    'sapphire_crystal', 'rejuvenation_bead', 'boots',
+    'long_sword', 'cloth_armor', 'amplifying_tome', 'ruby_crystal', 'sapphire_crystal', 'fearie_charm', 'dagger',
+    'rejuvenation_bead', 'boots', 'pickaxe', 'null_magic_mantle', 'blasting_wand', 'bf_sword', 'cloak_of_agility', 'glowing_mote',
+    // Epic consumables
+    'elixir_of_iron', 'elixir_of_sorcery', 'elixir_of_wrath',
     // Epic items
-    'vampiric_scepter', 'chain_vest', 'null_magic_mantle', 'pickaxe', 'needlessly_large_rod',
-    'giants_belt', 'blasting_wand', 'bf_sword', 'recurve_bow', 'cloak_of_agility',
+    'aether_wisp', 'bamis_cinder', 'bandleglass_mirror', 'blighting_jewel', 'bramble_vest', 'catalyst_of_aeons',
+    'caufields_warhammer', 'chain_vest', 'crystalline_bracer', 'executioners_calling', 'fated_ashes', 'fiendish_codex',
+    'forbidden_idol', 'giants_belt', 'glacial_buckler', 'haunting_guise', 'heartbound_axe', 'hexdrinker',
+    'hextech_alternator', 'kindlegem', 'last_whisper', 'lifeline', 'lost_chapter', 'negatron_cloak', 'noonquiver',
+    'oblivion_orb', 'phage', 'quicksilver_sash', 'rectrix', 'recurve_bow', 'scouts_slingshot', 'seekers_armguard',
+    'serrated_dirk', 'sheen', 'spectre_cowl', 'steel_sigil', 'the_brutalizer', 'tiamat', 'tunneler', 'vampiric_scepter',
+    'verdant_barrier', 'wardens_mail', 'winged_moonplate', 'zeal',
     // Legendary items
-    'infinity_edge', 'rabadons_deathcap', 'blade_of_the_ruined_king', 'zhonyas_hourglass',
-    'guardian_angel', 'warmogs_armor', 'trinity_force', 'runaans_hurricane',
-    // Mythic items
-    'ludens_tempest', 'eclipse', 'immortal_shieldbow', 'sunfire_aegis',
-    // Ultimate items  
-    'nashors_tooth', 'lich_bane', 'rylais_crystal_scepter', 'banshees_veil',
-    // Exalted items
-    'mejais_soulstealer', 'dark_seal', 'tear_of_the_goddess', 'seraphs_embrace',
-    // Transcendent items
-    'Staff of Ages'
+    'mejais_soulstealer', 'infinity_edge', 'abyssal_mask', 'nashor_tooth', 'trinity_force', 'rabadons_deathcap',
+    'kaenic_rookern', 'warmogs_armor', 'lich_bane', 'guardian_angel', 'chalicar'
   ];
 
   // Get all region connections
@@ -390,11 +391,96 @@ export function unlockAllContent(profileId: number): void {
     'targon-demacia', 'targon-shurima',
   ];
 
+  // Get all enemy IDs
+  const allEnemyIds = [
+    'demacia_soldier', 'demacia_scout', 'demacia_guard', 'demacia_wild_boar', 'demacia_general',
+    'demacia_silverwing_knight', 'demacia_crag_beast', 'demacia_crag_elder', 'demacia_mageseeker',
+    'demacia_warhorse_commander', 'garen', 'ionia_spirit_walker', 'ionia_shadow_assassin',
+    'ionia_kinkou_ninja', 'ionia_vastayan_hunter', 'ionia_forest_spirit', 'ionia_master_swordsman',
+    'ionia_spirit_blossom', 'ionia_vastayan_elder', 'ionia_shadow_reaper', 'ionia_ancient_spirit',
+    'ionia_wuju_bladesman', 'yasuo', 'ahri', 'shurima_sand_soldier', 'shurima_tomb_guardian',
+    'shurima_desert_nomad', 'shurima_sand_scarab', 'shurima_sun_priest', 'shurima_ascended_warrior',
+    'shurima_sun_disc_keeper', 'shurima_xer_sai_tunneler', 'shurima_emperor_construct',
+    'shurima_desert_tyrant', 'shurima_sun_guardian', 'nasus', 'azir', 'noxus_legionnaire',
+    'noxus_raider', 'noxus_executioner', 'noxus_battle_mage', 'noxus_warmonger', 'noxus_crimson_elite',
+    'noxus_blood_ritualist', 'noxus_trifarian_captain', 'noxus_war_general', 'noxus_warlord',
+    'noxus_master_assassin', 'darius', 'katarina', 'freljord_warrior', 'freljord_elite',
+    'freljord_boss', 'zaun_chemtech', 'zaun_enforcer', 'zaun_boss', 'ixtal_warrior', 'ixtal_shaman',
+    'ixtal_boss', 'bandle_poro', 'bandle_soldier', 'bandle_elite', 'bandle_boss', 'bilgewater_pirate',
+    'bilgewater_captain', 'bilgewater_boss', 'piltover_guard', 'piltover_officer', 'piltover_boss',
+    'shadow_isles_undead', 'shadow_isles_spectre', 'shadow_isles_boss', 'void_creature',
+    'void_spawn', 'void_boss', 'targon_celestial', 'targon_guardian', 'targon_boss',
+    'camavor_wraith', 'camavor_knight', 'camavor_viego', 'marai_tidecaller', 'marai_warrior',
+    'marai_scout', 'marai_wave_bearer', 'marai_deep_guardian', 'marai_siren_warden',
+    'marai_leviathan', 'ice_sea_frostborn', 'ice_sea_glacial_mage', 'ice_sea_frost_archer',
+    'ice_sea_blizzard_knight', 'ice_sea_frost_sorcerer', 'ice_sea_frost_tyrant',
+    'ice_sea_eternal_winter', 'runeterra_bandit', 'runeterra_mercenary', 'runeterra_void_spawn',
+    'runeterra_dragon_whelp', 'runeterra_rogue_mage', 'runeterra_elder_dragon', 'runeterra_void_hunter',
+    'runeterra_warlord', 'runeterra_ancient_dragon', 'runeterra_void_terror', 'runeterra_bandit_king',
+    'janna', 'brand', 'ryze'
+  ];
+
+  // Get all quest IDs
+  const allQuestIds = [
+    'demacia_path_1', 'demacia_path_1_safe', 'demacia_path_1_balanced', 'demacia_path_1_risky',
+    'demacia_path_2', 'demacia_path_2_safe', 'demacia_path_2_balanced', 'demacia_path_2_risky',
+    'demacia_path_3', 'demacia_path_3_safe', 'demacia_path_3_balanced', 'demacia_path_3_risky',
+    'demacia_path_4', 'demacia_path_4_safe', 'demacia_path_4_balanced', 'demacia_path_4_risky',
+    'demacia_path_5', 'demacia_path_5_safe', 'demacia_path_5_balanced', 'demacia_path_5_risky',
+    'ionia_path_1', 'ionia_path_1_safe', 'ionia_path_1_balanced', 'ionia_path_1_risky',
+    'ionia_path_2', 'ionia_path_2_safe', 'ionia_path_2_balanced', 'ionia_path_2_risky',
+    'ionia_path_3', 'ionia_path_3_safe', 'ionia_path_3_balanced', 'ionia_path_3_risky',
+    'ionia_path_4', 'ionia_path_4_safe', 'ionia_path_4_balanced', 'ionia_path_4_risky',
+    'ionia_path_5', 'ionia_path_5_safe', 'ionia_path_5_balanced', 'ionia_path_5_risky',
+    'shurima_path_1', 'shurima_path_1_safe', 'shurima_path_1_balanced', 'shurima_path_1_risky',
+    'shurima_path_2', 'shurima_path_2_safe', 'shurima_path_2_balanced', 'shurima_path_2_risky',
+    'shurima_path_3', 'shurima_path_3_safe', 'shurima_path_3_balanced', 'shurima_path_3_risky',
+    'shurima_path_4', 'shurima_path_4_safe', 'shurima_path_4_balanced', 'shurima_path_4_risky',
+    'shurima_path_5', 'shurima_path_5_safe', 'shurima_path_5_balanced', 'shurima_path_5_risky',
+    'noxus_path_1', 'noxus_path_1_safe', 'noxus_path_1_balanced', 'noxus_path_1_risky',
+    'noxus_path_2', 'noxus_path_2_safe', 'noxus_path_2_balanced', 'noxus_path_2_risky',
+    'noxus_path_3', 'noxus_path_3_safe', 'noxus_path_3_balanced', 'noxus_path_3_risky',
+    'freljord_path_1', 'freljord_path_1_safe', 'freljord_path_1_risky',
+    'zaun_path_1', 'zaun_path_1_safe', 'zaun_path_1_risky',
+    'ixtal_path_1', 'ixtal_path_1_safe', 'ixtal_path_1_risky',
+    'bandle_city_path_1', 'bandle_city_path_1_safe', 'bandle_city_path_1_risky',
+    'bilgewater_path_1', 'bilgewater_path_1_safe', 'bilgewater_path_1_risky',
+    'piltover_path_1', 'piltover_path_1_safe', 'piltover_path_1_risky',
+    'shadow_isles_path_1', 'shadow_isles_path_1_safe', 'shadow_isles_path_1_risky',
+    'void_path_1', 'void_path_1_safe', 'void_path_1_risky',
+    'targon_path_1', 'targon_path_1_safe', 'targon_path_1_risky',
+    'camavor_path_1', 'camavor_path_1_safe', 'camavor_path_1_balanced', 'camavor_path_1_risky',
+    'marai_path_1', 'marai_path_1_safe', 'marai_path_1_balanced', 'marai_path_1_risky',
+    'marai_path_2', 'marai_path_2_safe', 'marai_path_2_balanced', 'marai_path_2_risky',
+    'ice_sea_path_1', 'ice_sea_path_1_safe', 'ice_sea_path_1_balanced', 'ice_sea_path_1_risky',
+    'ice_sea_path_2', 'ice_sea_path_2_safe', 'ice_sea_path_2_balanced', 'ice_sea_path_2_risky'
+  ];
+
+  // Get all regions
+  const allRegions = [
+    'demacia', 'ionia', 'shurima', 'noxus', 'freljord', 'zaun', 'ixtal', 'bandle_city',
+    'bilgewater', 'piltover', 'shadow_isles', 'void', 'targon', 'camavor', 'ice_sea',
+    'marai_territory', 'runeterra'
+  ];
+
+  // Get all shop items (region:item combinations)
+  const allShopItems: string[] = [];
+  const shopItemTypes = ['cloth_armor', 'health_potion', 'random_items'];
+  allRegions.forEach(region => {
+    shopItemTypes.forEach(itemType => {
+      allShopItems.push(`${region}:${itemType}`);
+    });
+  });
+
   updateProfile(profileId, {
     stats: {
       ...profile.stats,
       itemsDiscovered: allItemIds,
       discoveredConnections: allConnections,
+      discoveredEnemies: allEnemyIds,
+      discoveredQuests: allQuestIds,
+      discoveredShopItems: allShopItems,
+      visitedRegions: allRegions,
       unlockedItems: allItemIds, // Unlock all items too
       achievementsDisabled: true,
     }
