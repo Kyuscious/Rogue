@@ -1,5 +1,9 @@
 # Bami's Cinder Immolate Passive - Complete Implementation Guide
 
+**STATUS:** ✅ DONE - Immolate system implemented  
+**LAST UPDATED:** February 10, 2026  
+**NOTE:** See IMMOLATE_PASSIVE_GUIDE.md for mechanics documentation.
+
 ## Summary
 
 You now have a complete system for implementing Bami's Cinder's **Immolate** passive feature. Here's what has been set up:

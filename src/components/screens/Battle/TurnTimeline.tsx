@@ -34,8 +34,8 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   stunPeriods = [],
   onSimultaneousAction,
 }) => {
-  // Get next 10 actions starting from current
-  const visibleActions = turnSequence.slice(currentIndex, currentIndex + 10);
+  // Get next 30 actions starting from current
+  const visibleActions = turnSequence.slice(currentIndex, currentIndex + 30);
   
   // Track previous action time for smooth transitions
   const prevActionTimeRef = React.useRef<number>(visibleActions[0]?.time || 1);

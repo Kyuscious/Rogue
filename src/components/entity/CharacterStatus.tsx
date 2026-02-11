@@ -7,7 +7,7 @@ import { BuffsDisplay } from './BuffsDisplay';
 import { ItemsBar } from './ItemsBar';
 import { StatsPanel } from './StatsPanel';
 import { getClassStatBonuses } from '../../game/statsSystem';
-import { CombatBuff } from '../../game/itemSystem';
+import { CombatBuff, computeBuffDisplayValues } from '../../game/itemSystem';
 import './CharacterStatus.css';
 
 const CLASS_ICONS: Record<string, string> = {
@@ -26,7 +26,8 @@ export const CharacterStatus: React.FC<{
   combatBuffs?: CombatBuff[];
   combatDebuffs?: CombatBuff[];
   isRevealed?: boolean; // For stealth/control ward mechanic - enemy visibility
-}> = ({ characterId, combatBuffs, combatDebuffs, isRevealed = true }) => {
+  turnCounter?: number; // Actual turn counter for accurate duration display
+}> = ({ characterId, combatBuffs, combatDebuffs, isRevealed = true, turnCounter = 0 }) => {
   const { state } = useGameStore();
   const t = useTranslation();
   const [hoveredClass, setHoveredClass] = useState(false);
@@ -74,23 +75,44 @@ export const CharacterStatus: React.FC<{
 
   if (!character) return null;
 
-  // Convert CombatBuffs to TemporaryStatModifiers for BuffsDisplay
-  const temporaryStats = combatBuffs?.map(buff => ({
-    statName: buff.stat,
-    value: Math.max(1, Math.round(buff.amount)), // Round to integer, minimum 1
-    source: buff.name,
-    duration: buff.duration,
-    isDebuff: false,
-  })) || [];
+  // Convert CombatBuffs to TemporaryStatModifiers for BuffsDisplay (NEW STACKING SYSTEM)
+  const temporaryStats = combatBuffs?.map(buff => {
+    const { totalAmount, maxDuration } = computeBuffDisplayValues(buff, turnCounter);
+    
+    // Decimal stats (xpGain, goldGain, magicFind, etc.) should not be forced to min 1 or rounded
+    const decimalStats = ['speed', 'lifeSteal', 'spellVamp', 'omnivamp', 'tenacity', 'goldGain', 'xpGain', 'criticalChance', 'criticalDamage', 'haste', 'health_regen', 'heal_shield_power', 'magicFind'];
+    const isDecimalStat = decimalStats.includes(buff.stat);
+    
+    return {
+      statName: buff.stat,
+      value: isDecimalStat ? totalAmount : Math.max(1, Math.round(totalAmount)), // Keep decimals for decimal stats
+      source: buff.name,
+      duration: buff.isInfinite ? -1 : maxDuration, // -1 for infinite, otherwise longest remaining
+      isDebuff: false,
+      stackCount: buff.stacks.length, // Track number of stacks for display
+    };
+  }) || [];
 
-  // Convert CombatDebuffs to TemporaryStatModifiers for BuffsDisplay
-  const temporaryDebuffs = combatDebuffs?.map(debuff => ({
-    statName: debuff.stat,
-    value: Math.round(debuff.amount), // Keep negative values for debuffs
-    source: debuff.name,
-    duration: debuff.duration,
-    isDebuff: true,
-  })) || [];
+  // Log display stats for debugging
+  if (character.role === 'player' && temporaryStats.length > 0) {
+    console.log('📊 PLAYER BUFF DISPLAY:', {
+      total: temporaryStats.length,
+      buffs: temporaryStats.map(t => ({ source: t.source, value: t.value, stacks: t.stackCount, duration: t.duration })),
+    });
+  }
+
+  // Convert CombatDebuffs to TemporaryStatModifiers for BuffsDisplay (NEW STACKING SYSTEM)
+  const temporaryDebuffs = combatDebuffs?.map(debuff => {
+    const { totalAmount, maxDuration } = computeBuffDisplayValues(debuff, turnCounter);
+    return {
+      statName: debuff.stat,
+      value: Math.round(totalAmount), // Total of all active stacks (can be negative)
+      source: debuff.name,
+      duration: debuff.isInfinite ? -1 : maxDuration,
+      isDebuff: true,
+      stackCount: debuff.stacks.length,
+    };
+  }) || [];
 
   // Convert character.effects (StatusEffect) to TemporaryStatModifiers
   const statusEffectBuffs = character.effects
@@ -173,7 +195,7 @@ export const CharacterStatus: React.FC<{
       <BuffsDisplay temporaryStats={allTemporaryStats} />
 
       {/* Toggleable: Stats Panel */}
-      <StatsPanel character={character} combatBuffs={combatBuffs} combatDebuffs={combatDebuffs} isRevealed={isRevealed} />
+      <StatsPanel character={character} combatBuffs={combatBuffs} combatDebuffs={combatDebuffs} isRevealed={isRevealed} turnCounter={turnCounter} />
     </div>
   );
 };

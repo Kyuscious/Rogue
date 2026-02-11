@@ -1,5 +1,8 @@
 # Bami's Cinder - Immolate Passive Guide
 
+**STATUS:** ✅ DONE - Burn system implemented  
+**LAST UPDATED:** February 10, 2026
+
 ## Overview
 
 Bami's Cinder is an epic-tier item with the **Immolate** passive effect. This passive applies burn stacks to enemies on physical attacks, dealing damage over time.

@@ -104,7 +104,8 @@ export function applyForDemaciaBuff(character: Character, uniqueId: string): Sta
   const shieldId = `${uniqueId}_shield`;
   addShield(character, shieldId, shieldAmount, 2);
 
-  // Create buff status effect with unique ID
+  // Return buff status effect for compatibility, but DON'T add to character.effects
+  // The buff is now handled by the CombatBuff stacking system in Battle.tsx
   const buff: StatusEffect = {
     id: uniqueId,
     name: 'For Demacia!',
@@ -112,16 +113,13 @@ export function applyForDemaciaBuff(character: Character, uniqueId: string): Sta
     duration: 2, // Lasts 2 turns (current + next)
     description: `+5% Attack Damage, Shield: ${shieldAmount}`,
     statModifiers: {
-      attackDamage: 5, // +5% AD
+      attackDamage: 5, // +5% AD (5 represents 5% percentage, not 5 AD)
     },
     shieldAmount: shieldAmount,
   };
 
-  // Add buff to character's effects
-  if (!character.effects) {
-    character.effects = [];
-  }
-  character.effects.push(buff);
+  // NOTE: No longer adding to character.effects - using CombatBuff system instead
+  // This prevents double-display of the buff and ensures proper stacking behavior
 
   return buff;
 }

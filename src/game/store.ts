@@ -139,6 +139,7 @@ export interface GameStoreState {
     lastShopFloor: number; // Track when shop was last generated
     // Run stats for unlock tracking
     maxAbilityPowerReached: number; // Highest AP reached in current run
+    maxLevelReached: number; // Highest level reached in current run
     // Persistent buff system
     persistentBuffs: CombatBuff[]; // Buffs that persist across encounters (e.g., elixirs)
     encountersCompleted: number; // Total encounters completed in current run
@@ -205,6 +206,7 @@ export interface GameStoreState {
   incrementEncounterCount: () => void; // Call after each battle ends
   applyElixirBuff: (elixirId: string) => void; // Apply encounter-based buff from elixir
   getPersistentBuffs: () => CombatBuff[]; // Get current persistent buffs
+  updatePersistentBuff: (buff: CombatBuff) => void; // Add or update a persistent buff (for stacking buffs like glory/manaflow)
   // Weapons & Spells management
   equipWeapon: (index: number) => void; // Switch to weapon at index (0-2)
   equipSpell: (index: number) => void; // Switch to spell at index (0-4)
@@ -272,6 +274,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
     lastShopFloor: -1,
     // Run stats
     maxAbilityPowerReached: 0,
+    maxLevelReached: 1,
     // Persistent buffs
     persistentBuffs: [],
     encountersCompleted: 0,
@@ -647,9 +650,13 @@ export const useGameStore = create<GameStoreState>((set) => ({
           statBoosts
         );
         
+        // Track max level reached for unlocks
+        const maxLevel = Math.max(store.state.maxLevelReached, newLevel);
+        
         return {
           state: {
             ...store.state,
+            maxLevelReached: maxLevel,
             playerCharacter: {
               ...updatedCharacter,
               experience: remainingExp,
@@ -704,6 +711,12 @@ export const useGameStore = create<GameStoreState>((set) => ({
         unlockItem('dark_seal');
       }
       
+      // Check for Tear of the Goddess unlock before resetting
+      const maxLevel = store.state.maxLevelReached;
+      if (maxLevel >= 1000) {
+        unlockItem('tear_of_the_goddess');
+      }
+      
       // Track failed run for profile
       incrementRunsFailed();
       
@@ -725,6 +738,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           shopInventory: [],
           lastShopFloor: -1,
           maxAbilityPowerReached: 0,
+          maxLevelReached: 1,
           persistentBuffs: [],
           encountersCompleted: 0,
           weapons: [], // Start with no weapons
@@ -1073,28 +1087,49 @@ export const useGameStore = create<GameStoreState>((set) => ({
             id: 'elixir_iron_health',
             name: 'Elixir of Iron (Health)',
             stat: 'health',
-            amount: 300,
-            duration: 999, // Dummy duration for turn-based system
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 300,
+                stackId: 'elixir_iron_health_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
           {
             id: 'elixir_iron_tenacity',
             name: 'Elixir of Iron (Tenacity)',
             stat: 'tenacity',
-            amount: 250,
-            duration: 999,
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 250,
+                stackId: 'elixir_iron_tenacity_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
           {
             id: 'elixir_iron_movespeed',
             name: 'Elixir of Iron (Speed)',
             stat: 'movementSpeed',
-            amount: 150,
-            duration: 999,
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 150,
+                stackId: 'elixir_iron_movespeed_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
         ];
       } else if (elixirId === 'elixir_of_sorcery') {
@@ -1103,28 +1138,49 @@ export const useGameStore = create<GameStoreState>((set) => ({
             id: 'elixir_sorcery_ap',
             name: 'Elixir of Sorcery (AP)',
             stat: 'abilityPower',
-            amount: 50,
-            duration: 999,
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 50,
+                stackId: 'elixir_sorcery_ap_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
           {
             id: 'elixir_sorcery_mf',
             name: 'Elixir of Sorcery (Magic Find)',
             stat: 'magicFind',
-            amount: 10,
-            duration: 999,
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 10,
+                stackId: 'elixir_sorcery_mf_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
           {
             id: 'elixir_sorcery_true',
             name: 'Elixir of Sorcery (True Damage)',
             stat: 'trueDamage',
-            amount: 25,
-            duration: 999,
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 25,
+                stackId: 'elixir_sorcery_true_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
         ];
       } else if (elixirId === 'elixir_of_wrath') {
@@ -1133,19 +1189,33 @@ export const useGameStore = create<GameStoreState>((set) => ({
             id: 'elixir_wrath_ad',
             name: 'Elixir of Wrath (AD)',
             stat: 'attackDamage',
-            amount: 30,
-            duration: 999,
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 30,
+                stackId: 'elixir_wrath_ad_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
           {
             id: 'elixir_wrath_lifesteal',
             name: 'Elixir of Wrath (Lifesteal)',
             stat: 'lifeSteal',
-            amount: 12,
-            duration: 999,
+            stacks: [
+              {
+                addedTime: 0,
+                expiresAtTurn: 9999,
+                effectAmount: 12,
+                stackId: 'elixir_wrath_lifesteal_stack_1',
+              }
+            ],
             durationType: 'encounters',
             encountersRemaining: 15,
+            type: 'stacking_permanent',
           },
         ];
       }
@@ -1164,6 +1234,29 @@ export const useGameStore = create<GameStoreState>((set) => ({
   getPersistentBuffs: (): CombatBuff[] => {
     return useGameStore.getState().state.persistentBuffs;
   },
+
+  // Update or add a persistent buff (for stacking buffs like glory/manaflow)
+  updatePersistentBuff: (buff: CombatBuff) =>
+    set((store) => {
+      const existingIndex = store.state.persistentBuffs.findIndex(b => b.id === buff.id);
+      
+      let updatedBuffs: CombatBuff[];
+      if (existingIndex !== -1) {
+        // Update existing buff
+        updatedBuffs = [...store.state.persistentBuffs];
+        updatedBuffs[existingIndex] = buff;
+      } else {
+        // Add new buff
+        updatedBuffs = [...store.state.persistentBuffs, buff];
+      }
+      
+      return {
+        state: {
+          ...store.state,
+          persistentBuffs: updatedBuffs,
+        },
+      };
+    }),
   // Weapons & Spells Management
   equipWeapon: (index: number) =>
     set((store) => {

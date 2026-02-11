@@ -61,7 +61,7 @@ export interface CharacterStats {
 export const DEFAULT_STATS: CharacterStats = {
   //Survivability
   health: 125,
-  health_regen: 1,
+  health_regen: 0,
   armor: 20,
   magicResist: 20,
   tenacity: 0,
@@ -91,8 +91,6 @@ export const DEFAULT_STATS: CharacterStats = {
   xpGain: 1,
   magicFind: 0,
   trueDamage: 0,
-  
-  
 };
 
 /**
@@ -104,10 +102,14 @@ export const CLASS_STAT_MULTIPLIERS: Record<CharacterClass, Partial<CharacterSta
     abilityPower: 1.8,
     health: 1.2,
     magicResist: 1.2,
+    armor: 0.8,
     haste: 0.2,
+    magicPenetration: 0.1,
+    omnivamp: 0.1,
   },
   vanguard: {
     health: 1.8,
+    health_regen: 1,
     armor: 1.8,
     magicResist: 1.5,
     attackDamage: 0.5,
@@ -115,44 +117,52 @@ export const CLASS_STAT_MULTIPLIERS: Record<CharacterClass, Partial<CharacterSta
   },
   warden: {
     health: 1.5,
+    health_regen: 0.8,
     armor: 1.5,
     magicResist: 1.3,
     tenacity: 0.2,
   },
   juggernaut: {
     health: 1.3,
+    health_regen: 1.1,
     attackDamage: 1.4,
     armor: 1.2,
     lifeSteal: 0.1,
-    omnivamp: 0.2,
   },
   skirmisher: {
+    health: 1.2,
     attackDamage: 1.3,
     abilityPower: 1.0,
     speed: 0.1,
     movementSpeed: 1.2,
-    health: 1.2,
+    omnivamp: 0.1,
+   
   },
   assassin: {
+    health: 0.7,
     attackDamage: 1.5,
     abilityPower: 1.2,
-    lethality: 0.4,
+    lethality: 0.2,
     movementSpeed: 1.2,
     criticalChance: 0.2,
   },
   marksman: {
+    health: 0.5,
     attackDamage: 1.7,
     speed: 0.1,
     criticalChance: 0.35,
-    criticalDamage: 2.5,
+    criticalDamage: 0.5,
     attackRange: 1.5,
     lifeSteal: 0.15,
   },
   enchanter: {
     health: 1.2,
+    health_regen: 0.8,
     armor: 1.1,
     magicResist: 1.1,
     attackDamage: 0.6,
+    heal_shield_power: 0.3,
+    haste: 0.1,
   },
 };
 

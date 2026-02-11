@@ -1,5 +1,8 @@
 # Delverhold Greateaxe - Implementation Example
 
+**STATUS:** ✅ DONE - Example documentation for Hemorrhage DoT mechanic  
+**LAST UPDATED:** February 10, 2026
+
 ## Weapon Overview
 
 **Delverhold Greateaxe** - A legendary weapon that demonstrates the Hybrid Timing Model with stacking damage-over-time mechanics.

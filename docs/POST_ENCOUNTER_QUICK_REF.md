@@ -1,5 +1,9 @@
 # Post-Encounter System - Quick Reference
 
+**STATUS:** ✅ DONE - Quick reference guide  
+**LAST UPDATED:** February 10, 2026  
+**NOTE:** This doc may be consolidated into POST_ENCOUNTER_SYSTEM.md. See DOCS_INDEX.md.
+
 ## What Was Added
 
 ### Game Logic Files (4)

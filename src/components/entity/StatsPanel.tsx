@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Character } from '../../game/types';
 import { CharacterStats, getScaledStats } from '../../game/statsSystem';
-import { getPassiveIdsFromInventory } from '../../game/items';
+import { getPassiveIdsFromInventory, getItemById } from '../../game/items';
 import { useGameStore } from '../../game/store';
 import { useTranslation } from '../../hooks/useTranslation';
-import { CombatBuff } from '../../game/itemSystem';
+import { CombatBuff, computeBuffDisplayValues } from '../../game/itemSystem';
 import './StatsPanel.css';
 
 interface StatsPanelProps {
@@ -12,9 +12,10 @@ interface StatsPanelProps {
   combatBuffs?: CombatBuff[];
   combatDebuffs?: CombatBuff[];
   isRevealed?: boolean; // Whether to show stats or hide them
+  turnCounter?: number; // Current turn counter for accurate buff duration display
 }
 
-export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, combatDebuffs, isRevealed = true }) => {
+export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, combatDebuffs, isRevealed = true, turnCounter = 0 }) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -26,11 +27,31 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
     ? getPassiveIdsFromInventory(state.inventory)
     : [];
 
+  // For players, add inventory item stats to base stats before scaling
+  const baseStats = character.role === 'player'
+    ? (() => {
+        const statsWithItems = { ...character.stats };
+        state.inventory.forEach(invItem => {
+          const item = getItemById(invItem.itemId);
+          if (item?.stats) {
+            (Object.keys(item.stats) as Array<keyof typeof item.stats>).forEach((statKey) => {
+              const itemStatValue = item.stats?.[statKey];
+              if (itemStatValue !== undefined && itemStatValue !== null) {
+                const currentValue = statsWithItems[statKey as keyof CharacterStats] || 0;
+                statsWithItems[statKey as keyof CharacterStats] = (currentValue + itemStatValue) as any;
+              }
+            });
+          }
+        });
+        return statsWithItems;
+      })()
+    : character.stats;
+
   // For enemies, stats are already fully scaled at spawn (includes items + class bonuses)
   // For players, we need to calculate scaled stats with class bonuses and passives
   const scaledStats = character.role === 'enemy'
-    ? character.stats
-    : getScaledStats(character.stats, character.level, character.class, passiveIds);
+    ? baseStats
+    : getScaledStats(baseStats, character.level, character.class, passiveIds);
   
   // Apply combat buffs and debuffs to the stats
   const statsWithModifiers = { ...scaledStats };
@@ -39,7 +60,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
   combatBuffs?.forEach(buff => {
     const statKey = buff.stat as keyof CharacterStats;
     if (statsWithModifiers[statKey] !== undefined) {
-      (statsWithModifiers[statKey] as number) += buff.amount;
+      const { totalAmount } = computeBuffDisplayValues(buff, turnCounter);
+      (statsWithModifiers[statKey] as number) += totalAmount;
     }
   });
   
@@ -47,7 +69,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
   combatDebuffs?.forEach(debuff => {
     const statKey = debuff.stat as keyof CharacterStats;
     if (statsWithModifiers[statKey] !== undefined) {
-      (statsWithModifiers[statKey] as number) += debuff.amount; // amount is already negative for debuffs
+      const { totalAmount } = computeBuffDisplayValues(debuff, turnCounter);
+      (statsWithModifiers[statKey] as number) += totalAmount; // totalAmount is already negative for debuffs
     }
   });
   

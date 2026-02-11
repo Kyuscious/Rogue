@@ -1,5 +1,8 @@
 # Difficulty Scaling System
 
+**STATUS:** 🚧 WIP - Core scaling implemented, revisit penalties planned  
+**LAST UPDATED:** February 10, 2026
+
 ## Design Notes
 
 - **Reward Scaling:** Rewards (including shop offerings) should scale up with the encounter counter, so that progressing further always feels rewarding and the shop remains relevant throughout a run.

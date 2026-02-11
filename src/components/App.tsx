@@ -280,22 +280,36 @@ export const App: React.FC = () => {
     setScene('preTestSetup');
   };
 
-  const handleStartTestBattle = (player: any, enemy: any, playerItems: string[], enemyItems: string[]) => {
-    // Create inventory items from selected items
-    const inventoryItems = playerItems.map(itemId => ({ itemId, quantity: 1 }));
+  const handleStartTestBattle = (
+    player: any,
+    enemy: any,
+    playerItems: Array<{ itemId: string; quantity: number }>,
+    enemyItems: Array<{ itemId: string; quantity: number }>,
+    playerUseItems: Array<{ itemId: string; quantity: number }>,
+    _enemyUseItems: Array<{ itemId: string; quantity: number }>,
+    _playerWeapons: string[],
+    _enemyWeapons: string[],
+    _playerSpells: string[],
+    _enemySpells: string[]
+  ) => {
+    // Create inventory items from selected items (with quantities)
+    const inventoryItems = [...playerItems];
+    
+    // Add use-items to inventory
+    inventoryItems.push(...playerUseItems);
     
     // Apply enemy items' stats to enemy character
     const enemyWithItems = { ...enemy };
     if (enemyItems.length > 0) {
       const itemStats: Partial<CharacterStats> = {};
-      enemyItems.forEach(itemId => {
+      enemyItems.forEach(({ itemId, quantity }) => {
         const item = getItemById(itemId);
         if (item && item.stats) {
-          // Add each stat from the item to the enemy's stats
+          // Add each stat from the item to the enemy's stats (multiplied by quantity)
           (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
             const currentValue = (itemStats[stat] as number) || 0;
             const itemValue = (item.stats[stat] as number) || 0;
-            (itemStats[stat] as number) = currentValue + itemValue;
+            (itemStats[stat] as number) = currentValue + (itemValue * quantity);
           });
         }
       });
@@ -307,9 +321,15 @@ export const App: React.FC = () => {
         const bonusValue = (itemStats[stat] as number) || 0;
         (enemyWithItems.stats[stat] as number) = currentValue + bonusValue;
       });
+      
+      // Set enemy's inventory to the items they were given
+      enemyWithItems.inventory = enemyItems;
+    } else {
+      // Enemy has no items - initialize with empty inventory
+      enemyWithItems.inventory = [];
     }
     
-    // Update store with test characters and inventory
+    // Update store with test characters, inventory, weapons and spells
     useGameStore.setState((prev: any) => ({
       state: {
         ...prev.state,
@@ -317,6 +337,8 @@ export const App: React.FC = () => {
         enemyCharacters: [enemyWithItems],
         currentFloor: 1,
         inventory: inventoryItems,
+        weapons: _playerWeapons,
+        spells: _playerSpells,
       }
     }));
     setScene('testBattle');

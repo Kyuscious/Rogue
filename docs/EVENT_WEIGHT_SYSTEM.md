@@ -1,5 +1,8 @@
 # Event Weight System Documentation
 
+**STATUS:** ✅ DONE - Weighted event system implemented  
+**LAST UPDATED:** February 10, 2026
+
 ## Overview
 
 The Event Weight System is a probability-based mechanism for controlling which events players encounter. It works similarly to the enemy rarity system, allowing for weighted random selection where certain events can be more or less common based on their weight value.

@@ -1,5 +1,9 @@
 # Dark Seal & Mejai's - Complete Implementation
 
+**STATUS:** ✅ DONE - Feature complete  
+**LAST UPDATED:** February 10, 2026  
+**NOTE:** See DARK_SEAL_IMPLEMENTATION.md for full technical details.
+
 ## ✅ All Features Implemented
 
 ### 1. Dark Seal (Starter Item)

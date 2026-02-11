@@ -122,6 +122,31 @@ export const UNLOCKABLES: Record<string, UnlockableItem> = {
       };
     },
   },
+  
+  tear_of_the_goddess: {
+    id: 'tear_of_the_goddess',
+    name: 'Tear of the Goddess',
+    category: 'starter_item',
+    requirement: {
+      type: 'items_discovered', // Reusing type; actual check is custom
+      value: 1000,
+      description: 'Reach level 1000 in a single run',
+    },
+    isUnlocked: (stats) => {
+      // Check if item is in the unlockedItems array
+      const unlockedItems = stats.unlockedItems || [];
+      return unlockedItems.includes('tear_of_the_goddess');
+    },
+    getProgress: (stats) => {
+      // Progress can't be tracked from profile stats (it's per-run)
+      // Return completed or 0/1000
+      const unlockedItems = stats.unlockedItems || [];
+      return {
+        current: unlockedItems.includes('tear_of_the_goddess') ? 1000 : 0,
+        required: 1000
+      };
+    },
+  },
 };
 
 /**

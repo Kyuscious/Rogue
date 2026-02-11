@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../../../game/store';
 import { CharacterStatus } from '../../entity/CharacterStatus';
 import { BattlefieldDisplay, AoEIndicator } from './BattlefieldDisplay';
@@ -25,7 +25,10 @@ import {
   CombatBuff,
   applyLifeDrainingBuff,
   applyDrainBuff,
-  applyEnduringFocusBuff
+  applyEnduringFocusBuff,
+  addOrMergeBuffStack,
+  decayBuffStacks,
+  computeBuffDisplayValues,
 } from '../../../game/itemSystem';
 import { 
   handleEnemyDefeat,
@@ -111,7 +114,7 @@ const formatSpellEffects = (spell: any) => {
 export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   const store = useGameStore();
   const state = store.state;
-  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion, revealEnemy, decayRevealedEnemies } = store;
+  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion, revealEnemy, decayRevealedEnemies, updatePersistentBuff } = store;
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
@@ -170,10 +173,24 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     });
   }
 
-  // Get scaled stats for both characters (with class bonuses, weapon stats, and passives)
-  const playerScaledStats = getScaledStats(playerStatsWithWeapon, playerChar.level, playerChar.class, playerPassiveIds);
+  // Apply inventory item stats (non-weapon equipment like Tear of the Goddess)
+  state.inventory.forEach(invItem => {
+    const item = getItemById(invItem.itemId);
+    if (item?.stats) {
+      (Object.keys(item.stats) as Array<keyof typeof item.stats>).forEach((statKey) => {
+        const itemStatValue = item.stats?.[statKey];
+        if (itemStatValue !== undefined && itemStatValue !== null) {
+          const currentValue = playerStatsWithWeapon[statKey as keyof typeof playerStatsWithWeapon] || 0;
+          playerStatsWithWeapon[statKey as keyof typeof playerStatsWithWeapon] = (currentValue + itemStatValue) as any;
+        }
+      });
+    }
+  });
+
+  // Get base scaled stats for both characters (with class bonuses, weapon stats, inventory items, and passives)
+  const playerBaseStats = getScaledStats(playerStatsWithWeapon, playerChar.level, playerChar.class, playerPassiveIds);
   // Enemy stats are already scaled at spawn in store.ts, don't recalculate
-  const enemyScaledStats = enemyChar.stats;
+  const enemyBaseStats = enemyChar.stats;
 
   // DEBUG: Log weapon stats merge
   console.log('🔫 WEAPON STATS MERGE DEBUG:', {
@@ -182,7 +199,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     equippedWeaponStats: equippedWeapon?.stats,
     playerBaseAD: playerChar.stats.attackDamage,
     playerStatsWithWeaponAD: playerStatsWithWeapon.attackDamage,
-    playerScaledAD: playerScaledStats.attackDamage,
+    playerBaseScaledAD: playerBaseStats.attackDamage, // Base stats before buffs
   });
 
   // Ref for auto-scrolling battle log
@@ -249,6 +266,31 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     setSelectedItemId(null); // Will be auto-selected by useEffect watching inventory
     setEnemyDebuffs([]); // Reset enemy debuffs for new encounter
     
+    // CRITICAL FIX FOR BUFF DURATION EXTENDING BETWEEN ENCOUNTERS:
+    // Reset playerBuffs to only persistent buffs (clear temporary buffs from previous fight)
+    // This prevents old buffs with old expiresAtTurn values from showing extended durations
+    setPlayerBuffs(state.persistentBuffs || []);
+    
+    // Initialize manaflow buff if player has the passive but no buff exists yet
+    const hasManaflowPassive = playerPassiveIds.includes('manaflow');
+    const hasManaflowBuff = (state.persistentBuffs || []).some(b => b.id === 'manaflow_stacks');
+    
+    if (hasManaflowPassive && !hasManaflowBuff) {
+      // Create initial manaflow buff with 0 stacks
+      const initialManaflowBuff: CombatBuff = {
+        id: 'manaflow_stacks',
+        name: 'Manaflow',
+        stat: 'xpGain',
+        stacks: [], // Start with 0 stacks
+        type: 'stacking_permanent',
+        isInfinite: true,
+      };
+      
+      // Add to both local state and store
+      setPlayerBuffs(prev => [...prev, initialManaflowBuff]);
+      updatePersistentBuff(initialManaflowBuff);
+    }
+    
     // Log cooldown reductions from previous encounter
     const activeCooldowns = Object.entries(state.spellCooldowns);
     if (activeCooldowns.length > 0) {
@@ -294,6 +336,42 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   // Track active debuffs on enemy (DoTs, armor reduction, etc.)
   const [enemyDebuffs, setEnemyDebuffs] = useState<CombatBuff[]>([]);
 
+  // Compute player stats with active buffs applied (recalculates when buffs/turn changes)
+  const playerScaledStats = useMemo(() => {
+    let stats = { ...playerBaseStats };
+    
+    playerBuffs.forEach(buff => {
+      const { totalAmount } = computeBuffDisplayValues(buff, turnCounter);
+      if (buff.stat in stats) {
+        const currentValue = stats[buff.stat as keyof typeof stats] || 0;
+        stats = {
+          ...stats,
+          [buff.stat]: currentValue + totalAmount,
+        };
+      }
+    });
+    
+    return stats;
+  }, [playerBaseStats, playerBuffs, turnCounter]);
+
+  // Compute enemy stats with active debuffs applied (recalculates when debuffs/turn changes)
+  const enemyScaledStats = useMemo(() => {
+    let stats = { ...enemyBaseStats };
+    
+    enemyDebuffs.forEach(debuff => {
+      const { totalAmount } = computeBuffDisplayValues(debuff, turnCounter);
+      if (debuff.stat in stats) {
+        const currentValue = stats[debuff.stat as keyof typeof stats] || 0;
+        stats = {
+          ...stats,
+          [debuff.stat]: Math.max(0, currentValue + totalAmount), // Can't go negative
+        };
+      }
+    });
+    
+    return stats;
+  }, [enemyBaseStats, enemyDebuffs, turnCounter]);
+
   // Track selected item for use
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
@@ -317,7 +395,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     
     // If currently selected item still exists in inventory with quantity > 0, keep it
     if (selectedItemId) {
-      const currentItemExists = usableItemsList.some(item => item.item.id === selectedItemId);
+      const currentItemExists = usableItemsList.some((item: { itemId: string; item: any; quantity: number }) => item.item.id === selectedItemId);
       if (currentItemExists) {
         return; // Keep current selection
       }
@@ -625,30 +703,37 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // Check for Hemorrhage debuff (Delverhold Greateaxe)
     if (equippedWeaponId === 'delverhold_greateaxe' && newEnemyHp > 0) {
       setEnemyDebuffs((prevDebuffs) => {
-        const hemorrhageDebuffs = prevDebuffs.filter(d => d.id.startsWith('hemorrhage'));
-        const stackCount = hemorrhageDebuffs.length;
+        const hemorrhageBuff = prevDebuffs.find(d => d.id === 'hemorrhage');
+        const currentStacks = hemorrhageBuff?.stacks.length || 0;
         
-        if (stackCount < 5) {
-          // Add new stack
-          const damagePerTurn = playerScaledStats.attackDamage * 0.30;
-          logMessages.push({ message: `🩸 Hemorrhage applied! (Stack ${stackCount + 1}/5) - ${Math.round(damagePerTurn)} damage/turn` });
-          return [
-            ...prevDebuffs,
-            {
-              id: `hemorrhage_${Date.now()}`,
-              name: 'Hemorrhage',
-              stat: 'attackDamage', // Using as damage source reference
-              amount: damagePerTurn,
-              duration: 6, // 5 turns + 1 for partial turn (Hybrid Timing Model)
-              type: 'instant',
-            } as CombatBuff,
-          ];
+        if (currentStacks < 5) {
+          // Add new stack (30% AD damage per turn)
+          const damagePerTurn = Math.round(playerScaledStats.attackDamage * 0.30);
+          logMessages.push({ message: `🩸 Hemorrhage applied! (Stack ${currentStacks + 1}/5) - ${damagePerTurn} damage/turn` });
+          return addOrMergeBuffStack(
+            prevDebuffs,
+            'hemorrhage',
+            'Hemorrhage',
+            'trueDamage',
+            damagePerTurn,
+            5, // Lasts 5 turns
+            turnCounter,
+            'instant',
+            false
+          );
         } else {
-          // At max stacks (5), refresh duration of all stacks
-          logMessages.push({ message: `🩸 Hemorrhage refreshed! (5/5 stacks) - ${Math.round(playerScaledStats.attackDamage * 1.50)} damage/turn` });
+          // At max stacks (5), refresh all stack durations
+          const totalDamage = Math.round(playerScaledStats.attackDamage * 1.50); // 5 stacks * 30%
+          logMessages.push({ message: `🩸 Hemorrhage refreshed! (5/5 stacks) - ${totalDamage} damage/turn` });
           return prevDebuffs.map(d => 
-            d.id.startsWith('hemorrhage') 
-              ? { ...d, duration: 6 } // Refresh to 5 turns + 1 for partial turn
+            d.id === 'hemorrhage'
+              ? {
+                  ...d,
+                  stacks: d.stacks.map(stack => ({
+                    ...stack,
+                    expiresAtTurn: turnCounter + 5, // Refresh to 5 turns
+                  })),
+                }
               : d
           );
         }
@@ -724,18 +809,20 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
               endTime: stunEndTime,
             }]);
             
-            // Add stunned debuff for visual indicator
-            setEnemyDebuffs((prevDebuffs) => [
-              ...prevDebuffs,
-              {
-                id: `stunned_${Date.now()}`,
-                name: `Stunned (${stunStartTime.toFixed(2)}>${stunEndTime.toFixed(2)})`,
-                stat: 'health', // Use health as placeholder to avoid stat display issues
-                amount: 0, // Zero amount so no stat change shows
-                duration: Math.ceil(effectiveDuration) + 1, // Duration for visual display
-                type: 'instant',
-              } as CombatBuff,
-            ]);
+            // Add stunned debuff for visual indicator using new stacking system
+            setEnemyDebuffs((prevDebuffs) => 
+              addOrMergeBuffStack(
+                prevDebuffs,
+                'stunned',
+                `Stunned (${stunStartTime.toFixed(2)}>${stunEndTime.toFixed(2)})`,
+                'health', // Placeholder stat
+                0, // No stat effect
+                Math.ceil(effectiveDuration),
+                turnCounter,
+                'instant',
+                false
+              )
+            );
             
             logMessages.push({ message: `💫 ${enemyChar.name} is stunned for ${effectiveDuration} turn(s)!` });
           } else {
@@ -748,13 +835,10 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // Check for Life Draining passive (Doran's Blade)
     if (playerPassiveIds.includes('life_draining')) {
       const baseAD = playerChar.stats.attackDamage || 50;
+      const adBonus = Math.max(1, Math.floor(baseAD * 0.01));
       setPlayerBuffs((prev) => {
-        const updatedBuffs = applyLifeDrainingBuff(prev, baseAD);
-        const oldBuff = prev.find((b) => b.id.startsWith('life_draining'));
-        const newBuff = updatedBuffs.find((b) => b.id.startsWith('life_draining'));
-        if (!oldBuff || (newBuff && newBuff.amount !== oldBuff.amount)) {
-          logMessages.push({ message: `⚔️ Life Draining: +${Math.floor(baseAD * 0.01)} AD!` });
-        }
+        const updatedBuffs = applyLifeDrainingBuff(prev, baseAD, turnCounter);
+        logMessages.push({ message: `⚔️ Life Draining: +${adBonus} AD!` });
         return updatedBuffs;
       });
     }
@@ -1002,16 +1086,20 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           const enemyBaseMovement = enemyScaledStats.movementSpeed || 350;
           const flatReduction = Math.round(enemyBaseMovement * (slowPercent / 100));
           
-          // Also add as CombatBuff for display and stat modification
-          const slowDebuff: CombatBuff = {
-            id: `slow_${Date.now()}`,
-            name: `Slowed (${slowPercent}%)`,
-            stat: 'movementSpeed',
-            amount: -flatReduction, // Negative flat amount for debuff
-            duration: slowDuration,
-            durationType: 'turns',
-          };
-          setEnemyDebuffs(prev => [...prev, slowDebuff]);
+          // Add slow as CombatBuff for display and stat modification using new stacking system
+          setEnemyDebuffs(prev => 
+            addOrMergeBuffStack(
+              prev,
+              'slowed',
+              `Slowed (${slowPercent}%)`,
+              'movementSpeed',
+              -flatReduction,
+              slowDuration,
+              turnCounter,
+              'instant',
+              false
+            )
+          );
           
           logMessages.push({ message: `🐌 ${enemyChar.name} is slowed by ${slowPercent}% for ${slowDuration} turn(s)!` });
         } else {
@@ -1032,19 +1120,30 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             playerShields: playerChar.shields,
           });
           
-          // Add combat buff for display
+          // Add combat buff for display using new stacking system
           const adBonus = Math.round(playerScaledStats.attackDamage * 0.05);
-          const combatBuff: CombatBuff = {
-            id: uniqueId,
-            name: 'For Demacia!',
-            stat: 'attackDamage',
-            amount: adBonus,
-            duration: 2, // 2 turns: current turn + next turn
-            durationType: 'turns',
-          };
-          setPlayerBuffs(prev => [...prev, combatBuff]);
+          setPlayerBuffs(prev => {
+            const updated = addOrMergeBuffStack(
+              prev,
+              'for_demacia',
+              'For Demacia!',
+              'attackDamage',
+              adBonus,
+              2, // 2 turns (current + next)
+              turnCounter,
+              'instant',
+              false
+            );
+            console.log('📊 For Demacia buffer update:', {
+              buffsBefore: prev.map(b => ({ id: b.id, stacks: b.stacks.length, stat: b.stat })),
+              buffsAfter: updated.map(b => ({ id: b.id, stacks: b.stacks.length, stat: b.stat })),
+              totalADBuffs: updated.filter(b => b.stat === 'attackDamage').length,
+              adBonus,
+            });
+            return updated;
+          });
           
-          logMessages.push({ message: `🛡️ ${playerChar.name} gains +${adBonus} AD and ${buff.shieldAmount} shield for 1 turn!` });
+          logMessages.push({ message: `🛡️ ${playerChar.name} gains +${adBonus} AD and ${buff.shieldAmount} shield for 2 turns!` });
         }
       }
     }
@@ -1083,13 +1182,10 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     // Check for Drain passive (Doran's Ring)
     if (playerPassiveIds.includes('drain')) {
       const baseAP = playerChar.stats.abilityPower || 30;
+      const apBonus = Math.max(1, Math.floor(baseAP * 0.01));
       setPlayerBuffs((prev) => {
-        const updatedBuffs = applyDrainBuff(prev, baseAP);
-        const oldBuff = prev.find((b) => b.id.startsWith('drain'));
-        const newBuff = updatedBuffs.find((b) => b.id.startsWith('drain'));
-        if (!oldBuff || (newBuff && newBuff.amount !== oldBuff.amount)) {
-          logMessages.push({ message: `✨ Drain: +${Math.floor(baseAP * 0.01)} AP!` });
-        }
+        const updatedBuffs = applyDrainBuff(prev, baseAP, turnCounter);
+        logMessages.push({ message: `✨ Drain: +${apBonus} AP!` });
         return updatedBuffs;
       });
     }
@@ -1310,7 +1406,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       consumeInventoryItem(selectedItemId);
     } else {
       // Fallback for other items
-      const newBuff = createBuffFromItem(selectedItemId, `buff-${Date.now()}`);
+      const newBuff = createBuffFromItem(selectedItemId, `buff-${Date.now()}`, turnCounter);
       if (!newBuff) {
         setBattleLog((prev) => [
           ...prev,
@@ -1319,10 +1415,13 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         return;
       }
       
+      // Compute display values from buff
+      const { totalAmount, maxDuration } = computeBuffDisplayValues(newBuff, turnCounter);
+      
       setPlayerBuffs((prev) => [...prev, newBuff]);
       setBattleLog((prev) => [
         ...prev,
-        { message: `${playerChar.name} used ${item.name}! +${newBuff.amount} ${newBuff.stat} for ${newBuff.duration} turns!` },
+        { message: `${playerChar.name} used ${item.name}! +${totalAmount} ${newBuff.stat} for ${maxDuration} turns!` },
       ]);
       
       // Consume the item from inventory
@@ -1474,7 +1573,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
       if (playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus')) {
         setPlayerBuffs((prev) => {
-          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage);
+          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage, turnCounter);
           return updatedBuffs;
         });
       }
@@ -1553,7 +1652,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
       if (playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus')) {
         setPlayerBuffs((prev) => {
-          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage);
+          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage, turnCounter);
           return updatedBuffs;
         });
       }
@@ -1787,23 +1886,25 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       if (playerBuffs.length > 0 && playerChar && playerChar.hp > 0) {
         const hotBuffs = playerBuffs.filter(b => b.type === 'heal_over_time');
         if (hotBuffs.length > 0 && playerChar.hp < playerScaledStats.health) {
-          const totalHealing = hotBuffs.reduce((sum, buff) => sum + buff.amount, 0);
+          // Use new stacking system to compute total healing from all active stacks
+          let totalHealing = 0;
+          hotBuffs.forEach(buff => {
+            const { totalAmount } = computeBuffDisplayValues(buff, turnCounter);
+            totalHealing += totalAmount;
+          });
+          
           // Ensure minimum 1 HP healing per turn
           const healingAmount = Math.max(1, Math.floor(totalHealing));
           const newPlayerHp = Math.min(Math.round(playerChar.hp + healingAmount), Math.round(playerScaledStats.health));
           const actualHealing = newPlayerHp - playerChar.hp;
           if (actualHealing > 0) {
             updatePlayerHp(newPlayerHp);
-            newLogMessages.push({ message: `🧪 ${playerChar.name} healed ${actualHealing} HP from potion` });
+            newLogMessages.push({ message: `🧪 ${playerChar.name} healed ${actualHealing} HP from buffs` });
           }
         }
         
-        // Decay buff durations
-        setPlayerBuffs((prevBuffs) => 
-          prevBuffs
-            .map(buff => ({ ...buff, duration: buff.duration - 1 }))
-            .filter(buff => buff.duration > 0)
-        );
+        // Decay buff durations using new stacking system
+        setPlayerBuffs((prevBuffs) => decayBuffStacks(prevBuffs, turnCounter));
       }
       
       // Process StatusEffect durations and shield removal (always, not just when buffs exist)
@@ -1868,16 +1969,17 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
 
       // Apply damage-over-time debuffs to enemy (e.g., Hemorrhage)
       if (enemyDebuffs.length > 0 && enemyChar && enemyChar.hp > 0) {
-        // Calculate Hemorrhage damage (stacking DoT)
-        const hemorrhageDebuffs = enemyDebuffs.filter(d => d.id.startsWith('hemorrhage'));
-        if (hemorrhageDebuffs.length > 0) {
-          const totalDamage = hemorrhageDebuffs.reduce((sum, debuff) => sum + debuff.amount, 0);
-          const damageAmount = Math.max(1, Math.floor(totalDamage));
+        // Calculate Hemorrhage damage (stacking DoT) using new stacking system
+        const hemorrhageBuff = enemyDebuffs.find(d => d.id === 'hemorrhage');
+        if (hemorrhageBuff) {
+          const { totalAmount } = computeBuffDisplayValues(hemorrhageBuff, turnCounter);
+          const damageAmount = Math.max(1, Math.floor(totalAmount));
+          const stackCount = hemorrhageBuff.stacks.length;
           const newEnemyHp = Math.max(0, enemyChar.hp - damageAmount);
           const actualDamage = enemyChar.hp - newEnemyHp;
           if (actualDamage > 0) {
             updateEnemyHp(0, newEnemyHp);
-            newLogMessages.push({ message: `🩸 ${enemyChar.name} takes ${actualDamage} damage from Hemorrhage (${hemorrhageDebuffs.length} stack${hemorrhageDebuffs.length > 1 ? 's' : ''})` });
+            newLogMessages.push({ message: `🩸 ${enemyChar.name} takes ${actualDamage} damage from Hemorrhage (${stackCount} stack${stackCount > 1 ? 's' : ''})` });
           }
 
           // Check for immediate death from DoT
@@ -1886,12 +1988,8 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           }
         }
 
-        // Decay debuff durations
-        setEnemyDebuffs((prevDebuffs) => 
-          prevDebuffs
-            .map(debuff => ({ ...debuff, duration: debuff.duration - 1 }))
-            .filter(debuff => debuff.duration > 0)
-        );
+        // Decay debuff durations using new stacking system
+        setEnemyDebuffs((prevDebuffs) => decayBuffStacks(prevDebuffs, turnCounter));
       }
       
       setBattleLog((prev) => [...prev, ...newLogMessages]);
@@ -1966,45 +2064,92 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           const apGain = hasGloryUpgraded ? 15 : 10;
           const passiveName = hasGloryUpgraded ? "Glory (Upgraded)" : "Glory";
           
-          // Add permanent AP buff
-          setPlayerBuffs((prev) => {
-            const existingGloryBuff = prev.find(b => b.id === 'glory_stacks');
-            
-            let newBuffs;
-            if (existingGloryBuff) {
-              // Stack the buff
-              newBuffs = prev.map(buff =>
-                buff.id === 'glory_stacks'
-                  ? { ...buff, name: passiveName + ' Stacks', amount: buff.amount + apGain, duration: 999 }
-                  : buff
-              );
-            } else {
-              // Create new permanent buff
-              newBuffs = [...prev, {
-                id: 'glory_stacks',
-                name: passiveName + ' Stacks',
-                stat: 'abilityPower',
-                amount: apGain,
-                duration: 999, // Effectively permanent (999 turns)
-              } as CombatBuff];
-            }
-            
-            // Calculate current total AP with new buff
-            const baseAP = playerChar.stats.abilityPower || 0;
-            const buffAP = newBuffs
-              .filter(b => b.stat === 'abilityPower')
-              .reduce((sum, b) => sum + (b.amount || 0), 0);
-            const totalAP = baseAP + buffAP;
-            
-            // Track max AP reached for unlock tracking
-            updateMaxAbilityPower(totalAP);
-            
-            return newBuffs;
-          });
+          // Add permanent AP buff using new stacking system
+          const updatedBuffs = addOrMergeBuffStack(
+            playerBuffs,
+            'glory_stacks',
+            passiveName + ' Stacks',
+            'abilityPower',
+            apGain,
+            9999, // Effectively permanent
+            turnCounter,
+            'stacking_permanent',
+            true // Infinite - persists entire game
+          );
+          
+          // Update both local and persistent buffs
+          setPlayerBuffs(updatedBuffs);
+          const gloryBuff = updatedBuffs.find(b => b.id === 'glory_stacks');
+          if (gloryBuff) {
+            updatePersistentBuff(gloryBuff);
+          }
+          
+          // Calculate current total AP for tracking
+          const baseAP = playerChar.stats.abilityPower || 0;
+          const buffAP = updatedBuffs
+            .filter(b => b.stat === 'abilityPower')
+            .reduce((sum, b) => {
+              const { totalAmount } = computeBuffDisplayValues(b, turnCounter);
+              return sum + totalAmount;
+            }, 0);
+          const totalAP = baseAP + buffAP;
+          
+          // Track max AP reached for unlock tracking
+          updateMaxAbilityPower(totalAP);
           
           setBattleLog((prev) => [
             ...prev,
             { message: `✨ ${passiveName}: +${apGain} AP gained! (Champion/Legend defeated)` },
+          ]);
+        }
+      }
+      
+      // Check for Manaflow passive (Tear of the Goddess)
+      // Grants +10 stacks per encounter victory (max 360 stacks)
+      // Stacks are tracked via persistent buff and grant +0.01 xpGain per stack
+      const hasManaflow = playerPassiveIds.includes('manaflow');
+      
+      if (hasManaflow) {
+        const stacksPerVictory = 10;
+        const maxStacks = 360;
+        
+        // Check current stacks from persistent buffs
+        const existingBuff = playerBuffs.find(b => b.id === 'manaflow_stacks');
+        const currentStackCount = existingBuff?.stacks.length || 0;
+        
+        // Only add stacks if under the cap
+        if (currentStackCount < maxStacks) {
+          const stacksToAdd = Math.min(stacksPerVictory, maxStacks - currentStackCount);
+          
+          // Add stacks one by one (each stack = 1 count = +0.01 xpGain)
+          let updatedBuffs = playerBuffs;
+          for (let i = 0; i < stacksToAdd; i++) {
+            updatedBuffs = addOrMergeBuffStack(
+              updatedBuffs,
+              'manaflow_stacks',
+              'Manaflow',
+              'xpGain', // XP gain bonus stat
+              0.01, // Each stack grants +0.01 xpGain
+              9999, // Effectively permanent
+              turnCounter,
+              'stacking_permanent',
+              true // Infinite - persists entire game
+            );
+          }
+          
+          // Update both local and persistent buffs
+          setPlayerBuffs(updatedBuffs);
+          const manaflowBuff = updatedBuffs.find(b => b.id === 'manaflow_stacks');
+          if (manaflowBuff) {
+            updatePersistentBuff(manaflowBuff);
+          }
+          
+          const newStackCount = Math.min(currentStackCount + stacksToAdd, maxStacks);
+          const xpGainBonus = newStackCount * 0.01;
+          
+          setBattleLog((prev) => [
+            ...prev,
+            { message: `💧 Manaflow: +${stacksToAdd} stacks gained! (${newStackCount}/${maxStacks}, +${xpGainBonus.toFixed(2)} XP Gain)` },
           ]);
         }
       }
@@ -2034,6 +2179,18 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         totalGoldGain,
         hasReapPassive
       );
+      
+      // Apply manaflow xpGain bonus if present
+      // Manaflow stacks grant +0.01 xpGain per stack (max 360 stacks = +3.6 xpGain)
+      const manaflowBuff = playerBuffs.find(b => b.id === 'manaflow_stacks');
+      if (manaflowBuff) {
+        const stackCount = manaflowBuff.stacks.length;
+        const manaflowXpGain = stackCount * 0.01; // Each stack = +0.01 xpGain
+        
+        // Apply manaflow xpGain multiplier: 100 xpGain = 100% bonus = 2x experience
+        const manaflowMultiplier = 1 + (manaflowXpGain / 100);
+        victoryResult.expReward = Math.floor(victoryResult.expReward * manaflowMultiplier);
+      }
       
       // Apply rewards to game state
       applyVictoryRewards(
@@ -2125,7 +2282,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       {/* Character Panels with Battlefield */}
       <div className="battle-arena">
         <div className="team-player">
-          <CharacterStatus combatBuffs={playerBuffs} />
+          <CharacterStatus combatBuffs={playerBuffs} turnCounter={turnCounter} />
         </div>
         
         {/* Vertical Battlefield Display in Center */}
@@ -2142,7 +2299,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         />
         
         <div className="team-enemy">
-          <CharacterStatus characterId={enemyChar.id} combatDebuffs={enemyDebuffs} isRevealed={store.isEnemyRevealed(enemyChar.id)} />
+          <CharacterStatus characterId={enemyChar.id} combatDebuffs={enemyDebuffs} isRevealed={store.isEnemyRevealed(enemyChar.id)} turnCounter={turnCounter} />
         </div>
       </div>
 

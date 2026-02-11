@@ -1,5 +1,8 @@
 # Combat Formulas Documentation
 
+**STATUS:** ✅ DONE - Formulas implemented and tested  
+**LAST UPDATED:** February 10, 2026
+
 ## Damage Reduction (Armor & Magic Resist)
 
 The damage reduction uses a diminishing returns formula to prevent infinite scaling while allowing meaningful stat stacking.

@@ -19,7 +19,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
   const [totalTooltipPosition, setTotalTooltipPosition] = useState({ x: 0, y: 0 });
 
   // Use custom inventory if provided, otherwise use player inventory from state
-  const inventory = customInventory || state.inventory;
+  // If custom inventory is explicitly an empty array, use that (don't fallback to player inventory)
+  const inventory = Array.isArray(customInventory) ? customInventory : (customInventory || state.inventory);
   
   // Filter to only show items with stats (equipment), not consumables without stats
   const equipmentItems = inventory.filter(item => {

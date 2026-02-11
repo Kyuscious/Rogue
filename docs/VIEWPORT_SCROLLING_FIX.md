@@ -1,5 +1,8 @@
 # Viewport & Scrolling Fix Documentation
 
+**STATUS:** ✅ DONE - UI/viewport issues resolved  
+**LAST UPDATED:** February 10, 2026
+
 ## Problems Identified
 
 1. **Unwanted scrolling** on QuestSelect and other screens

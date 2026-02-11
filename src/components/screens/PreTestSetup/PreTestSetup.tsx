@@ -2,10 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { Character } from '../../../game/types';
 import { DEFAULT_STATS, getScaledStats, getClassStatBonuses, CharacterStats } from '../../../game/statsSystem';
 import { ITEM_DATABASE, getPassiveIdsFromInventory, getItemById } from '../../../game/items';
+import { getAllWeapons } from '../../../game/weapons';
+import { getAllSpells } from '../../../game/spells';
 import './PreTestSetup.css';
 
+interface ItemWithQuantity {
+  itemId: string;
+  quantity: number;
+}
+
 interface PreTestSetupProps {
-  onStartTestBattle: (player: Character, enemy: Character, playerItems: string[], enemyItems: string[]) => void;
+  onStartTestBattle: (
+    player: Character,
+    enemy: Character,
+    playerItems: ItemWithQuantity[],
+    enemyItems: ItemWithQuantity[],
+    playerUseItems: ItemWithQuantity[],
+    enemyUseItems: ItemWithQuantity[],
+    playerWeapons: string[],
+    enemyWeapons: string[],
+    playerSpells: string[],
+    enemySpells: string[]
+  ) => void;
   onBack: () => void;
 }
 
@@ -28,9 +46,21 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
   const [enemyMaxHp, setEnemyMaxHp] = useState(DEFAULT_STATS.health);
   const [enemyStats, setEnemyStats] = useState({ ...DEFAULT_STATS });
 
-  // Items for each character
-  const [playerItems, setPlayerItems] = useState<string[]>([]);
-  const [enemyItems, setEnemyItems] = useState<string[]>([]);
+  // Items for each character (with quantities)
+  const [playerItems, setPlayerItems] = useState<ItemWithQuantity[]>([]);
+  const [enemyItems, setEnemyItems] = useState<ItemWithQuantity[]>([]);
+  
+  // Use-items (consumables) for each character (with quantities)
+  const [playerUseItems, setPlayerUseItems] = useState<ItemWithQuantity[]>([]);
+  const [enemyUseItems, setEnemyUseItems] = useState<ItemWithQuantity[]>([]);
+  
+  // Weapons for each character (up to 3)
+  const [playerWeapons, setPlayerWeapons] = useState<string[]>([]);
+  const [enemyWeapons, setEnemyWeapons] = useState<string[]>([]);
+  
+  // Spells for each character (up to 5)
+  const [playerSpells, setPlayerSpells] = useState<string[]>([]);
+  const [enemySpells, setEnemySpells] = useState<string[]>([]);
 
   // Tooltip states
   const [showPlayerLevelTooltip, setShowPlayerLevelTooltip] = useState(false);
@@ -39,70 +69,94 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
 
   // Calculate player max HP when stats change
   useEffect(() => {
-    // Apply item stats first
+    // Apply regular item stats first
     const statsWithItems = { ...playerStats };
-    playerItems.forEach(itemId => {
+    playerItems.forEach(({ itemId, quantity }) => {
       const item = getItemById(itemId);
       if (item && item.stats) {
         (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
           const currentValue = (statsWithItems[stat] as number) || 0;
           const itemValue = (item.stats[stat] as number) || 0;
-          (statsWithItems[stat] as number) = currentValue + itemValue;
+          (statsWithItems[stat] as number) = currentValue + (itemValue * quantity);
         });
       }
     });
     
-    const passiveIds = getPassiveIdsFromInventory(playerItems.map(id => ({ itemId: id, quantity: 1 })));
+    // Apply use-item stats
+    playerUseItems.forEach(({ itemId, quantity }) => {
+      const item = getItemById(itemId);
+      if (item && item.stats) {
+        (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
+          const currentValue = (statsWithItems[stat] as number) || 0;
+          const itemValue = (item.stats[stat] as number) || 0;
+          (statsWithItems[stat] as number) = currentValue + (itemValue * quantity);
+        });
+      }
+    });
+    
+    const passiveIds = getPassiveIdsFromInventory([...playerItems, ...playerUseItems]);
     const scaledStats = getScaledStats(statsWithItems, playerLevel, playerClass, passiveIds);
     setPlayerMaxHp(scaledStats.health);
-  }, [playerLevel, playerClass, playerStats, playerItems]);
+  }, [playerLevel, playerClass, playerStats, playerItems, playerUseItems]);
 
   // Calculate enemy max HP when stats change
   useEffect(() => {
-    // Apply item stats first
+    // Apply regular item stats first
     const statsWithItems = { ...enemyStats };
-    enemyItems.forEach(itemId => {
+    enemyItems.forEach(({ itemId, quantity }) => {
       const item = getItemById(itemId);
       if (item && item.stats) {
         (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
           const currentValue = (statsWithItems[stat] as number) || 0;
           const itemValue = (item.stats[stat] as number) || 0;
-          (statsWithItems[stat] as number) = currentValue + itemValue;
+          (statsWithItems[stat] as number) = currentValue + (itemValue * quantity);
         });
       }
     });
     
-    const passiveIds = getPassiveIdsFromInventory(enemyItems.map(id => ({ itemId: id, quantity: 1 })));
+    // Apply use-item stats
+    enemyUseItems.forEach(({ itemId, quantity }) => {
+      const item = getItemById(itemId);
+      if (item && item.stats) {
+        (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
+          const currentValue = (statsWithItems[stat] as number) || 0;
+          const itemValue = (item.stats[stat] as number) || 0;
+          (statsWithItems[stat] as number) = currentValue + (itemValue * quantity);
+        });
+      }
+    });
+    
+    const passiveIds = getPassiveIdsFromInventory([...enemyItems, ...enemyUseItems]);
     const scaledStats = getScaledStats(statsWithItems, enemyLevel, enemyClass, passiveIds);
     setEnemyMaxHp(scaledStats.health);
-  }, [enemyLevel, enemyClass, enemyStats, enemyItems]);
+  }, [enemyLevel, enemyClass, enemyStats, enemyItems, enemyUseItems]);
 
   const handleStartBattle = () => {
     const playerCurrentHp = Math.ceil((playerHpPercent / 100) * playerMaxHp);
     const enemyCurrentHp = Math.ceil((enemyHpPercent / 100) * enemyMaxHp);
 
-    // Apply item stats to player
+    // Apply item stats to player (with quantities)
     const playerStatsWithItems = { ...playerStats };
-    playerItems.forEach(itemId => {
+    playerItems.forEach(({ itemId, quantity }) => {
       const item = getItemById(itemId);
       if (item && item.stats) {
         (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
           const currentValue = (playerStatsWithItems[stat] as number) || 0;
           const itemValue = (item.stats[stat] as number) || 0;
-          (playerStatsWithItems[stat] as number) = currentValue + itemValue;
+          (playerStatsWithItems[stat] as number) = currentValue + (itemValue * quantity);
         });
       }
     });
 
-    // Apply item stats to enemy
+    // Apply item stats to enemy (with quantities)
     const enemyStatsWithItems = { ...enemyStats };
-    enemyItems.forEach(itemId => {
+    enemyItems.forEach(({ itemId, quantity }) => {
       const item = getItemById(itemId);
       if (item && item.stats) {
         (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
           const currentValue = (enemyStatsWithItems[stat] as number) || 0;
           const itemValue = (item.stats[stat] as number) || 0;
-          (enemyStatsWithItems[stat] as number) = currentValue + itemValue;
+          (enemyStatsWithItems[stat] as number) = currentValue + (itemValue * quantity);
         });
       }
     });
@@ -135,7 +189,18 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
       tier: 'minion',
     };
 
-    onStartTestBattle(playerChar, enemyChar, playerItems, enemyItems);
+    onStartTestBattle(
+      playerChar,
+      enemyChar,
+      playerItems,
+      enemyItems,
+      playerUseItems,
+      enemyUseItems,
+      playerWeapons,
+      enemyWeapons,
+      playerSpells,
+      enemySpells
+    );
   };
 
   const handlePlayerStatChange = (stat: keyof typeof DEFAULT_STATS, value: number) => {
@@ -151,19 +216,127 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
   };
 
   const handlePlayerItemToggle = (itemId: string) => {
-    setPlayerItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
+    setPlayerItems(prev => {
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.filter(i => i.itemId !== itemId);
+      }
+      return [...prev, { itemId, quantity: 1 }];
+    });
+  };
+
+  const handlePlayerItemQuantity = (itemId: string, quantity: number) => {
+    setPlayerItems(prev => {
+      if (quantity <= 0) return prev.filter(i => i.itemId !== itemId);
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.map(i => i.itemId === itemId ? { ...i, quantity } : i);
+      }
+      return [...prev, { itemId, quantity }];
+    });
   };
 
   const handleEnemyItemToggle = (itemId: string) => {
-    setEnemyItems(prev => 
-      prev.includes(itemId) 
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
+    setEnemyItems(prev => {
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.filter(i => i.itemId !== itemId);
+      }
+      return [...prev, { itemId, quantity: 1 }];
+    });
+  };
+
+  const handleEnemyItemQuantity = (itemId: string, quantity: number) => {
+    setEnemyItems(prev => {
+      if (quantity <= 0) return prev.filter(i => i.itemId !== itemId);
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.map(i => i.itemId === itemId ? { ...i, quantity } : i);
+      }
+      return [...prev, { itemId, quantity }];
+    });
+  };
+
+  const handlePlayerUseItemToggle = (itemId: string) => {
+    setPlayerUseItems(prev => {
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.filter(i => i.itemId !== itemId);
+      }
+      return [...prev, { itemId, quantity: 1 }];
+    });
+  };
+
+  const handlePlayerUseItemQuantity = (itemId: string, quantity: number) => {
+    setPlayerUseItems(prev => {
+      if (quantity <= 0) return prev.filter(i => i.itemId !== itemId);
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.map(i => i.itemId === itemId ? { ...i, quantity } : i);
+      }
+      return [...prev, { itemId, quantity }];
+    });
+  };
+
+  const handleEnemyUseItemToggle = (itemId: string) => {
+    setEnemyUseItems(prev => {
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.filter(i => i.itemId !== itemId);
+      }
+      return [...prev, { itemId, quantity: 1 }];
+    });
+  };
+
+  const handleEnemyUseItemQuantity = (itemId: string, quantity: number) => {
+    setEnemyUseItems(prev => {
+      if (quantity <= 0) return prev.filter(i => i.itemId !== itemId);
+      const existing = prev.find(i => i.itemId === itemId);
+      if (existing) {
+        return prev.map(i => i.itemId === itemId ? { ...i, quantity } : i);
+      }
+      return [...prev, { itemId, quantity }];
+    });
+  };
+
+  const handlePlayerWeaponToggle = (weaponId: string) => {
+    setPlayerWeapons(prev => {
+      if (prev.includes(weaponId)) {
+        return prev.filter(id => id !== weaponId);
+      }
+      if (prev.length >= 3) return prev; // Max 3 weapons
+      return [...prev, weaponId];
+    });
+  };
+
+  const handleEnemyWeaponToggle = (weaponId: string) => {
+    setEnemyWeapons(prev => {
+      if (prev.includes(weaponId)) {
+        return prev.filter(id => id !== weaponId);
+      }
+      if (prev.length >= 3) return prev; // Max 3 weapons
+      return [...prev, weaponId];
+    });
+  };
+
+  const handlePlayerSpellToggle = (spellId: string) => {
+    setPlayerSpells(prev => {
+      if (prev.includes(spellId)) {
+        return prev.filter(id => id !== spellId);
+      }
+      if (prev.length >= 5) return prev; // Max 5 spells
+      return [...prev, spellId];
+    });
+  };
+
+  const handleEnemySpellToggle = (spellId: string) => {
+    setEnemySpells(prev => {
+      if (prev.includes(spellId)) {
+        return prev.filter(id => id !== spellId);
+      }
+      if (prev.length >= 5) return prev; // Max 5 spells
+      return [...prev, spellId];
+    });
   };
 
   const availableItems = Object.values(ITEM_DATABASE).filter(item => !item.id.startsWith('locked'));
@@ -353,15 +526,100 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
           <div className="items-section">
             <h3>Items ({playerItems.length} selected)</h3>
             <div className="items-grid">
-              {availableItems.map(item => (
+              {availableItems.filter(item => !item.consumable).map(item => {
+                const selected = playerItems.find(i => i.itemId === item.id);
+                return (
+                  <div 
+                    key={item.id}
+                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    title={item.name}
+                  >
+                    <div 
+                      className="item-slot-content"
+                      onClick={() => handlePlayerItemToggle(item.id)}
+                    >
+                      <div className="item-name">{item.name}</div>
+                      <div className="item-rarity">{item.rarity}</div>
+                    </div>
+                    {selected && (
+                      <input 
+                        type="number"
+                        min="1"
+                        className="quantity-input"
+                        value={selected.quantity}
+                        onChange={(e) => handlePlayerItemQuantity(item.id, parseInt(e.target.value) || 0)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="items-section">
+            <h3>Use Items (Consumables) ({playerUseItems.length} selected)</h3>
+            <div className="items-grid">
+              {availableItems.filter(item => item.consumable).map(item => {
+                const selected = playerUseItems.find(i => i.itemId === item.id);
+                return (
+                  <div 
+                    key={item.id}
+                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    title={item.name}
+                  >
+                    <div 
+                      className="item-slot-content"
+                      onClick={() => handlePlayerUseItemToggle(item.id)}
+                    >
+                      <div className="item-name">{item.name}</div>
+                      <div className="item-rarity">Consumable</div>
+                    </div>
+                    {selected && (
+                      <input 
+                        type="number"
+                        min="1"
+                        className="quantity-input"
+                        value={selected.quantity}
+                        onChange={(e) => handlePlayerUseItemQuantity(item.id, parseInt(e.target.value) || 0)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="items-section">
+            <h3>Weapons ({playerWeapons.length}/3 selected)</h3>
+            <div className="items-grid">
+              {getAllWeapons().map(weapon => (
                 <div 
-                  key={item.id}
-                  className={`item-slot ${playerItems.includes(item.id) ? 'selected' : ''}`}
-                  onClick={() => handlePlayerItemToggle(item.id)}
-                  title={item.name}
+                  key={weapon.id}
+                  className={`item-slot ${playerWeapons.includes(weapon.id) ? 'selected' : ''} ${playerWeapons.length >= 3 && !playerWeapons.includes(weapon.id) ? 'disabled' : ''}`}
+                  onClick={() => handlePlayerWeaponToggle(weapon.id)}
+                  title={weapon.name}
                 >
-                  <div className="item-name">{item.name}</div>
-                  <div className="item-rarity">{item.rarity}</div>
+                  <div className="item-name">{weapon.name}</div>
+                  <div className="item-rarity">{weapon.rarity || 'Weapon'}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="items-section">
+            <h3>Spells ({playerSpells.length}/5 selected)</h3>
+            <div className="items-grid">
+              {getAllSpells().map(spell => (
+                <div 
+                  key={spell.id}
+                  className={`item-slot ${playerSpells.includes(spell.id) ? 'selected' : ''} ${playerSpells.length >= 5 && !playerSpells.includes(spell.id) ? 'disabled' : ''}`}
+                  onClick={() => handlePlayerSpellToggle(spell.id)}
+                  title={spell.name}
+                >
+                  <div className="item-name">{spell.name}</div>
+                  <div className="item-rarity">{spell.cooldown}s</div>
                 </div>
               ))}
             </div>
@@ -545,15 +803,100 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
           <div className="items-section">
             <h3>Items ({enemyItems.length} selected)</h3>
             <div className="items-grid">
-              {availableItems.map(item => (
+              {availableItems.filter(item => !item.consumable).map(item => {
+                const selected = enemyItems.find(i => i.itemId === item.id);
+                return (
+                  <div 
+                    key={item.id}
+                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    title={item.name}
+                  >
+                    <div 
+                      className="item-slot-content"
+                      onClick={() => handleEnemyItemToggle(item.id)}
+                    >
+                      <div className="item-name">{item.name}</div>
+                      <div className="item-rarity">{item.rarity}</div>
+                    </div>
+                    {selected && (
+                      <input 
+                        type="number"
+                        min="1"
+                        className="quantity-input"
+                        value={selected.quantity}
+                        onChange={(e) => handleEnemyItemQuantity(item.id, parseInt(e.target.value) || 0)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="items-section">
+            <h3>Use Items (Consumables) ({enemyUseItems.length} selected)</h3>
+            <div className="items-grid">
+              {availableItems.filter(item => item.consumable).map(item => {
+                const selected = enemyUseItems.find(i => i.itemId === item.id);
+                return (
+                  <div 
+                    key={item.id}
+                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    title={item.name}
+                  >
+                    <div 
+                      className="item-slot-content"
+                      onClick={() => handleEnemyUseItemToggle(item.id)}
+                    >
+                      <div className="item-name">{item.name}</div>
+                      <div className="item-rarity">Consumable</div>
+                    </div>
+                    {selected && (
+                      <input 
+                        type="number"
+                        min="1"
+                        className="quantity-input"
+                        value={selected.quantity}
+                        onChange={(e) => handleEnemyUseItemQuantity(item.id, parseInt(e.target.value) || 0)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          <div className="items-section">
+            <h3>Weapons ({enemyWeapons.length}/3 selected)</h3>
+            <div className="items-grid">
+              {getAllWeapons().map(weapon => (
                 <div 
-                  key={item.id}
-                  className={`item-slot ${enemyItems.includes(item.id) ? 'selected' : ''}`}
-                  onClick={() => handleEnemyItemToggle(item.id)}
-                  title={item.name}
+                  key={weapon.id}
+                  className={`item-slot ${enemyWeapons.includes(weapon.id) ? 'selected' : ''} ${enemyWeapons.length >= 3 && !enemyWeapons.includes(weapon.id) ? 'disabled' : ''}`}
+                  onClick={() => handleEnemyWeaponToggle(weapon.id)}
+                  title={weapon.name}
                 >
-                  <div className="item-name">{item.name}</div>
-                  <div className="item-rarity">{item.rarity}</div>
+                  <div className="item-name">{weapon.name}</div>
+                  <div className="item-rarity">{weapon.rarity || 'Weapon'}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="items-section">
+            <h3>Spells ({enemySpells.length}/5 selected)</h3>
+            <div className="items-grid">
+              {getAllSpells().map(spell => (
+                <div 
+                  key={spell.id}
+                  className={`item-slot ${enemySpells.includes(spell.id) ? 'selected' : ''} ${enemySpells.length >= 5 && !enemySpells.includes(spell.id) ? 'disabled' : ''}`}
+                  onClick={() => handleEnemySpellToggle(spell.id)}
+                  title={spell.name}
+                >
+                  <div className="item-name">{spell.name}</div>
+                  <div className="item-rarity">{spell.cooldown}s</div>
                 </div>
               ))}
             </div>

@@ -67,7 +67,7 @@ export interface Item {
     type: 'stat_threshold' | 'achievement' | 'progression';
     description: string; // Human-readable unlock condition
     // For stat_threshold type
-    stat?: 'abilityPower' | 'attackDamage' | 'health';
+    stat?: 'abilityPower' | 'attackDamage' | 'health' | 'level';
     threshold?: number; // Required stat value
     // For achievement type
     achievementId?: string;
@@ -287,9 +287,10 @@ export const UNLOCKABLE_STARTING_ITEMS: Item[] = [
     description: 'The book for the most curious explorers',
     rarity: 'starter',
     price: 0,
+    imagePath: '/assets/global/images/items/World_Atlas_item.png',
     stats: {
       health: 50,
-      xpGain: 50,
+      xpGain: 0.5,
     },
     passiveId: 'pathfinder',
     unlockRequirement: {
@@ -303,7 +304,7 @@ export const UNLOCKABLE_STARTING_ITEMS: Item[] = [
     name: 'Dark Seal',
     description: 'Glory: Defeating Champion or Legend tier enemies grants +10 AP permanently (stacks endlessly).',
     rarity: 'starter',
-    price: 350,
+    price: 0,
     imagePath: '/assets/global/images/items/Dark_Seal_item.png',
     stats: {
       health: 50,
@@ -315,6 +316,25 @@ export const UNLOCKABLE_STARTING_ITEMS: Item[] = [
       description: 'Reach 150 Ability Power in a single run',
       stat: 'abilityPower',
       threshold: 150,
+    },
+  },
+  {
+    id: 'tear_of_the_goddess',
+    name: 'Tear of the Goddess',
+    description: 'A mystical tear that grants experience the more you stack it.',
+    rarity: 'starter',
+    price: 0,
+    imagePath: '/assets/global/images/items/Tear_of_the_Goddess_item.png',
+    stats: {
+      health: 50,
+      xpGain: 0.024,
+    },
+    passiveId: 'manaflow',
+    unlockRequirement: {
+      type: 'stat_threshold',
+      description: 'Reach level 1000 in a single run',
+      stat: 'level',
+      threshold: 1000,
     },
   },
 ];
@@ -336,6 +356,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
   cull: UNLOCKABLE_STARTING_ITEMS[0],
   world_atlas: UNLOCKABLE_STARTING_ITEMS[1],
   dark_seal: UNLOCKABLE_STARTING_ITEMS[2],
+  tear_of_the_goddess: UNLOCKABLE_STARTING_ITEMS[3],
 
   // Common Usables
   
@@ -345,6 +366,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A magical elixir that restores health over time',
     rarity: 'common',
     price: 50,
+    imagePath: '/assets/global/images/items/Health_Potion_item.png',
     stats: {},
     consumable: true,
     onUseEffect: 'Restores 100 health over 5 turns',
@@ -356,6 +378,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A trap that stuns enemies after setup time',
     rarity: 'common',
     price: 75,
+    imagePath: '/assets/global/images/items/Flashbomb_Trap_item.png',
     stats: {},
     consumable: true,
     active: {
@@ -377,6 +400,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'Invisible ward that reveals the stats of enemies for the encounter',
     rarity: 'common',
     price: 50,
+    imagePath: '/assets/global/images/items/Stealth_Ward_item.png',
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals the enemy stats for the remainder of the encounter',
@@ -387,6 +411,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A ward that reveals the stats of enemies for multiple encounters',
     rarity: 'common',
     price: 75,
+    imagePath: '/assets/global/images/items/Control_Ward_item.png',
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals the enemy stats for the next 5 encounters',
@@ -398,6 +423,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A mystical lens that reveals hidden enemies',
     rarity: 'common',
     price: 50,
+    imagePath: '/assets/global/images/items/Oracle_Lens_item.png',
     stats: {},
     consumable: true,
     onUseEffect: 'Allows to attack invisible enemies for the next 3 turns',
@@ -408,6 +434,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A magical device that allows to plan ahead',
     rarity: 'common',
     price: 50,
+    imagePath: '/assets/global/images/items/Farsight_Alteration_item.png',
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals what the next encounter will be',
@@ -418,6 +445,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A treat for poros',
     rarity: 'common',
     price: 0,
+    imagePath: '/assets/global/images/items/Poro_Snax_item.png',
     stats: {},
     consumable: true,
     onUseEffect: 'It must do something',
@@ -473,7 +501,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 300,
     imagePath: '/assets/global/images/items/Sapphire_Crystal_item.png',
     classes: ['mage', 'enchanter'],
-    stats: { xpGain: 0.3 },
+    stats: { xpGain: 0.03 },
   },
   fearie_charm: {
     id: 'fearie_charm',
@@ -483,7 +511,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 200,
     imagePath: '/assets/global/images/items/Faerie_Charm_item.png',
     classes: ['mage', 'enchanter'],
-    stats: { magicFind: 5 },
+    stats: { magicFind: 0.5 },
   },
   dagger: {
     id: 'dagger',
@@ -621,7 +649,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     name: 'Aether Wisp',
     description: 'A wisp of pure magical energy',
     rarity: 'epic',
-    price: 300,
+    price: 900,
     imagePath: '/assets/global/images/items/Aether_Wisp_item.png',
     classes: ['mage', 'enchanter'],
     stats: { abilityPower: 30, movementSpeed: 40 },
@@ -680,7 +708,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     classes: ['vanguard', 'warden', 'juggernaut', 'enchanter'],
     stats: { health: 300, xpGain: .0375 },
     passiveId: 'eternity',
-    passive: 'Eternity: At the start of combat, gain a shield equal to 15% of your max health for 3 turns.',
+    passive: 'Eternity: gives xp when absorbing damage .', //rate to define
   },
   caufields_warhammer: {
     id: 'caufields_warhammer',
@@ -772,7 +800,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 800,
     imagePath: '/assets/global/images/items/Glacial_Buckler_item.png',
     classes: ['vanguard', 'warden', 'juggernaut'],
-    stats: { haste: 10,armor: 25, magicFind: 3, },
+    stats: { haste: 0.1,armor: 25, xpGain: 0.03, },
   },
   hauting_guise : {
     id: 'haunting_guise',
@@ -830,13 +858,13 @@ export const ITEM_DATABASE: Record<string, Item> = {
     classes: ['vanguard', 'warden', 'juggernaut', 'enchanter'],
     stats: { health: 200, haste: 10},
   },
-  lest_whisper: {
-    id: 'lest_whisper',
-    name: "Lest Whisper",
+  last_whisper: {
+    id: 'last_whisper',
+    name: "Last Whisper",
     description: 'A whisper that grants attack damage and a powerful passive',
     rarity: 'epic',
     price: 1450,
-    imagePath: '/assets/global/images/items/Lest_Whisper_item.png',
+    imagePath: '/assets/global/images/items/Last_Whisper_item.png',
     classes: ['skirmisher', 'assassin', 'marksman', 'juggernaut'],
     stats: { attackDamage: 20, lethality: 20 },
   },
@@ -1092,7 +1120,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     price: 1200,
     imagePath: '/assets/global/images/items/Zeal_item.png',
     classes: ['skirmisher', 'assassin', 'marksman', 'juggernaut'],
-    stats: { speed: 20, criticalChance: 20, movementSpeed: 40 },
+    stats: { speed: 0.2, criticalChance: 20, movementSpeed: 40 },
   },
 
   // Legendary Items
@@ -1300,8 +1328,8 @@ export function getRandomItemsForEnemy(
   
   if (classItems.length === 0) return [];
   
-  // Exclude starter items (dorans items, cull, world_atlas, dark_seal) from enemy loot
-  const starterItemIds = ['dorans_blade', 'dorans_shield', 'dorans_ring', 'cull', 'world_atlas', 'dark_seal'];
+  // Exclude starter items (dorans items, cull, world_atlas, dark_seal, tear_of_the_goddess) from enemy loot
+  const starterItemIds = ['dorans_blade', 'dorans_shield', 'dorans_ring', 'cull', 'world_atlas', 'dark_seal', 'tear_of_the_goddess'];
   const nonStarterItems = classItems.filter(item => !starterItemIds.includes(item.id));
   
   // Filter by allowed rarities based on progression
