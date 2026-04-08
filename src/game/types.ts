@@ -20,6 +20,13 @@ export type Region =
   | 'runeterra';
 export type EnemyTier = 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
 export type CharacterClass = 'mage' | 'vanguard' | 'warden' | 'juggernaut' | 'skirmisher' | 'assassin' | 'marksman' | 'enchanter';
+export type AIBehaviorProfile = 
+  | 'aggressive' 
+  | 'defensive' 
+  | 'balanced' 
+  | 'ranged' 
+  | 'melee'
+  | 'tactical';
 
 export interface StatusEffect {
   id: string;
@@ -59,6 +66,18 @@ export interface Character {
   inventory?: InventoryItem[]; // Optional inventory for displaying equipped items
   effects?: StatusEffect[]; // Active buffs and debuffs
   gold?: number; // Gold earned/available
+  
+  // Enemy AI System
+  behaviorProfile?: AIBehaviorProfile; // AI behavior for enemies (required for enemies)
+  enemyLoadout?: {
+    weapons: string[]; // Up to 2 weapon IDs
+    spells: string[]; // Up to 3 spell IDs
+    items: string[]; // Up to 1 consumable item ID
+    equippedWeaponIndex: number;
+    equippedSpellIndex: number;
+  };
+  enemyWeaponCooldowns?: Record<string, number>; // Weapon ID -> turns remaining
+  enemySpellCooldowns?: Record<string, number>; // Spell ID -> turns remaining
 }
 
 export interface Ability {

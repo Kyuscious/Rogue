@@ -36,6 +36,7 @@
   margin: 80px auto 20px;
   padding: 0 20px;
   z-index: 10;
+  position: relative;
 }
 
 /* Back to Menu Button */
@@ -63,6 +64,13 @@
   box-shadow: 0 4px 15px rgba(74, 158, 255, 0.3);
 }
 
+.back-to-menu-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Dev Test Button */
 .dev-test-btn {
   position: absolute;
@@ -85,6 +93,12 @@
   background: rgba(100, 100, 100, 0.3);
   color: #aaa;
   transform: scale(1.05);
+}
+
+.dev-test-btn:disabled {
+  opacity: 0.1;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* Center Content */
@@ -328,6 +342,119 @@
 .start-run-btn:active {
   transform: translateY(-2px) scale(1);
   box-shadow: 0 4px 20px rgba(74, 158, 255, 0.5);
+}
+
+.start-run-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.tutorial-active .selection-section {
+  position: relative;
+  transition: opacity 0.2s ease;
+}
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  z-index: 40;
+  pointer-events: none;
+}
+
+.tutorial-highlight {
+  position: relative;
+  z-index: 50;
+  opacity: 1;
+  filter: none;
+}
+
+.tutorial-muted {
+  position: relative;
+  z-index: 45;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.tutorial-dialogue-box {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(920px, calc(100% - 40px));
+  min-height: 140px;
+  background: linear-gradient(135deg, rgba(18, 24, 44, 0.96) 0%, rgba(26, 20, 50, 0.96) 100%);
+  border: 2px solid rgba(74, 158, 255, 0.75);
+  border-radius: 12px;
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  z-index: 60;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6);
+}
+
+.tutorial-character {
+  width: 88px;
+  height: 88px;
+  border-radius: 10px;
+  background: rgba(74, 158, 255, 0.18);
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  flex-shrink: 0;
+}
+
+.tutorial-dialogue-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.tutorial-dialogue-text {
+  margin: 0;
+  color: #e9f2ff;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.tutorial-dialogue-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tutorial-action-btn {
+  border: 1px solid rgba(74, 158, 255, 0.7);
+  background: rgba(74, 158, 255, 0.2);
+  color: #d9ebff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-action-btn:hover {
+  background: rgba(74, 158, 255, 0.35);
+  box-shadow: 0 0 10px rgba(74, 158, 255, 0.45);
+}
+
+.tutorial-action-btn.skip {
+  border-color: rgba(255, 120, 120, 0.7);
+  background: rgba(255, 120, 120, 0.15);
+  color: #ffd8d8;
+  margin-right: 8px;
+}
+
+.tutorial-action-btn.skip:hover {
+  background: rgba(255, 120, 120, 0.3);
+  box-shadow: 0 0 10px rgba(255, 120, 120, 0.35);
 }
 
 .btn-icon {

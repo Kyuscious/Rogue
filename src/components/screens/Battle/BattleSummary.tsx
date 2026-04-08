@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { InventoryItem } from '../../../game/types';
+import { InventoryItem, Region } from '../../../game/types';
 import { getItemById, getPassiveDescription } from '../../../game/items';
 import { getItemName, getItemDescription } from '../../../i18n/helpers';
+import { LootPreviewModal } from '../../shared/LootPreviewModal';
+import { calculateQuestLoot, QuestLootInfo } from '../../../game/lootCalculator';
 import './BattleSummary.css';
 
 interface CombatStats {
@@ -26,6 +28,9 @@ interface BattleSummaryProps {
     onSkip: () => void;
     onReroll: () => void;
     rerollsRemaining: number;
+    region?: Region; // For loot preview
+    enemyIds?: string[]; // For loot preview
+    playerMagicFind?: number; // For loot preview calculations
   };
   runStats?: {
     itemsOwned: number;
@@ -47,6 +52,8 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
   const [hoveredRewardIndex, setHoveredRewardIndex] = useState<number | null>(null);
   const [autoSkipTimer, setAutoSkipTimer] = useState(5.0);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [lootPreviewOpen, setLootPreviewOpen] = useState(false);
+  const [selectedLootInfo, setSelectedLootInfo] = useState<QuestLootInfo | null>(null);
 
   useEffect(() => {
     // Show rewards instantly
@@ -184,6 +191,20 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                 </div>
                 
                 <div className="reward-selection-actions">
+                  {rewardSelection.region && rewardSelection.enemyIds && rewardSelection.enemyIds.length > 0 && (
+                    <button 
+                      className="preview-loot-btn" 
+                      onClick={() => {
+                        const magicFind = rewardSelection.playerMagicFind || 0;
+                        const lootInfo = calculateQuestLoot(rewardSelection.enemyIds!, rewardSelection.region!, magicFind);
+                        setSelectedLootInfo(lootInfo);
+                        setLootPreviewOpen(true);
+                      }}
+                      title="View all possible loot and drop rates"
+                    >
+                      👁️ View All Possible Loot
+                    </button>
+                  )}
                   <button className="skip-reward-btn" onClick={rewardSelection.onSkip}>
                     ⏭️ Skip
                   </button>
@@ -317,6 +338,14 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
           document.body
         );
       })()}
+
+      {/* Loot Preview Modal */}
+      <LootPreviewModal 
+        isOpen={lootPreviewOpen}
+        onClose={() => setLootPreviewOpen(false)}
+        lootInfo={selectedLootInfo}
+        title="All Possible Boss Loot"
+      />
     </div>
   );
 };

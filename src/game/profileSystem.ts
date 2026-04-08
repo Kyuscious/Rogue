@@ -134,6 +134,7 @@ export function resetProfile(profileId: number): void {
       stats: { ...DEFAULT_PROFILE_STATS, lastPlayedTimestamp: Date.now() },
     };
     saveProfiles(profiles);
+    localStorage.removeItem(`tutorialCompleted_profile_${profileId}`);
   }
 }
 

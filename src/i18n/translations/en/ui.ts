@@ -7,6 +7,7 @@ export const ui = {
     credits: 'Credits',
     start: 'Start',
     profiles: 'Profiles',
+    tutorial: 'Tutorial',
     index: 'Index',
     options: 'Options',
     disclaimer: 'Disclaimer',
@@ -204,6 +205,38 @@ export const ui = {
     },
   },
 
+  tutorial: {
+    skip: 'Skip',
+    sadskip: '...Oh, you skipped me. If you need help later, tap ❔ anytime and I will guide you again.',
+    reenable: 'Re-enable tutorial',
+    preGameSetup: {
+      intro: 'intro',
+      region: 'region',
+      regionNeedSelection: 'regionNeedSelection',
+      regionSelected: 'regionSelected: {{region}}',
+      startingitem: 'startingitem',
+      itemNeedSelection: 'itemNeedSelection',
+      itemSelected: 'itemSelected: {{item}}',
+      start: 'start',
+      finishTutorial: 'finishTutorial',
+    },
+    questSelect: {
+      path: 'path',
+      mechanics: 'mechanics',
+      stats: 'stats',
+    },
+    battle: {
+      options: 'battleoptions',
+      resources: 'battleresources',
+      turns: 'battleturns',
+    },
+    shop: {
+      intro: 'shopintro',
+      buy: 'shopbuy',
+      sell: 'shopsell',
+    },
+  },
+
   questSelect: {
     noRerollsRemaining: 'No rerolls remaining',
     noAlternativePaths: 'No alternative paths available',
@@ -271,7 +304,7 @@ export const ui = {
     creatingAccount: 'Creating account...',
     playAsGuest: '👤 Play as Guest',
     guestWarning: '⚠️ Progress will not be saved',
-    footer: 'I\'m not super confident about security so don\'t use sensitive info! 😉',
+    footer: 'Everything is stored only locally on your browser for now - no accounts or servers yet!',
     errors: {
       emptyCredentials: 'Please enter your credentials',
       emptySignUpCredentials: 'Please enter a username and password',

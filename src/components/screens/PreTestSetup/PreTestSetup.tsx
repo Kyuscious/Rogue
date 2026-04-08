@@ -28,6 +28,7 @@ interface PreTestSetupProps {
 }
 
 const CHARACTER_CLASSES = ['juggernaut', 'vanguard', 'warden', 'assassin', 'mage', 'marksman', 'skirmisher', 'enchanter'] as const;
+const BEHAVIOR_PROFILES = ['aggressive', 'defensive', 'balanced', 'ranged', 'melee', 'tactical'] as const;
 
 export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, onBack }) => {
   // Player character state
@@ -45,6 +46,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
   const [enemyHpPercent, setEnemyHpPercent] = useState(100); // 1-100%
   const [enemyMaxHp, setEnemyMaxHp] = useState(DEFAULT_STATS.health);
   const [enemyStats, setEnemyStats] = useState({ ...DEFAULT_STATS });
+  const [enemyBehaviorProfile, setEnemyBehaviorProfile] = useState<typeof BEHAVIOR_PROFILES[number]>('balanced');
 
   // Items for each character (with quantities)
   const [playerItems, setPlayerItems] = useState<ItemWithQuantity[]>([]);
@@ -187,6 +189,17 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
       experience: 0,
       stats: enemyStatsWithItems,
       tier: 'minion',
+      // Enemy AI configuration
+      behaviorProfile: enemyBehaviorProfile,
+      enemyLoadout: {
+        weapons: enemyWeapons.slice(0, 2), // Max 2 weapons for enemies
+        spells: enemySpells.slice(0, 3), // Max 3 spells for enemies
+        items: enemyUseItems.length > 0 ? [enemyUseItems[0].itemId] : [], // Max 1 item
+        equippedWeaponIndex: 0,
+        equippedSpellIndex: 0,
+      },
+      enemyWeaponCooldowns: {},
+      enemySpellCooldowns: {},
     };
 
     onStartTestBattle(
@@ -314,7 +327,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
       if (prev.includes(weaponId)) {
         return prev.filter(id => id !== weaponId);
       }
-      if (prev.length >= 3) return prev; // Max 3 weapons
+      if (prev.length >= 2) return prev; // Max 2 weapons for enemies
       return [...prev, weaponId];
     });
   };
@@ -334,7 +347,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
       if (prev.includes(spellId)) {
         return prev.filter(id => id !== spellId);
       }
-      if (prev.length >= 5) return prev; // Max 5 spells
+      if (prev.length >= 3) return prev; // Max 3 spells for enemies
       return [...prev, spellId];
     });
   };
@@ -649,6 +662,15 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
           </div>
 
           <div className="config-section">
+            <label>AI Behavior:</label>
+            <select value={enemyBehaviorProfile} onChange={(e) => setEnemyBehaviorProfile(e.target.value as any)}>
+              {BEHAVIOR_PROFILES.map(profile => (
+                <option key={profile} value={profile}>{profile}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="config-section">
             <label>Level:</label>
             <input 
               type="number" 
@@ -869,12 +891,12 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
           </div>
           
           <div className="items-section">
-            <h3>Weapons ({enemyWeapons.length}/3 selected)</h3>
+            <h3>Weapons ({enemyWeapons.length}/2 selected)</h3>
             <div className="items-grid">
               {getAllWeapons().map(weapon => (
                 <div 
                   key={weapon.id}
-                  className={`item-slot ${enemyWeapons.includes(weapon.id) ? 'selected' : ''} ${enemyWeapons.length >= 3 && !enemyWeapons.includes(weapon.id) ? 'disabled' : ''}`}
+                  className={`item-slot ${enemyWeapons.includes(weapon.id) ? 'selected' : ''} ${enemyWeapons.length >= 2 && !enemyWeapons.includes(weapon.id) ? 'disabled' : ''}`}
                   onClick={() => handleEnemyWeaponToggle(weapon.id)}
                   title={weapon.name}
                 >
@@ -886,12 +908,12 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
           </div>
           
           <div className="items-section">
-            <h3>Spells ({enemySpells.length}/5 selected)</h3>
+            <h3>Spells ({enemySpells.length}/3 selected)</h3>
             <div className="items-grid">
               {getAllSpells().map(spell => (
                 <div 
                   key={spell.id}
-                  className={`item-slot ${enemySpells.includes(spell.id) ? 'selected' : ''} ${enemySpells.length >= 5 && !enemySpells.includes(spell.id) ? 'disabled' : ''}`}
+                  className={`item-slot ${enemySpells.includes(spell.id) ? 'selected' : ''} ${enemySpells.length >= 3 && !enemySpells.includes(spell.id) ? 'disabled' : ''}`}
                   onClick={() => handleEnemySpellToggle(spell.id)}
                   title={spell.name}
                 >

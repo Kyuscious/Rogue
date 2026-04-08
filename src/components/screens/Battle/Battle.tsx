@@ -45,6 +45,11 @@ import { SpellSelector } from './SpellSelector';
 import { getWeaponById } from '../../../game/weapons';
 import { getSpellById } from '../../../game/spells';
 import { InventoryItem } from '../../../game/types';
+import { 
+  decideEnemyAction, 
+  getDefaultEnemyLoadout, 
+  AIDecisionContext 
+} from '../../../game/enemyAI';
 import './Battle.css';
 
 interface BattleProps {
@@ -141,6 +146,10 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     endTime: number;
   }>>([]);
   const [weaponCooldowns, setWeaponCooldowns] = useState<Record<string, number>>({});
+  
+  // Enemy AI cooldown tracking
+  const [enemyWeaponCooldowns, setEnemyWeaponCooldowns] = useState<Record<string, number>>({});
+  const [enemySpellCooldowns, setEnemySpellCooldowns] = useState<Record<string, number>>({});
 
   // Movement and range system
   const [playerPosition, setPlayerPosition] = useState(50);
@@ -302,6 +311,10 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     }
     
     console.log('🔧 Battle state reset complete - battleEnded should now be FALSE');
+    
+    // Reset enemy AI cooldowns for new encounter
+    setEnemyWeaponCooldowns({});
+    setEnemySpellCooldowns({});
     
     // Don't reset combat stats or summary rewards here - they need to persist
     // for the summary display. They'll be reset after the user dismisses the summary.
@@ -544,6 +557,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
 
   // Helper function to reduce spell cooldowns by 1 turn (called per timeline turn)
   const reduceSpellCooldowns = () => {
+    // Reduce player spell cooldowns
     useGameStore.setState((store) => {
       const currentCooldowns = store.state.spellCooldowns;
       const updatedCooldowns: Record<string, number> = {};
@@ -555,7 +569,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
         // If cooldown is 1, it will be removed (spell is ready next turn)
       }
       
-      console.log('🔄 Reducing spell cooldowns (timeline turn):', { before: currentCooldowns, after: updatedCooldowns });
+      console.log('🔄 Reducing player spell cooldowns (timeline turn):', { before: currentCooldowns, after: updatedCooldowns });
       
       return {
         state: {
@@ -565,7 +579,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
       };
     });
     
-    // Also reduce weapon cooldowns
+    // Reduce player weapon cooldowns
     setWeaponCooldowns(prev => {
       const updated: Record<string, number> = {};
       for (const [weaponId, cooldown] of Object.entries(prev)) {
@@ -573,7 +587,31 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
           updated[weaponId] = cooldown - 1;
         }
       }
-      console.log('🔄 Reducing weapon cooldowns (timeline turn):', { before: prev, after: updated });
+      console.log('🔄 Reducing player weapon cooldowns (timeline turn):', { before: prev, after: updated });
+      return updated;
+    });
+    
+    // Reduce enemy weapon cooldowns
+    setEnemyWeaponCooldowns(prev => {
+      const updated: Record<string, number> = {};
+      for (const [weaponId, cooldown] of Object.entries(prev)) {
+        if (cooldown > 1) {
+          updated[weaponId] = cooldown - 1;
+        }
+      }
+      console.log('🔄 Reducing enemy weapon cooldowns (timeline turn):', { before: prev, after: updated });
+      return updated;
+    });
+    
+    // Reduce enemy spell cooldowns
+    setEnemySpellCooldowns(prev => {
+      const updated: Record<string, number> = {};
+      for (const [spellId, cooldown] of Object.entries(prev)) {
+        if (cooldown > 1) {
+          updated[spellId] = cooldown - 1;
+        }
+      }
+      console.log('🔄 Reducing enemy spell cooldowns (timeline turn):', { before: prev, after: updated });
       return updated;
     });
   };
@@ -1508,161 +1546,309 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     const currentAction = turnSequence[sequenceIndex];
     if (!currentAction) return;
     
-    if (currentAction.actionType === 'attack') {
-      // Check if enemy is in range
-      const enemyAttackRange = enemyScaledStats.attackRange || 125;
-      if (currentDistance > enemyAttackRange) {
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `${enemyChar.name} is out of range! (${currentDistance} > ${enemyAttackRange})` },
-        ]);
-        // Advance to next action even if attack fails
-        setSequenceIndex((prev) => prev + 1);
-        setTurnCounter((prev) => {
-          const nextAction = turnSequence[sequenceIndex + 1];
-          return nextAction ? Math.ceil(nextAction.turnNumber) : prev + 1;
-        });
+    // Get enemy loadout (use default if not specified)
+    const enemyLoadout = enemyChar.enemyLoadout || getDefaultEnemyLoadout();
+    const behaviorProfile = enemyChar.behaviorProfile || 'balanced';
+    
+    // Build AI decision context
+    const aiContext: AIDecisionContext = {
+      enemy: enemyChar,
+      player: playerChar,
+      enemyPosition,
+      playerPosition,
+      enemyStats: enemyScaledStats,
+      playerStats: playerScaledStats,
+      turnCounter,
+      weaponCooldowns: enemyWeaponCooldowns,
+      spellCooldowns: enemySpellCooldowns,
+      behaviorProfile,
+      enemyLoadout,
+    };
+    
+    // Get AI decision
+    const aiAction = decideEnemyAction(aiContext);
+    
+    console.log('🤖 Enemy AI Action:', aiAction);
+    
+    // Execute AI decision
+    if (aiAction.type === 'weapon') {
+      // Enemy uses a weapon
+      const weaponId = enemyLoadout.weapons[aiAction.weaponIndex];
+      const weapon = weaponId ? getWeaponById(weaponId) : null;
+      
+      if (!weapon) {
+        console.error('Enemy weapon not found:', weaponId);
+        handleSkip();
         return;
       }
       
-      let enemyBaseDamage = enemyScaledStats.attackDamage;
-      let isCrit = false;
+      // Calculate weapon damage and effects
+      let totalDamage = 0;
+      const logMessages: Array<{ message: string }> = [];
       
-      // Check for critical strike
-      if (rollCriticalStrike(enemyScaledStats.criticalChance || 0)) {
-        enemyBaseDamage = calculateCriticalDamage(enemyBaseDamage, enemyScaledStats.criticalDamage || 200);
-        isCrit = true;
+      for (const effect of weapon.effects) {
+        if (effect.type === 'damage' && effect.damageScaling) {
+          let baseDamage = 0;
+          
+          if (effect.damageScaling.attackDamage) {
+            baseDamage += (enemyScaledStats.attackDamage || 0) * (effect.damageScaling.attackDamage / 100);
+          }
+          if (effect.damageScaling.abilityPower) {
+            baseDamage += (enemyScaledStats.abilityPower || 0) * (effect.damageScaling.abilityPower / 100);
+          }
+          if (effect.damageScaling.health) {
+            baseDamage += (enemyScaledStats.health || 0) * (effect.damageScaling.health / 100);
+          }
+          
+          // Check for critical strike
+          let isCrit = false;
+          if (rollCriticalStrike(enemyScaledStats.criticalChance || 0)) {
+            baseDamage = calculateCriticalDamage(baseDamage, enemyScaledStats.criticalDamage || 200);
+            isCrit = true;
+          }
+          
+          // Apply player armor/resistances
+          let finalDamage = baseDamage;
+          if (effect.damageScaling.attackDamage) {
+            finalDamage = calculatePhysicalDamage(
+              baseDamage,
+              playerScaledStats.armor || 0,
+              enemyScaledStats.lethality || 0
+            );
+          }
+          
+          if (effect.damageScaling.trueDamage) {
+            finalDamage += effect.damageScaling.trueDamage;
+          }
+          
+          totalDamage += finalDamage;
+          
+          if (isCrit) {
+            logMessages.push({ message: `💥 CRITICAL HIT! ${getCharacterName(enemyChar)} uses ${weapon.name} for ${Math.round(finalDamage)} damage!` });
+          } else {
+            logMessages.push({ message: `${getCharacterName(enemyChar)} uses ${weapon.name} for ${Math.round(finalDamage)} damage!` });
+          }
+        }
+        
+        // Handle movement effects
+        if (effect.type === 'movement' && effect.movementAmount) {
+          const direction = effect.movementAmount > 0 ? 'towards' : 'away';
+          const distance = Math.abs(effect.movementAmount);
+          const newPosition = direction === 'towards' 
+            ? enemyPosition + distance
+            : enemyPosition - distance;
+          setEnemyPosition(newPosition);
+          logMessages.push({ message: `${getCharacterName(enemyChar)} dashes ${direction}!` });
+        }
       }
       
-      // Apply player armor mitigation with enemy lethality
-      const finalDamage = calculatePhysicalDamage(
-        enemyBaseDamage,
-        playerScaledStats.armor || 0,
-        enemyScaledStats.lethality || 0
-      );
+      // Apply damage to player
+      if (totalDamage > 0) {
+        const damageResult = applyDamageWithShield(playerChar, totalDamage);
+        updatePlayerHp(playerChar.hp);
+        
+        // Track damage taken
+        if (totalDamage > combatStats.highestDamageTaken) {
+          setCombatStats(prev => ({
+            ...prev,
+            highestDamageTaken: Math.round(totalDamage),
+            highestDamageTakenSource: 'attack',
+          }));
+        }
+        
+        if (damageResult.shieldDamage > 0) {
+          logMessages.push({ message: `🛡️ Shield absorbed ${damageResult.shieldDamage} damage!` });
+        }
+        
+        // Check player death
+        if (playerChar.hp <= 0 && !battleEnded) {
+          setBattleEnded(true);
+          setBattleResult('defeat');
+          setShowSummary(true);
+          setBattleLog((prev) => [...prev, ...logMessages]);
+          return;
+        }
+      }
       
-      // Update player HP using shield-aware damage
-      const damageResult = applyDamageWithShield(playerChar, finalDamage);
-      updatePlayerHp(playerChar.hp);
+      setBattleLog((prev) => [...prev, ...logMessages]);
       
-      // Track damage taken for combat stats
-      if (finalDamage > combatStats.highestDamageTaken) {
-        setCombatStats(prev => ({
+      // Apply weapon cooldown
+      if (weapon.cooldown && weapon.cooldown > 0) {
+        const adjustedCooldown = weapon.cooldown + 1;
+        setEnemyWeaponCooldowns(prev => ({
           ...prev,
-          highestDamageTaken: Math.round(finalDamage),
-          highestDamageTakenSource: 'attack',
+          [weaponId]: adjustedCooldown
         }));
       }
       
-      // Log shield damage if any
-      if (damageResult.shieldDamage > 0) {
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `🛡️ Shield absorbed ${damageResult.shieldDamage} damage!` },
-        ]);
-      }
+    } else if (aiAction.type === 'spell') {
+      // Enemy casts a spell
+      const spellId = enemyLoadout.spells[aiAction.spellIndex];
+      const spell = spellId ? getSpellById(spellId) : null;
       
-      // IMMEDIATE DEATH CHECK: End battle instantly if player dies
-      if (playerChar.hp <= 0 && !battleEnded) {
-        setBattleEnded(true);
-        setBattleResult('defeat');
-        setShowSummary(true);
-        return; // Stop processing this turn
-      }
-      
-      // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
-      if (playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus')) {
-        setPlayerBuffs((prev) => {
-          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage, turnCounter);
-          return updatedBuffs;
-        });
-      }
-      
-      if (isCrit) {
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `💥 CRITICAL HIT! ${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
-          ...(playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus') 
-            ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
-            : []),
-        ]);
-      } else {
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `${enemyChar.name} attacks ${playerChar.name} for ${finalDamage} damage!` },
-          ...(playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus') 
-            ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
-            : []),
-        ]);
-      }
-    } else if (currentAction.actionType === 'spell') {
-      // Check if enemy spell is in range
-      if (currentDistance > 500) {
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `${enemyChar.name}'s spell is out of range! (${currentDistance} > 500)` },
-        ]);
-        // Advance to next action even if spell fails
-        setSequenceIndex((prev) => prev + 1);
-        setTurnCounter((prev) => {
-          const nextAction = turnSequence[sequenceIndex + 1];
-          return nextAction ? Math.ceil(nextAction.turnNumber) : prev + 1;
-        });
+      if (!spell) {
+        console.error('Enemy spell not found:', spellId);
+        handleSkip();
         return;
       }
       
-      const enemyBaseSpellDamage = enemyScaledStats.abilityPower;
+      let totalDamage = 0;
+      let totalHealing = 0;
+      const logMessages: Array<{ message: string }> = [];
       
-      // Apply player magic resist mitigation with enemy magic penetration
-      const finalDamage = calculateMagicDamage(
-        enemyBaseSpellDamage,
-        playerScaledStats.magicResist || 0,
-        enemyScaledStats.magicPenetration || 0
-      );
+      for (const effect of spell.effects) {
+        if (effect.type === 'damage' && effect.damageScaling) {
+          let baseDamage = 0;
+          
+          if (effect.damageScaling.abilityPower) {
+            baseDamage += (enemyScaledStats.abilityPower || 0) * (effect.damageScaling.abilityPower / 100);
+          }
+          if (effect.damageScaling.attackDamage) {
+            baseDamage += (enemyScaledStats.attackDamage || 0) * (effect.damageScaling.attackDamage / 100);
+          }
+          
+          // Apply player magic resist
+          let finalDamage = baseDamage;
+          if (effect.damageScaling.abilityPower) {
+            finalDamage = calculateMagicDamage(
+              baseDamage,
+              playerScaledStats.magicResist || 0,
+              enemyScaledStats.magicPenetration || 0
+            );
+          }
+          
+          if (effect.damageScaling.trueDamage) {
+            finalDamage += effect.damageScaling.trueDamage;
+          }
+          
+          totalDamage += finalDamage;
+          logMessages.push({ message: `${getCharacterName(enemyChar)} casts ${spell.name} for ${Math.round(finalDamage)} magic damage!` });
+        }
+        
+        if (effect.type === 'heal' && effect.healScaling) {
+          let healAmount = 0;
+          
+          if (effect.healScaling.flatAmount) {
+            healAmount += effect.healScaling.flatAmount;
+          }
+          if (effect.healScaling.abilityPower) {
+            healAmount += (enemyScaledStats.abilityPower || 0) * (effect.healScaling.abilityPower / 100);
+          }
+          if (effect.healScaling.missingHealth) {
+            const missingHp = enemyScaledStats.health - enemyChar.hp;
+            healAmount += missingHp * (effect.healScaling.missingHealth / 100);
+          }
+          
+          totalHealing += healAmount;
+          logMessages.push({ message: `💚 ${getCharacterName(enemyChar)} heals for ${Math.round(healAmount)} HP!` });
+        }
+      }
       
-      // Update player HP using shield-aware damage
-      const damageResult = applyDamageWithShield(playerChar, finalDamage);
-      updatePlayerHp(playerChar.hp);
+      // Apply damage to player
+      if (totalDamage > 0) {
+        const damageResult = applyDamageWithShield(playerChar, totalDamage);
+        updatePlayerHp(playerChar.hp);
+        
+        if (totalDamage > combatStats.highestDamageTaken) {
+          setCombatStats(prev => ({
+            ...prev,
+            highestDamageTaken: Math.round(totalDamage),
+            highestDamageTakenSource: 'spell',
+          }));
+        }
+        
+        if (damageResult.shieldDamage > 0) {
+          logMessages.push({ message: `🛡️ Shield absorbed ${damageResult.shieldDamage} damage!` });
+        }
+        
+        if (playerChar.hp <= 0 && !battleEnded) {
+          setBattleEnded(true);
+          setBattleResult('defeat');
+          setShowSummary(true);
+          setBattleLog((prev) => [...prev, ...logMessages]);
+          return;
+        }
+      }
       
-      // Track damage taken for combat stats
-      if (finalDamage > combatStats.highestDamageTaken) {
-        setCombatStats(prev => ({
+      // Apply healing to enemy
+      if (totalHealing > 0) {
+        const newEnemyHp = Math.min(
+          Math.round(enemyChar.hp + totalHealing),
+          Math.round(enemyScaledStats.health)
+        );
+        updateEnemyHp(0, newEnemyHp);
+      }
+      
+      setBattleLog((prev) => [...prev, ...logMessages]);
+      
+      // Apply spell cooldown
+      if (spell.cooldown && spell.cooldown > 0) {
+        const adjustedCooldown = spell.cooldown + 1;
+        setEnemySpellCooldowns(prev => ({
           ...prev,
-          highestDamageTaken: Math.round(finalDamage),
-          highestDamageTakenSource: 'spell',
+          [spellId]: adjustedCooldown
         }));
       }
       
-      // Log shield damage if any
-      if (damageResult.shieldDamage > 0) {
+    } else if (aiAction.type === 'item') {
+      // Enemy uses an item
+      const item = getItemById(aiAction.itemId);
+      
+      if (!item) {
+        console.error('Enemy item not found:', aiAction.itemId);
+        handleSkip();
+        return;
+      }
+      
+      // Handle health potion
+      if (aiAction.itemId === 'health_potion') {
+        // Heal enemy over time (simplified for enemies)
+        const healAmount = 50; // Flat heal for simplicity
+        const newEnemyHp = Math.min(
+          Math.round(enemyChar.hp + healAmount),
+          Math.round(enemyScaledStats.health)
+        );
+        updateEnemyHp(0, newEnemyHp);
+        
         setBattleLog((prev) => [
           ...prev,
-          { message: `🛡️ Shield absorbed ${damageResult.shieldDamage} damage!` },
+          { message: `${getCharacterName(enemyChar)} used ${item.name}! Restored ${healAmount} HP.` },
         ]);
       }
       
-      // IMMEDIATE DEATH CHECK: End battle instantly if player dies
-      if (playerChar.hp <= 0 && !battleEnded) {
+    } else if (aiAction.type === 'move') {
+      // Enemy moves
+      const moveDistance = aiAction.distance;
+      const direction = aiAction.direction;
+      
+      let newPosition = direction === 'towards' 
+        ? enemyPosition + moveDistance
+        : enemyPosition - moveDistance;
+      
+      // Check bounds
+      if (newPosition > 2500 || newPosition < -2500) {
         setBattleEnded(true);
-        setBattleResult('defeat');
-        setShowSummary(true);
-        return; // Stop processing this turn
+        setBattleResult('victory');
+        setBattleLog((prev) => [
+          ...prev,
+          { message: `${getCharacterName(enemyChar)} fled the battlefield!` },
+        ]);
+        return;
       }
       
-      // INSTANT DEATH CHECK: If player HP is 0, they're dead - no buffs applied
-      if (playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus')) {
-        setPlayerBuffs((prev) => {
-          const updatedBuffs = applyEnduringFocusBuff(prev, finalDamage, turnCounter);
-          return updatedBuffs;
-        });
-      }
+      setEnemyPosition(newPosition);
+      const newDistance = Math.abs(playerPosition - newPosition);
       
       setBattleLog((prev) => [
         ...prev,
-        { message: `${enemyChar.name} casts a spell on ${playerChar.name} for ${finalDamage} magic damage!` },
-        ...(playerChar.hp > 0 && playerPassiveIds.includes('enduring_focus') 
-          ? [{ message: `🛡️ Enduring Focus: Healing ${Math.floor((finalDamage * 0.05) / 3)} HP per turn for 3 turns!` }]
-          : []),
+        { message: `${getCharacterName(enemyChar)} moved ${direction} by ${moveDistance} units. Distance: ${newDistance}` },
+      ]);
+      
+    } else if (aiAction.type === 'skip') {
+      // Enemy skips turn
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${getCharacterName(enemyChar)} skipped their turn.` },
       ]);
     }
     
@@ -2547,6 +2733,9 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             onSkip: handleSkipReward,
             onReroll: handleRerollRewards,
             rerollsRemaining: state.rerolls,
+            region: state.selectedRegion || undefined,
+            enemyIds: [], // TODO: Track quest path enemy IDs in Battle component
+            playerMagicFind: playerChar.stats.magicFind || 0,
           } : undefined}
           runStats={battleResult === 'defeat' ? {
             itemsOwned: state.inventory.length,

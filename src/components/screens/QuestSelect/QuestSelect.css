@@ -10,6 +10,109 @@
   background: transparent;
   overflow: hidden;
   box-sizing: border-box;
+  position: relative;
+}
+
+.quest-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  z-index: 40;
+  pointer-events: none;
+}
+
+.quest-tutorial-highlight {
+  position: relative;
+  z-index: 50;
+  opacity: 1;
+  filter: none;
+}
+
+.quest-tutorial-muted {
+  position: relative;
+  z-index: 45;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.quest-tutorial-dialogue-box {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(860px, calc(100% - 30px));
+  min-height: 112px;
+  background: linear-gradient(135deg, rgba(17, 23, 39, 0.96) 0%, rgba(26, 24, 48, 0.96) 100%);
+  border: 2px solid rgba(74, 158, 255, 0.75);
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  z-index: 60;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+}
+
+.quest-tutorial-character {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: rgba(74, 158, 255, 0.18);
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  flex-shrink: 0;
+}
+
+.quest-tutorial-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.quest-tutorial-text {
+  margin: 0;
+  color: #e9f2ff;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.quest-tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quest-tutorial-action-btn {
+  border: 1px solid rgba(74, 158, 255, 0.7);
+  background: rgba(74, 158, 255, 0.2);
+  color: #e9f2ff;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.quest-tutorial-action-btn:hover {
+  background: rgba(74, 158, 255, 0.35);
+  box-shadow: 0 0 10px rgba(74, 158, 255, 0.4);
+}
+
+.quest-tutorial-action-btn.skip {
+  border-color: rgba(255, 120, 120, 0.7);
+  background: rgba(255, 120, 120, 0.15);
+  color: #ffd8d8;
+  margin-right: 8px;
+}
+
+.quest-tutorial-action-btn.skip:hover {
+  background: rgba(255, 120, 120, 0.3);
+  box-shadow: 0 0 10px rgba(255, 120, 120, 0.35);
 }
 
 @keyframes slideIn {
@@ -317,6 +420,29 @@
   font-size: 20px;
   opacity: 0.9;
   padding-left: 3px;
+}
+
+.loot-preview-btn {
+  background: rgba(74, 158, 255, 0.2);
+  border: 2px solid #4a9eff;
+  color: #4a9eff;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.loot-preview-btn:hover {
+  background: rgba(74, 158, 255, 0.4);
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.6);
 }
 
 .boss-icon {

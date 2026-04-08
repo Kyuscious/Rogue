@@ -94,6 +94,7 @@ export interface Translations {
     credits: string;
     start: string;
     profiles: string;
+    tutorial: string;
     index: string;
     options: string;
     disclaimer: string;
@@ -298,6 +299,38 @@ export interface Translations {
       demacia: string;
       ionia: string;
       shurima: string;
+    };
+  };
+
+  tutorial: {
+    skip: string;
+    sadskip: string;
+    reenable: string;
+    preGameSetup: {
+      intro: string;
+      region: string;
+      regionNeedSelection: string;
+      regionSelected: string;
+      startingitem: string;
+      itemNeedSelection: string;
+      itemSelected: string;
+      start: string;
+      finishTutorial: string;
+    };
+    questSelect: {
+      path: string;
+      mechanics: string;
+      stats: string;
+    };
+    battle: {
+      options: string;
+      resources: string;
+      turns: string;
+    };
+    shop: {
+      intro: string;
+      buy: string;
+      sell: string;
     };
   };
 

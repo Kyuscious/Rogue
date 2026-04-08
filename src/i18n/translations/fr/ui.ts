@@ -7,6 +7,7 @@ export const ui = {
     credits: 'Crédits',
     start: 'Commencer',
     profiles: 'Profils',
+    tutorial: 'Tutoriel',
     index: 'Index',
     options: 'Options',
     disclaimer: 'Avertissement',
@@ -201,6 +202,38 @@ export const ui = {
       demacia: 'Un royaume fort et légal avec une armée prestigieuse. Connu pour sa justice et son honneur.',
       ionia: 'Une terre de magie naturelle et de spiritualité. Berceau de traditions anciennes et d\'arts martiaux.',
       shurima: 'Un vaste empire désertique au pouvoir ancien. Guerriers Ascendants et trésors enfouis vous attendent.',
+    },
+  },
+
+  tutorial: {
+    skip: 'Passer',
+    sadskip: '...Tu m\'as passé. Si tu as besoin d\'aide plus tard, appuie sur ❔ à tout moment et je reviens.',
+    reenable: 'Réactiver le tutoriel',
+    preGameSetup: {
+      intro: 'intro',
+      region: 'region',
+      regionNeedSelection: 'regionNeedSelection',
+      regionSelected: 'regionSelected: {{region}}',
+      startingitem: 'startingitem',
+      itemNeedSelection: 'itemNeedSelection',
+      itemSelected: 'itemSelected: {{item}}',
+      start: 'start',
+      finishTutorial: 'finishTutorial',
+    },
+    questSelect: {
+      path: 'path',
+      mechanics: 'mechanics',
+      stats: 'stats',
+    },
+    battle: {
+      options: 'battleoptions',
+      resources: 'battleresources',
+      turns: 'battleturns',
+    },
+    shop: {
+      intro: 'shopintro',
+      buy: 'shopbuy',
+      sell: 'shopsell',
     },
   },
 

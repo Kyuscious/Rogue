@@ -107,9 +107,10 @@ export interface Enemy {
 
 // Minion tier loot: 5% Starter, 75% Common, 20% Epic
 // Lower rarities allow negative magicFind to reduce loot quality
+// Minion tier loot: 80% Common, 20% Epic
+// No starter items - those are only obtainable from character selection
 export const MINION_RARITY_POOL = [
-  { rarity: 'starter' as const, weight: 5 },
-  { rarity: 'common' as const, weight: 75 },
+  { rarity: 'common' as const, weight: 80 },
   { rarity: 'epic' as const, weight: 20 },
 ];
 
@@ -839,12 +840,12 @@ export const ITEM_DATABASE: Record<string, Item> = {
   hextech_alternator: {
     id: 'hextech_alternator',
     name: 'Hextech Alternator',
-    description: 'A hextech item that grants attack damage and a powerful passive',
+    description: 'A hextech item ',
     rarity: 'epic',
     price: 1100,
     imagePath: '/assets/global/images/items/Hextech_Alternator_item.png',
     classes: ['skirmisher', 'assassin', 'marksman', 'juggernaut'],
-    stats: { attackDamage: 20, haste: 10 },
+    stats: { abilityPower: 45 },
     passiveId: 'revved',
     passive: 'Revved: damaging the enemy deals 65 additional damage every 3 turns',
   },
@@ -976,7 +977,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     description: 'A slingshot that grants attack damage and a powerful passive',
     rarity: 'epic',
     price: 600,
-    imagePath: '/assets/global/images/items/Scouts_Slingshot_item.png',
+    imagePath: '/assets/global/images/items/Scout\'s_Slingshot_item.png',
     classes: ['skirmisher', 'assassin', 'marksman', 'juggernaut'],
     stats: { speed: 20 },
     passiveId: 'bullseyes',

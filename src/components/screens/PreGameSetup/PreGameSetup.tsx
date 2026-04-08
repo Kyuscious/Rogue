@@ -13,7 +13,12 @@ interface PreGameSetupProps {
   onStartRun: (region: Region, itemId: string) => void;
   onTestMode: () => void;
   onBack: () => void;
+  tutorialEnabled?: boolean;
+  onTutorialComplete?: () => void;
+  onTutorialSkip?: () => void;
 }
+
+type PreGameTutorialStep = 'intro' | 'region' | 'regionConfirm' | 'startingitem' | 'itemConfirm' | 'start' | 'done';
 
 const REGIONS: Array<{ id: string; unlocked: boolean; descKey: 'demacia' | 'ionia' | 'shurima' }> = [
   { id: 'demacia', unlocked: true, descKey: 'demacia' },
@@ -21,7 +26,14 @@ const REGIONS: Array<{ id: string; unlocked: boolean; descKey: 'demacia' | 'ioni
   { id: 'shurima', unlocked: true, descKey: 'shurima' },
 ];
 
-export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMode, onBack }) => {
+export const PreGameSetup: React.FC<PreGameSetupProps> = ({
+  onStartRun,
+  onTestMode,
+  onBack,
+  tutorialEnabled = false,
+  onTutorialComplete,
+  onTutorialSkip,
+}) => {
   const t = useTranslation();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -30,6 +42,23 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [tutorialStep, setTutorialStep] = useState<PreGameTutorialStep>(tutorialEnabled ? 'intro' : 'done');
+
+  const isTutorialActive = tutorialEnabled && tutorialStep !== 'done';
+  const isStartStep = tutorialStep === 'start';
+  const isBlockingTutorialStep = isTutorialActive && !isStartStep;
+  const isRegionStep = tutorialStep === 'region' || tutorialStep === 'regionConfirm';
+  const isItemStep = tutorialStep === 'startingitem' || tutorialStep === 'itemConfirm';
+  const canInteractRegion = !isBlockingTutorialStep || isRegionStep;
+  const canInteractItem = !isBlockingTutorialStep || isItemStep;
+
+  useEffect(() => {
+    if (tutorialEnabled) {
+      setTutorialStep('intro');
+      return;
+    }
+    setTutorialStep('done');
+  }, [tutorialEnabled]);
 
   // Load starter items with unlock status
   useEffect(() => {
@@ -40,14 +69,17 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   const STARTER_ITEMS = starterItems;
 
   const handleRegionClick = (regionId: string, unlocked: boolean) => {
-    if (unlocked) {
+    if (unlocked && canInteractRegion) {
       setSelectedRegion(regionId);
       setError('');
+      if (isTutorialActive && tutorialStep === 'region') {
+        setTutorialStep('regionConfirm');
+      }
     }
   };
 
   const handleRegionMouseEnter = (regionId: string, unlocked: boolean, e: React.MouseEvent) => {
-    if (unlocked) {
+    if (unlocked && canInteractRegion) {
       setHoveredRegion(regionId);
       const rect = e.currentTarget.getBoundingClientRect();
       setTooltipPosition({
@@ -62,13 +94,17 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   };
 
   const handleItemClick = (itemId: string, unlocked: boolean) => {
-    if (unlocked) {
+    if (unlocked && canInteractItem) {
       setSelectedItem(itemId);
       setError('');
+      if (isTutorialActive && tutorialStep === 'startingitem') {
+        setTutorialStep('itemConfirm');
+      }
     }
   };
 
   const handleItemMouseEnter = (itemId: string, _unlocked: boolean, e: React.MouseEvent) => {
+    if (!canInteractItem) return;
     setHoveredItem(itemId);
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltipPosition({
@@ -82,12 +118,91 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   };
 
   const handleStartRun = () => {
+    if (isBlockingTutorialStep) {
+      setError(t.tutorial.preGameSetup.finishTutorial);
+      return;
+    }
+
     if (!selectedRegion || !selectedItem) {
       setError(t.preGameSetup.selectRegionAndItem);
       return;
     }
     onStartRun(selectedRegion as Region, selectedItem);
   };
+
+  const handleTutorialConfirm = () => {
+    if (!isTutorialActive) return;
+
+    if (tutorialStep === 'regionConfirm') {
+      if (!selectedRegion) {
+        setError(t.tutorial.preGameSetup.regionNeedSelection);
+        return;
+      }
+      setTutorialStep('startingitem');
+      setError('');
+      return;
+    }
+
+    if (tutorialStep === 'itemConfirm') {
+      if (!selectedItem) {
+        setError(t.tutorial.preGameSetup.itemNeedSelection);
+        return;
+      }
+      setTutorialStep('start');
+      setError('');
+    }
+  };
+
+  const handleTutorialContinue = () => {
+    if (!isTutorialActive) return;
+
+    if (tutorialStep === 'intro') {
+      setTutorialStep('region');
+      return;
+    }
+
+    if (tutorialStep === 'start') {
+      setTutorialStep('done');
+      onTutorialComplete?.();
+    }
+  };
+
+  const getTutorialText = () => {
+    if (tutorialStep === 'intro') {
+      return t.tutorial.preGameSetup.intro;
+    }
+
+    if (tutorialStep === 'region') {
+      return t.tutorial.preGameSetup.region;
+    }
+
+    if (tutorialStep === 'regionConfirm') {
+      if (!selectedRegion) return t.tutorial.preGameSetup.regionNeedSelection;
+      return t.tutorial.preGameSetup.regionSelected.replace(
+        '{{region}}',
+        getRegionDisplayName(selectedRegion as Region)
+      );
+    }
+
+    if (tutorialStep === 'startingitem') {
+      return t.tutorial.preGameSetup.startingitem;
+    }
+
+    if (tutorialStep === 'itemConfirm') {
+      if (!selectedItem) return t.tutorial.preGameSetup.itemNeedSelection;
+      const item = ITEM_DATABASE[selectedItem];
+      const itemName = item ? getItemName(item) : selectedItem;
+      return t.tutorial.preGameSetup.itemSelected.replace('{{item}}', itemName);
+    }
+
+    if (tutorialStep === 'start') {
+      return t.tutorial.preGameSetup.start;
+    }
+
+    return '';
+  };
+
+  const tutorialText = getTutorialText();
 
   // Build dynamic title
   let title = t.preGameSetup.startAdventureAt;
@@ -101,20 +216,22 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
   }
 
   return (
-    <div className="pregame-setup">
+    <div className={`pregame-setup ${isTutorialActive ? 'tutorial-active' : ''}`}>
       {/* Back to Menu Button */}
-      <button className="back-to-menu-btn" onClick={onBack}>
+      <button className="back-to-menu-btn" onClick={onBack} disabled={isBlockingTutorialStep}>
         {t.preGameSetup.backToMenu}
       </button>
 
       {/* Dev Test Button - Hidden in corner */}
-      <button className="dev-test-btn" onClick={onTestMode} title={t.preGameSetup.testCombat}>
+      <button className="dev-test-btn" onClick={onTestMode} title={t.preGameSetup.testCombat} disabled={isBlockingTutorialStep}>
         🔬
       </button>
 
+      {isTutorialActive && <div className="tutorial-overlay" />}
+
       <div className="selection-container">
         {/* Region Selection */}
-        <div className="selection-section">
+        <div className={`selection-section ${isTutorialActive ? (isRegionStep ? 'tutorial-highlight' : isItemStep ? 'tutorial-muted' : '') : ''}`}>
           <h2 className="section-title">{t.preGameSetup.selectRegion}</h2>
           <div className="selection-grid regions">
             {REGIONS.map((region) => (
@@ -133,7 +250,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
         </div>
 
         {/* Item Selection */}
-        <div className="selection-section">
+        <div className={`selection-section ${isTutorialActive ? (isItemStep ? 'tutorial-highlight' : isRegionStep ? 'tutorial-muted' : '') : ''}`}>
           <h2 className="section-title">{t.preGameSetup.selectStartingItem}</h2>
           <div className="selection-grid items">
             {STARTER_ITEMS.map((item) => {
@@ -163,10 +280,34 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({ onStartRun, onTestMo
       {/* Start Button */}
       <div className="start-button-container">
         {error && <div className="error-message">{error}</div>}
-        <button className="start-run-btn" onClick={handleStartRun}>
+        <button className="start-run-btn" onClick={handleStartRun} disabled={isBlockingTutorialStep}>
           {t.preGameSetup.startYourRun}
         </button>
       </div>
+
+      {isTutorialActive && (
+        <div className="tutorial-dialogue-box">
+          <div className="tutorial-character">🧙</div>
+          <div className="tutorial-dialogue-content">
+            <p className="tutorial-dialogue-text">{tutorialText}</p>
+            <div className="tutorial-dialogue-actions">
+              <button className="tutorial-action-btn skip" onClick={onTutorialSkip}>
+                {t.tutorial.skip}
+              </button>
+              {(tutorialStep === 'intro' || tutorialStep === 'start') && (
+                <button className="tutorial-action-btn" onClick={handleTutorialContinue}>
+                  {t.common.continue}
+                </button>
+              )}
+              {(tutorialStep === 'regionConfirm' || tutorialStep === 'itemConfirm') && (
+                <button className="tutorial-action-btn" onClick={handleTutorialConfirm}>
+                  {t.common.confirm}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tooltips */}
       {hoveredRegion && (() => {

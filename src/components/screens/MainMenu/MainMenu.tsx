@@ -5,6 +5,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 interface MainMenuProps {
   username: string;
   onStart: () => void;
+  onTutorial: () => void;
   onProfiles: () => void;
   onIndex: () => void;
   onOptions: () => void;
@@ -49,6 +50,7 @@ const CREDITS_DATA_KEYS = [
 export const MainMenu: React.FC<MainMenuProps> = ({
   username,
   onStart,
+  onTutorial,
   onProfiles,
   onIndex,
   onOptions,
@@ -86,6 +88,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </button>
           
           <div className="secondary-actions">
+            <button className="action-btn secondary" onClick={onTutorial}>
+              <span className="btn-icon">❔</span>
+              <span className="btn-text">{t.mainMenu.tutorial}</span>
+            </button>
             <button className="action-btn secondary" onClick={onProfiles}>
               <span className="btn-icon">👤</span>
               <span className="btn-text">{t.mainMenu.profiles}</span>

@@ -5,19 +5,76 @@ import { useGameStore } from '../../../game/store';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { isPathCompleted } from '../../../game/questPathSystem';
 import { GearChange } from './GearChange';
+import { LootPreviewModal } from '../../shared/LootPreviewModal';
+import { calculateQuestLoot, QuestLootInfo } from '../../../game/lootCalculator';
 import './QuestSelect.css';
 
 interface QuestSelectProps {
   region: Region;
   onSelectPath: (questId: string, pathId: string) => void;
+  tutorialEnabled?: boolean;
+  onTutorialComplete?: () => void;
+  onTutorialSkip?: () => void;
+  onTutorialFocusChange?: (focus: 'path' | 'mechanics' | 'stats' | null) => void;
 }
 
-export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }) => {
+export const QuestSelect: React.FC<QuestSelectProps> = ({
+  region,
+  onSelectPath,
+  tutorialEnabled = false,
+  onTutorialComplete,
+  onTutorialSkip,
+  onTutorialFocusChange,
+}) => {
   const { state, useReroll } = useGameStore();
   const t = useTranslation();
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(tutorialEnabled ? 0 : -1);
+
+  const tutorialSteps = [
+    t.tutorial.questSelect.path,
+    t.tutorial.questSelect.mechanics,
+    t.tutorial.questSelect.stats,
+  ];
+
+  const isTutorialActive = tutorialEnabled && tutorialStepIndex >= 0 && tutorialStepIndex < tutorialSteps.length;
+  const isPathStep = isTutorialActive && tutorialStepIndex === 0;
+  const isMechanicsStep = isTutorialActive && tutorialStepIndex === 1;
+  const isStatsStep = isTutorialActive && tutorialStepIndex === 2;
   
   // Get all available quests for this region
   const allQuests = useMemo(() => getQuestsByRegion(region), [region]);
+
+  React.useEffect(() => {
+    if (tutorialEnabled) {
+      setTutorialStepIndex(0);
+      return;
+    }
+    setTutorialStepIndex(-1);
+  }, [tutorialEnabled]);
+
+  React.useEffect(() => {
+    if (!isTutorialActive) {
+      onTutorialFocusChange?.(null);
+      return;
+    }
+
+    if (isPathStep) {
+      onTutorialFocusChange?.('path');
+      return;
+    }
+
+    if (isMechanicsStep) {
+      onTutorialFocusChange?.('mechanics');
+      return;
+    }
+
+    if (isStatsStep) {
+      onTutorialFocusChange?.('stats');
+      return;
+    }
+
+    onTutorialFocusChange?.(null);
+  }, [isTutorialActive, isPathStep, isMechanicsStep, isStatsStep, onTutorialFocusChange]);
   
   // Filter out paths that have already been completed
   const availableQuests = useMemo(() => {
@@ -33,7 +90,14 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
     return shuffled.slice(0, 3);
   });
 
+  // Loot preview modal state
+  const [lootPreviewOpen, setLootPreviewOpen] = useState(false);
+  const [selectedLootInfo, setSelectedLootInfo] = useState<QuestLootInfo | null>(null);
+  const [previewTitle, setPreviewTitle] = useState('');
+
   const handleReroll = (questIndex: number) => {
+    if (isTutorialActive) return;
+
     // Check if we have rerolls
     if (state.rerolls <= 0) return;
     
@@ -82,15 +146,40 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
     return iconMap[lootType] || '?';
   };
 
+  const handleShowLootPreview = (path: QuestPath, pathName: string, e: React.MouseEvent) => {
+    if (isTutorialActive) return;
+
+    e.stopPropagation(); // Prevent path selection
+    const playerMagicFind = state.playerCharacter?.stats.magicFind || 0;
+    const lootInfo = calculateQuestLoot(path.enemyIds, region, playerMagicFind);
+    setSelectedLootInfo(lootInfo);
+    setPreviewTitle(`${pathName} - Possible Loot`);
+    setLootPreviewOpen(true);
+  };
+
+  const handleTutorialNext = () => {
+    if (!isTutorialActive) return;
+
+    if (tutorialStepIndex >= tutorialSteps.length - 1) {
+      setTutorialStepIndex(-1);
+      onTutorialComplete?.();
+      return;
+    }
+
+    setTutorialStepIndex(prev => prev + 1);
+  };
+
   return (
-    <div className="quest-select">
+    <div className={`quest-select ${isTutorialActive ? 'quest-tutorial-active' : ''}`}>
+      {isTutorialActive && <div className="quest-tutorial-overlay" />}
+
       {/* Left: Gear Management */}
-      <div className="inventory-panel">
+      <div className={`inventory-panel ${isTutorialActive ? (isMechanicsStep ? 'quest-tutorial-highlight' : 'quest-tutorial-muted') : ''}`}>
         <GearChange />
       </div>
 
       {/* Right: Quests */}
-      <div className="quests-container">
+      <div className={`quests-container ${isTutorialActive ? (isPathStep ? 'quest-tutorial-highlight' : 'quest-tutorial-muted') : ''}`}>
         {displayedQuests.map((quest: Quest, index: number) => (
           <div key={quest.id} className="quest-card">
             <div className="quest-title-row">
@@ -118,7 +207,10 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
                 <button
                   key={path.id}
                   className={`quest-path ${path.difficulty}`}
-                  onClick={() => onSelectPath(quest.id, path.id)}
+                  onClick={() => {
+                    if (isTutorialActive) return;
+                    onSelectPath(quest.id, path.id);
+                  }}
                 >
                   <div className="path-content">
                     <div className="path-info">
@@ -128,6 +220,13 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
                     <div className="path-icons">
                       {renderDifficultyBadge(path.difficulty)}
                       <span className="reward-icon" title={`${t.questSelect.reward}: ${path.lootType}`}>{renderRewardIcon(path.lootType)}</span>
+                      <button 
+                        className="loot-preview-btn" 
+                        title="Preview possible loot"
+                        onClick={(e) => handleShowLootPreview(path, path.name, e)}
+                      >
+                        👁️
+                      </button>
                       <div className="boss-icon">
                         {path.finalBossId ? '👑' : '?'}
                       </div>
@@ -139,6 +238,31 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({ region, onSelectPath }
           </div>
         ))}
       </div>
+
+      {/* Loot Preview Modal */}
+      <LootPreviewModal 
+        isOpen={lootPreviewOpen}
+        onClose={() => setLootPreviewOpen(false)}
+        lootInfo={selectedLootInfo}
+        title={previewTitle}
+      />
+
+      {isTutorialActive && (
+        <div className="quest-tutorial-dialogue-box">
+          <div className="quest-tutorial-character">🧭</div>
+          <div className="quest-tutorial-content">
+            <p className="quest-tutorial-text">{tutorialSteps[tutorialStepIndex]}</p>
+            <div className="quest-tutorial-actions">
+              <button className="quest-tutorial-action-btn skip" onClick={onTutorialSkip}>
+                {t.tutorial.skip}
+              </button>
+              <button className="quest-tutorial-action-btn" onClick={handleTutorialNext}>
+                {tutorialStepIndex === tutorialSteps.length - 1 ? t.common.confirm : t.common.continue}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
