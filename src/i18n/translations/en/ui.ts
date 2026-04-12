@@ -230,6 +230,7 @@ export const ui = {
     battle: {
       battle: 'You have encountered an enemy! This is the battle screen where you will fight against various foes. Each enemy has its own stats, abilities, and loot. Pay attention to their strengths and weaknesses to plan your strategy.',
       enemy: 'This is the arena panel, where you can monitor both teams during the fight.',
+      turns: 'Turn windows alternate between Attack/Move and Spell/Item actions. Use the timeline to plan what is available next.',
       battlefield: 'This is the battlefield. Positioning matters: range, spacing, and movement can decide whether actions are available or not.',
       timeline: 'This is the timeline. It shows upcoming turn order for both sides.',
       log: 'This is the battle log. It summarizes actions, damage, and important status changes.',
@@ -241,6 +242,7 @@ export const ui = {
       cast: 'Finally, cast your selected Spell Scrolls and apply their effects, chose them wisely, for now let\'s begin the fight by casting {{spell}} since it\'s your turn!.',
       loot: 'Great work. This panel shows the rewards you just earned. After this, the next enemy in the encounter sequence will spawn.',
       elite: 'This is an Elite encounter. It is tougher than previous enemies, so plan your cooldowns and positioning carefully.',
+      useSpellOrItem: 'This turn allows Spell or Item actions. Choose based on cooldowns, range, and enemy status.',
     },
     shop: {
       intro: 'Welcome to the shop. Upgrade your build before the next encounter.',
