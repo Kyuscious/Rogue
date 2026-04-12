@@ -331,6 +331,7 @@ export interface Translations {
       battlefield: string;
       timeline: string;
       log: string;
+      actions: string;
       speed: string;
       move: string;
       attack: string;

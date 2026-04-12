@@ -234,6 +234,7 @@ export const ui = {
       battlefield: 'Voici le champ de bataille. La position et la portée sont essentielles.',
       timeline: 'Voici la timeline : elle montre l\'ordre des actions entre vous et l\'ennemi.',
       log: 'Voici le journal de combat : vous y voyez les actions, dégâts et effets appliqués.',
+      actions: 'Voici les actions disponibles pendant votre tour.',
       speed: 'Ce bloc explique les actions liées à la vitesse.',
       move: 'Se déplacer modifie votre position. Plus vous avez de vitesse de déplacement, plus vous parcourez de distance.',
       attack: 'Attaquer inflige des dégâts avec votre arme équipée.',

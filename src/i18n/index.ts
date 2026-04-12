@@ -1,6 +1,6 @@
 import { Language, Translations } from './types';
-import { en } from './translations/en';
-import { fr } from './translations/fr';
+import { en } from './translations/en/index';
+import { fr } from './translations/fr/index';
 
 // Translation registry
 const translations: Record<Language, Translations> = {

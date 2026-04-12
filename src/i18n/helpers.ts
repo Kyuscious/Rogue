@@ -4,8 +4,8 @@
  */
 
 import { useGameStore } from '../game/store';
-import { en } from './translations/en';
-import { fr } from './translations/fr';
+import { en } from './translations/en/index';
+import { fr } from './translations/fr/index';
 import { Translations } from './types';
 
 /**

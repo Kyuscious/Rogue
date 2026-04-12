@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import { useGameStore } from '../../../game/store';
 import { CharacterStatus } from '../../entity/CharacterStatus';
 import { BattlefieldDisplay, AoEIndicator } from './BattlefieldDisplay';
@@ -55,7 +55,8 @@ import './Battle.css';
 interface BattleProps {
   onBack?: () => void;
   onQuestComplete?: () => void;
-  tutorialFocus?: 'battle' | 'enemy' | 'turns-battlefield' | 'turns-timeline' | 'turns-log' | 'speed-move' | 'speed-attack' | 'haste-cast' | 'haste-item' | null;
+  tutorialFocus?: 'battle' | 'enemy' | 'turns-battlefield' | 'turns-timeline' | 'turns-log' | 'actions' | 'speed' | 'speed-move' | 'speed-attack' | 'haste' | 'haste-item' | 'cast' | null;
+  tutorialActionPromptActive?: boolean;
   onTutorialActionUsed?: () => void;
   lootTutorialEnabled?: boolean;
   onLootTutorialComplete?: () => void;
@@ -124,6 +125,7 @@ export const Battle: React.FC<BattleProps> = ({
   onBack,
   onQuestComplete,
   tutorialFocus = null,
+  tutorialActionPromptActive = false,
   onTutorialActionUsed,
   lootTutorialEnabled = false,
   onLootTutorialComplete,
@@ -225,6 +227,7 @@ export const Battle: React.FC<BattleProps> = ({
 
   // Ref for auto-scrolling battle log
   const logEntriesRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
 
   // Initialize/reset turn entities when enemy changes (new encounter)
   useEffect(() => {
@@ -282,7 +285,8 @@ export const Battle: React.FC<BattleProps> = ({
     setBattleEnded(false);     // Critical: Must reset to false for buttons to appear
     // Don't reset battleResult here - it needs to persist for handleSummaryContinue
     // handleSummaryContinue will reset it after processing victory/defeat
-    setBattleLog([{ message: 'Battle started!' }, { message: '---' }]);
+    setBattleLog([{ message: getEncounterStartMessage() }]);
+    shouldAutoScrollRef.current = true;
     setLastLoggedTurn(0);
     setSelectedItemId(null); // Will be auto-selected by useEffect watching inventory
     setEnemyDebuffs([]); // Reset enemy debuffs for new encounter
@@ -319,7 +323,7 @@ export const Battle: React.FC<BattleProps> = ({
         const spell = getSpellById(spellId);
         return `⏳ ${spell?.name || 'Spell'}: ${cd} turn${cd > 1 ? 's' : ''} remaining`;
       });
-      setBattleLog(prev => [...prev, ...cooldownMessages.map(msg => ({ message: msg }))]);
+      appendLogs(cooldownMessages);
     }
     
     console.log('🔧 Battle state reset complete - battleEnded should now be FALSE');
@@ -341,12 +345,42 @@ export const Battle: React.FC<BattleProps> = ({
     message: string;
     type?: 'normal' | 'simultaneous';
   }
+  const encounterNumber = state.encountersCompleted + 1;
+  const getEncounterStartMessage = () => `Encounter ${encounterNumber} against ${getCharacterName(enemyChar)} started!`;
+
   const [battleLog, setBattleLog] = useState<LogEntry[]>(() => {
     return [
-      { message: 'Battle started!' },
-      { message: '---' },
+      { message: getEncounterStartMessage() },
     ];
   });
+
+  const appendLog = (message: string, type: 'normal' | 'simultaneous' = 'normal') => {
+    setBattleLog(prev => [...prev, { message, type }]);
+  };
+
+  const appendLogs = (messages: string[], type: 'normal' | 'simultaneous' = 'normal') => {
+    if (messages.length === 0) return;
+    setBattleLog(prev => [...prev, ...messages.map(message => ({ message, type }))]);
+  };
+
+  const scrollBattleLogToBottom = () => {
+    if (!shouldAutoScrollRef.current) return;
+
+    const logContainer = logEntriesRef.current;
+    if (!logContainer) return;
+
+    requestAnimationFrame(() => {
+      logContainer.scrollTop = logContainer.scrollHeight;
+    });
+  };
+
+  const handleLogScroll = () => {
+    const logContainer = logEntriesRef.current;
+    if (!logContainer) return;
+
+    const distanceFromBottom = logContainer.scrollHeight - (logContainer.scrollTop + logContainer.clientHeight);
+    shouldAutoScrollRef.current = distanceFromBottom <= 24;
+  };
 
   // Track which turn we've logged to avoid duplicate messages
   const [lastLoggedTurn, setLastLoggedTurn] = useState(0);
@@ -468,7 +502,7 @@ export const Battle: React.FC<BattleProps> = ({
   // Handler for simultaneous actions detected by timeline
   const handleSimultaneousAction = (playerAction: string, enemyAction: string, time: number) => {
     const message = `⚡ [${playerAction.toUpperCase()}] from ${playerChar.name} and [${enemyAction.toUpperCase()}] from ${enemyChar.name} happen simultaneously at T${time.toFixed(2)}! ${playerChar.name} has priority!`;
-    setBattleLog(prev => [...prev, { message, type: 'simultaneous' }]);
+    appendLog(message, 'simultaneous');
   };
 
   // Calculate distance between player and enemy
@@ -487,10 +521,7 @@ export const Battle: React.FC<BattleProps> = ({
     // Add selected reward to inventory
     addInventoryItem(selectedItem);
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `🎁 Reward selected: ${selectedItem.itemId}` },
-    ]);
+    appendLog(`🎁 Reward selected: ${selectedItem.itemId}`);
     
     // Hide summary and continue
     setShowSummary(false);
@@ -538,10 +569,7 @@ export const Battle: React.FC<BattleProps> = ({
   };
 
   const handleSkipReward = () => {
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `⏭️ Reward skipped` },
-    ]);
+    appendLog('⏭️ Reward skipped');
     
     // Hide summary and continue
     setShowSummary(false);
@@ -914,6 +942,9 @@ export const Battle: React.FC<BattleProps> = ({
       });
     }
     
+    if (logMessages.length === 0) {
+      logMessages.push({ message: `${playerChar.name} attacked with ${equippedWeapon.name}.` });
+    }
     setBattleLog((prev) => [...prev, ...logMessages]);
     
     // Apply weapon cooldown
@@ -959,6 +990,7 @@ export const Battle: React.FC<BattleProps> = ({
 
   const handleSpell = () => {
     if (!playerEntity || !enemyEntity) return;
+    const isCastTutorialStep = tutorialFocus === 'cast';
     
     // Get equipped spell
     const equippedSpellId = state.spells[state.equippedSpellIndex];
@@ -981,7 +1013,7 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Check cooldown
     const cooldownRemaining = state.spellCooldowns[equippedSpellId] || 0;
-    if (cooldownRemaining > 0) {
+    if (cooldownRemaining > 0 && !isCastTutorialStep) {
       console.log('❌ Spell on cooldown, blocking cast');
       setBattleLog((prev) => [
         ...prev,
@@ -991,7 +1023,7 @@ export const Battle: React.FC<BattleProps> = ({
     }
     
     // Check if player is in range
-    if (!canPlayerCastSpell) {
+    if (!canPlayerCastSpell && !isCastTutorialStep) {
       setBattleLog((prev) => [
         ...prev,
         { message: `${playerChar.name}'s spell is out of range! (${currentDistance} > 500)` },
@@ -1261,6 +1293,9 @@ export const Battle: React.FC<BattleProps> = ({
       });
     }
     
+    if (logMessages.length === 0) {
+      logMessages.push({ message: `${playerChar.name} cast ${equippedSpell.name}.` });
+    }
     setBattleLog((prev) => [...prev, ...logMessages]);
     
     // Update store with any changes made to playerChar (shields, effects, etc.)
@@ -1345,10 +1380,7 @@ export const Battle: React.FC<BattleProps> = ({
     setPlayerPosition(newPosition);
     const newDistance = Math.abs(newPosition - enemyPosition);
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `${playerChar.name} moved ${direction} by ${MOVE_DISTANCE} units. Distance: ${newDistance}` },
-    ]);
+    appendLog(`${playerChar.name} moved ${direction} by ${MOVE_DISTANCE} units. Distance: ${newDistance}`);
     
     // Advance to next action in sequence
     setSequenceIndex((prev) => prev + 1);
@@ -1387,10 +1419,7 @@ export const Battle: React.FC<BattleProps> = ({
       const newBuff = createHealthPotionBuff(`buff-${Date.now()}`);
       setPlayerBuffs((prev) => [...prev, newBuff]);
       
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} used ${item.name}! Restoring 10 HP per turn for 5 turns.` },
-      ]);
+      appendLog(`${playerChar.name} used ${item.name}! Restoring 10 HP per turn for 5 turns.`);
       
       // Consume the item from inventory
       consumeInventoryItem(selectedItemId);
@@ -1400,10 +1429,7 @@ export const Battle: React.FC<BattleProps> = ({
         revealEnemy(enemy.id, 1);
       }
       
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `👁️ ${playerChar.name} placed a Stealth Ward! Enemy stats are now revealed!` },
-      ]);
+      appendLog(`👁️ ${playerChar.name} placed a Stealth Ward! Enemy stats are now revealed!`);
       
       consumeInventoryItem(selectedItemId);
     } else if (selectedItemId === 'control_ward') {
@@ -1412,10 +1438,7 @@ export const Battle: React.FC<BattleProps> = ({
         revealEnemy(enemy.id, 3);
       }
       
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `👁️ ${playerChar.name} placed a Control Ward! Enemy stats will be revealed for the next 3 encounters!` },
-      ]);
+      appendLog(`👁️ ${playerChar.name} placed a Control Ward! Enemy stats will be revealed for the next 3 encounters!`);
       
       consumeInventoryItem(selectedItemId);
     } else if (selectedItemId === 'flashbomb_trap' && item.active) {
@@ -1469,10 +1492,7 @@ export const Battle: React.FC<BattleProps> = ({
         endTime: stunEndTime,
       }]);
       
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `💣 ${playerChar.name} placed a Flashbomb Trap! It will activate in ${setupTime} turn(s).` },
-      ]);
+      appendLog(`💣 ${playerChar.name} placed a Flashbomb Trap! It will activate in ${setupTime} turn(s).`);
       
       // Consume the item from inventory
       consumeInventoryItem(selectedItemId);
@@ -1491,10 +1511,7 @@ export const Battle: React.FC<BattleProps> = ({
       const { totalAmount, maxDuration } = computeBuffDisplayValues(newBuff, turnCounter);
       
       setPlayerBuffs((prev) => [...prev, newBuff]);
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} used ${item.name}! +${totalAmount} ${newBuff.stat} for ${maxDuration} turns!` },
-      ]);
+      appendLog(`${playerChar.name} used ${item.name}! +${totalAmount} ${newBuff.stat} for ${maxDuration} turns!`);
       
       // Consume the item from inventory
       consumeInventoryItem(selectedItemId);
@@ -1524,7 +1541,13 @@ export const Battle: React.FC<BattleProps> = ({
     
     // If in range to attack, don't move
     if (distance <= enemyAttackRange) {
-      return; // Will let normal attack/spell handle it
+      appendLog(`${enemyChar.name} held position (already in range).`);
+      setSequenceIndex((prev) => prev + 1);
+      setTurnCounter((prev) => {
+        const nextAction = turnSequence[sequenceIndex + 1];
+        return nextAction ? Math.ceil(nextAction.turnNumber) : prev + 1;
+      });
+      return;
     }
     
     // Calculate enemy movement speed with debuffs
@@ -1549,19 +1572,13 @@ export const Battle: React.FC<BattleProps> = ({
     setEnemyPosition(newPosition);
     const newDistance = Math.abs(playerPosition - newPosition);
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `${enemyChar.name} moved towards by ${enemyMoveDistance} units. Distance: ${newDistance}` },
-    ]);
+    appendLog(`${enemyChar.name} moved towards by ${enemyMoveDistance} units. Distance: ${newDistance}`);
   };
 
   const handleSkip = () => {
     if (!playerEntity || !enemyEntity) return;
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `${playerChar.name} skipped their turn!` },
-    ]);
+    appendLog(`${playerChar.name} skipped their turn!`);
     
     // Advance to next action in sequence
     setSequenceIndex((prev) => prev + 1);
@@ -1705,6 +1722,9 @@ export const Battle: React.FC<BattleProps> = ({
         }
       }
       
+      if (logMessages.length === 0) {
+        logMessages.push({ message: `${getCharacterName(enemyChar)} used ${weapon.name}.` });
+      }
       setBattleLog((prev) => [...prev, ...logMessages]);
       
       // Apply weapon cooldown
@@ -1814,6 +1834,9 @@ export const Battle: React.FC<BattleProps> = ({
         updateEnemyHp(0, newEnemyHp);
       }
       
+      if (logMessages.length === 0) {
+        logMessages.push({ message: `${getCharacterName(enemyChar)} cast ${spell.name}.` });
+      }
       setBattleLog((prev) => [...prev, ...logMessages]);
       
       // Apply spell cooldown
@@ -1874,17 +1897,11 @@ export const Battle: React.FC<BattleProps> = ({
       setEnemyPosition(newPosition);
       const newDistance = Math.abs(playerPosition - newPosition);
       
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${getCharacterName(enemyChar)} moved ${direction} by ${moveDistance} units. Distance: ${newDistance}` },
-      ]);
+      appendLog(`${getCharacterName(enemyChar)} moved ${direction} by ${moveDistance} units. Distance: ${newDistance}`);
       
     } else if (aiAction.type === 'skip') {
       // Enemy skips turn
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${getCharacterName(enemyChar)} skipped their turn.` },
-      ]);
+      appendLog(`${getCharacterName(enemyChar)} skipped their turn.`);
     }
     
     // Advance to next action in sequence
@@ -2061,18 +2078,16 @@ export const Battle: React.FC<BattleProps> = ({
   }, [sequenceIndex, turnSequence, pendingStuns, playerChar.name, enemyChar.name]);
 
   // Auto-scroll battle log to bottom when new entries are added
-  useEffect(() => {
-    if (logEntriesRef.current) {
-      logEntriesRef.current.scrollTop = logEntriesRef.current.scrollHeight;
-    }
-  }, [battleLog]);
+  useLayoutEffect(() => {
+    scrollBattleLogToBottom();
+  }, [battleLog.length]);
 
   // Auto-scroll when turn indicator appears (player's turn)
   useEffect(() => {
     if (logEntriesRef.current && !playerTurnDone && !battleEnded) {
       const currentAction = turnSequence[sequenceIndex];
       if (currentAction && currentAction.entityId === 'player') {
-        logEntriesRef.current.scrollTop = logEntriesRef.current.scrollHeight;
+        scrollBattleLogToBottom();
       }
     }
   }, [sequenceIndex, playerTurnDone, battleEnded, turnSequence]);
@@ -2087,7 +2102,7 @@ export const Battle: React.FC<BattleProps> = ({
     if (turnCounter > 0 && currentTurn > lastLoggedTurn && turnCounter % 1 === 0) {
       // Turn-based effects trigger at each integer turn count
       const newLogMessages: Array<{ message: string }> = [];
-      newLogMessages.push({ message: `--- Turn ${currentTurn} ---` });
+      const turnEffectSummary: string[] = [];
       
       // INSTANT DEATH CHECK: Only apply healing if player is alive (HP > 0)
       // Apply player health regeneration from base stats
@@ -2098,7 +2113,7 @@ export const Battle: React.FC<BattleProps> = ({
           const actualHealing = newPlayerHp - playerChar.hp;
           if (actualHealing > 0) {
             updatePlayerHp(newPlayerHp);
-            newLogMessages.push({ message: `💚 ${playerChar.name} regenerated ${actualHealing} HP` });
+            turnEffectSummary.push(`${playerChar.name} regenerated ${actualHealing} HP`);
           }
         }
       }
@@ -2120,7 +2135,7 @@ export const Battle: React.FC<BattleProps> = ({
           const actualHealing = newPlayerHp - playerChar.hp;
           if (actualHealing > 0) {
             updatePlayerHp(newPlayerHp);
-            newLogMessages.push({ message: `🧪 ${playerChar.name} healed ${actualHealing} HP from buffs` });
+            turnEffectSummary.push(`${playerChar.name} healed ${actualHealing} HP from buffs`);
           }
         }
         
@@ -2183,7 +2198,7 @@ export const Battle: React.FC<BattleProps> = ({
           const actualHealing = newEnemyHp - enemyChar.hp;
           if (actualHealing > 0) {
             updateEnemyHp(0, newEnemyHp);
-            newLogMessages.push({ message: `💚 ${enemyChar.name} regenerated ${actualHealing} HP` });
+            turnEffectSummary.push(`${enemyChar.name} regenerated ${actualHealing} HP`);
           }
         }
       }
@@ -2200,7 +2215,7 @@ export const Battle: React.FC<BattleProps> = ({
           const actualDamage = enemyChar.hp - newEnemyHp;
           if (actualDamage > 0) {
             updateEnemyHp(0, newEnemyHp);
-            newLogMessages.push({ message: `🩸 ${enemyChar.name} takes ${actualDamage} damage from Hemorrhage (${stackCount} stack${stackCount > 1 ? 's' : ''})` });
+            turnEffectSummary.push(`${enemyChar.name} takes ${actualDamage} damage from Hemorrhage (${stackCount} stack${stackCount > 1 ? 's' : ''})`);
           }
 
           // Check for immediate death from DoT
@@ -2212,6 +2227,11 @@ export const Battle: React.FC<BattleProps> = ({
         // Decay debuff durations using new stacking system
         setEnemyDebuffs((prevDebuffs) => decayBuffStacks(prevDebuffs, turnCounter));
       }
+
+      const turnHeader = turnEffectSummary.length > 0
+        ? `--- Turn ${currentTurn} --- ${turnEffectSummary.join(' | ')}`
+        : `--- Turn ${currentTurn} ---`;
+      newLogMessages.unshift({ message: turnHeader });
       
       setBattleLog((prev) => [...prev, ...newLogMessages]);
       setLastLoggedTurn(currentTurn);
@@ -2503,10 +2523,16 @@ export const Battle: React.FC<BattleProps> = ({
   const isBattlefieldFocus = tutorialFocus === 'turns-battlefield';
   const isTimelineFocus = tutorialFocus === 'turns-timeline';
   const isLogFocus = tutorialFocus === 'turns-log';
+  const isActionsFocus = tutorialFocus === 'actions';
+  const isSpeedFocus = tutorialFocus === 'speed';
   const isMoveFocus = tutorialFocus === 'speed-move';
   const isAttackFocus = tutorialFocus === 'speed-attack';
-  const isCastFocus = tutorialFocus === 'haste-cast';
+  const isHasteFocus = tutorialFocus === 'haste';
   const isItemFocus = tutorialFocus === 'haste-item';
+  const isCastFocus = tutorialFocus === 'cast';
+  const allowCastTutorialOverride = tutorialFocus === 'cast';
+  const blockSpellDuringTutorial = tutorialFocus === 'actions' || tutorialFocus === 'haste';
+  const blockItemDuringTutorial = tutorialFocus === 'actions' || tutorialFocus === 'haste';
   const getTutorialClass = (isHighlighted: boolean) => {
     if (!isBattleTutorial) return '';
     return isHighlighted ? 'battle-tutorial-highlight' : 'battle-tutorial-muted';
@@ -2532,7 +2558,7 @@ export const Battle: React.FC<BattleProps> = ({
       {/* Unified Combat Layout (desktop) */}
       <div className="battle-combat-layout">
         <div className={`battle-log battle-log-panel ${getTutorialClass(isLogFocus)}`}>
-          <div className="log-entries" ref={logEntriesRef}>
+          <div className="log-entries" ref={logEntriesRef} onScroll={handleLogScroll}>
             {battleLog.map((entry, idx) => (
               <div key={idx} className={`log-entry ${entry.type || ''}`}>
                 {entry.message}
@@ -2562,7 +2588,7 @@ export const Battle: React.FC<BattleProps> = ({
           />
         </div>
 
-        <div className="battle-controls-panel">
+        <div className={`battle-controls-panel ${getTutorialClass(isActionsFocus)}`}>
           {/* Turn Timeline - key forces full remount on new enemy */}
           {!showSummary && (
             <div className={getTutorialClass(isTimelineFocus)}>
@@ -2580,11 +2606,11 @@ export const Battle: React.FC<BattleProps> = ({
           )}
 
           {!showSummary && !battleEnded && (
-            <div className={`battle-actions-container ${getTutorialClass(isMoveFocus || isAttackFocus || isCastFocus || isItemFocus)}`}>
+            <div className={`battle-actions-container ${getTutorialClass(isActionsFocus || isSpeedFocus || isMoveFocus || isAttackFocus || isHasteFocus || isItemFocus || isCastFocus)}`}>
               {/* Main Action Row */}
               <div className="main-actions-row">
                 {/* Move Section */}
-                <div className={`action-section move-section ${getTutorialClass(isMoveFocus)}`}>
+                <div className={`action-section move-section ${getTutorialClass(isSpeedFocus || isMoveFocus)}`}>
                   <div className="section-label">Move</div>
                   <div className="move-buttons-vertical">
                     <button 
@@ -2611,7 +2637,7 @@ export const Battle: React.FC<BattleProps> = ({
                 </div>
 
                 {/* Attack Section */}
-                <div className={`action-section attack-section ${getTutorialClass(isAttackFocus)}`}>
+                <div className={`action-section attack-section ${getTutorialClass(isSpeedFocus || isAttackFocus)}`}>
                   <div className="section-label">Attack</div>
                   <button 
                     onClick={handleAttack} 
@@ -2654,12 +2680,12 @@ export const Battle: React.FC<BattleProps> = ({
                 </div>
 
                 {/* Item Section */}
-                <div className={`action-section item-section ${getTutorialClass(isItemFocus)}`}>
+                <div className={`action-section item-section ${getTutorialClass(isHasteFocus || isItemFocus)} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}>
                   <div className="section-label">Item</div>
                   <button 
                     onClick={handleUseSelectedItem} 
-                    className={`main-action-btn item-btn ${!canSpell || !selectedItemId ? 'disabled' : ''}`}
-                    disabled={!canSpell || !selectedItemId}
+                    className={`main-action-btn item-btn ${!canSpell || !selectedItemId ? 'disabled' : ''} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}
+                    disabled={!canSpell || !selectedItemId || blockItemDuringTutorial}
                     title={!canSpell ? 'Wait for your spell turn' : !selectedItemId ? 'Select an item first' : 'Use selected item'}
                   >
                     <span className="action-icon">🧪</span>
@@ -2675,24 +2701,24 @@ export const Battle: React.FC<BattleProps> = ({
                 </div>
 
                 {/* Spell Section */}
-                <div className={`action-section spell-section ${getTutorialClass(isCastFocus)}`}>
+                <div className={`action-section spell-section ${getTutorialClass(isHasteFocus || isCastFocus)} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}>
                   <div className="section-label">Cast</div>
                   <button 
                     onClick={handleSpell} 
-                    className={`main-action-btn spell-btn ${!canSpell ? 'disabled' : ''} ${(() => {
+                    className={`main-action-btn spell-btn ${!canSpell && !allowCastTutorialOverride ? 'disabled' : ''} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''} ${(() => {
                       const spellId = state.spells[state.equippedSpellIndex];
                       const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
-                      return cooldown > 0 ? 'on-cooldown' : '';
+                      return cooldown > 0 && !allowCastTutorialOverride ? 'on-cooldown' : '';
                     })()}`}
-                    disabled={!canSpell || (() => {
+                    disabled={(!canSpell && !allowCastTutorialOverride) || blockSpellDuringTutorial || (() => {
                       const spellId = state.spells[state.equippedSpellIndex];
-                      return (state.spellCooldowns[spellId] || 0) > 0;
+                      return (state.spellCooldowns[spellId] || 0) > 0 && !allowCastTutorialOverride;
                     })()}
                     title={(() => {
                       const spellId = state.spells[state.equippedSpellIndex];
                       const cooldown = state.spellCooldowns[spellId] || 0;
-                      if (cooldown > 0) return `Spell on cooldown (${cooldown} turn${cooldown > 1 ? 's' : ''} remaining)`;
-                      if (!canSpell) return 'Wait for your spell turn';
+                      if (cooldown > 0 && !allowCastTutorialOverride) return `Spell on cooldown (${cooldown} turn${cooldown > 1 ? 's' : ''} remaining)`;
+                      if (!canSpell && !allowCastTutorialOverride) return 'Wait for your spell turn';
                       return 'Cast equipped spell!';
                     })()}
                   >

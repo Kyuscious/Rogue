@@ -170,6 +170,7 @@ export const App: React.FC = () => {
   const [tutorialStage, setTutorialStage] = useState<TutorialStage>('none');
   const [sceneTutorialStep, setSceneTutorialStep] = useState(0);
   const [showSadSkip, setShowSadSkip] = useState(false);
+  const [showBattleActionPrompt, setShowBattleActionPrompt] = useState(false);
   const [questTutorialFocus, setQuestTutorialFocus] = useState<QuestTutorialFocus>(null);
 
   const getTutorialStorageKey = (profileId: number) => `tutorialCompleted_profile_${profileId}`;
@@ -211,6 +212,7 @@ export const App: React.FC = () => {
     markTutorialCompleted(true);
     markEliteTutorialSeen(true);
     setSceneTutorialStep(0);
+    setShowBattleActionPrompt(false);
     setTutorialStage('none');
     setQuestTutorialFocus(null);
     setShowSadSkip(true);
@@ -374,8 +376,11 @@ export const App: React.FC = () => {
         t.tutorial.battle.battlefield,
         t.tutorial.battle.timeline,
         t.tutorial.battle.log,
+        t.tutorial.battle.actions,
+        t.tutorial.battle.speed,
         t.tutorial.battle.move,
         t.tutorial.battle.attack,
+        t.tutorial.battle.haste,
         t.tutorial.battle.items,
         t.tutorial.battle.cast,
       ];
@@ -400,7 +405,8 @@ export const App: React.FC = () => {
     const steps = getSceneTutorialSteps();
     if (steps.length === 0) return;
 
-    if (scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 8) {
+    if (scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 11) {
+      setShowBattleActionPrompt(true);
       return;
     }
 
@@ -424,7 +430,8 @@ export const App: React.FC = () => {
   const handleBattleTutorialActionUsed = () => {
     if (scene !== 'battle' || tutorialStage !== 'battle') return;
 
-    if (sceneTutorialStep >= 8) {
+    if (sceneTutorialStep >= 11) {
+      setShowBattleActionPrompt(false);
       setTutorialStage('battleLoot');
       setSceneTutorialStep(0);
     }
@@ -443,6 +450,12 @@ export const App: React.FC = () => {
   }, [scene, tutorialStage]);
 
   useEffect(() => {
+    if (scene !== 'battle' || tutorialStage !== 'battle') {
+      setShowBattleActionPrompt(false);
+    }
+  }, [scene, tutorialStage]);
+
+  useEffect(() => {
     if (scene !== 'battle') return;
     if (tutorialStage !== 'none') return;
     if (state.currentFloor !== 5) return;
@@ -456,9 +469,12 @@ export const App: React.FC = () => {
     const steps = getSceneTutorialSteps();
     if (steps.length === 0) return null;
 
+    if (scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 11 && showBattleActionPrompt) {
+      return null;
+    }
+
     const text = steps[Math.min(sceneTutorialStep, steps.length - 1)];
     const isBattleActionStep = scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep >= 5;
-    const blockContinue = scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 8;
 
     return (
       <>
@@ -472,11 +488,9 @@ export const App: React.FC = () => {
             <p className="scene-tutorial-speaker-name">{t.tutorial.npcName}</p>
             <p className="scene-tutorial-text">{text}</p>
             <div className="scene-tutorial-actions">
-              {!blockContinue && (
-                <button className="scene-tutorial-action-btn" onClick={handleSceneTutorialNext}>
-                  {sceneTutorialStep >= steps.length - 1 ? t.common.confirm : t.common.continue}
-                </button>
-              )}
+              <button className="scene-tutorial-action-btn" onClick={handleSceneTutorialNext}>
+                {sceneTutorialStep >= steps.length - 1 ? t.common.confirm : t.common.continue}
+              </button>
             </div>
           </div>
         </div>
@@ -938,8 +952,13 @@ export const App: React.FC = () => {
   }
 
   if (scene === 'battle' || scene === 'testBattle') {
+    const isBattleActionPromptActive =
+      tutorialStage === 'battle' && scene === 'battle' && sceneTutorialStep === 11 && showBattleActionPrompt;
+
     const battleTutorialFocus = tutorialStage === 'battle' && scene === 'battle'
-      ? (sceneTutorialStep === 0
+      ? (isBattleActionPromptActive
+          ? null
+          : sceneTutorialStep === 0
           ? 'battle'
           : sceneTutorialStep === 1
             ? 'enemy'
@@ -950,12 +969,18 @@ export const App: React.FC = () => {
                 : sceneTutorialStep === 4
                   ? 'turns-log'
                   : sceneTutorialStep === 5
-                    ? 'speed-move'
+                    ? 'actions'
                     : sceneTutorialStep === 6
-                      ? 'speed-attack'
+                      ? 'speed'
                       : sceneTutorialStep === 7
-                        ? 'haste-item'
-                        : 'haste-cast')
+                        ? 'speed-move'
+                        : sceneTutorialStep === 8
+                          ? 'speed-attack'
+                          : sceneTutorialStep === 9
+                            ? 'haste'
+                            : sceneTutorialStep === 10
+                              ? 'haste-item'
+                              : 'cast')
       : null;
 
     return (
@@ -986,12 +1011,17 @@ export const App: React.FC = () => {
           onBack={() => setScene('pregame')}
           onQuestComplete={handleQuestComplete}
           tutorialFocus={battleTutorialFocus}
+          tutorialActionPromptActive={isBattleActionPromptActive}
           onTutorialActionUsed={handleBattleTutorialActionUsed}
           lootTutorialEnabled={tutorialStage === 'battleLoot'}
           onLootTutorialComplete={handleBattleLootTutorialComplete}
         />
 
         {renderSceneTutorialOverlay()}
+
+        {isBattleActionPromptActive && (
+          <div className="sad-skip-toast">{t.tutorial.battle.useSpellOrItem}</div>
+        )}
 
         {showSadSkip && (
           <div className="sad-skip-toast">{t.tutorial.sadskip}</div>

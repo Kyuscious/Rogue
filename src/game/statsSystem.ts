@@ -60,7 +60,7 @@ export interface CharacterStats {
  */
 export const DEFAULT_STATS: CharacterStats = {
   //Survivability
-  health: 125,
+  health: 500,
   health_regen: 0,
   armor: 20,
   magicResist: 20,
