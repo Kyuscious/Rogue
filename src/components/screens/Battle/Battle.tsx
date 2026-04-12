@@ -25,7 +25,6 @@ import {
   CombatBuff,
   applyLifeDrainingBuff,
   applyDrainBuff,
-  applyEnduringFocusBuff,
   addOrMergeBuffStack,
   decayBuffStacks,
   computeBuffDisplayValues,
@@ -38,6 +37,7 @@ import {
 import { generateRewardOptions } from '../../../game/rewardPool';
 import { checkLevelUp } from '../../../game/experienceSystem';
 import { incrementEnemiesKilled } from '../../../game/profileSystem';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { ItemBar } from './ItemSelector';
 import { BattleSummary } from './BattleSummary';
 import { WeaponSelector } from './WeaponSelector';
@@ -55,6 +55,10 @@ import './Battle.css';
 interface BattleProps {
   onBack?: () => void;
   onQuestComplete?: () => void;
+  tutorialFocus?: 'battle' | 'enemy' | 'turns-battlefield' | 'turns-timeline' | 'turns-log' | 'speed-move' | 'speed-attack' | 'haste-cast' | 'haste-item' | null;
+  onTutorialActionUsed?: () => void;
+  lootTutorialEnabled?: boolean;
+  onLootTutorialComplete?: () => void;
 }
 
 // Helper function to format weapon effect descriptions
@@ -116,7 +120,15 @@ const formatSpellEffects = (spell: any) => {
   return descriptions;
 };
 
-export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
+export const Battle: React.FC<BattleProps> = ({
+  onBack,
+  onQuestComplete,
+  tutorialFocus = null,
+  onTutorialActionUsed,
+  lootTutorialEnabled = false,
+  onLootTutorialComplete,
+}) => {
+  const t = useTranslation();
   const store = useGameStore();
   const state = store.state;
   const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion, revealEnemy, decayRevealedEnemies, updatePersistentBuff } = store;
@@ -396,11 +408,32 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     highestDamageTakenSource: 'attack' as 'attack' | 'spell',
   });
   const [showSummary, setShowSummary] = useState(false);
+  const [showLootTutorialPrompt, setShowLootTutorialPrompt] = useState(false);
   const [summaryRewards, setSummaryRewards] = useState<{
     gold: number;
     exp: number;
     items: InventoryItem[];
   } | null>(null);
+
+  useEffect(() => {
+    if (
+      lootTutorialEnabled &&
+      showSummary &&
+      battleResult === 'victory' &&
+      !!summaryRewards &&
+      !!pendingBattleData &&
+      pendingBattleData.length > 0 &&
+      !showLootTutorialPrompt
+    ) {
+      setShowLootTutorialPrompt(true);
+    }
+  }, [lootTutorialEnabled, showSummary, battleResult, summaryRewards, pendingBattleData, showLootTutorialPrompt]);
+
+  const handleLootTutorialConfirm = () => {
+    setShowLootTutorialPrompt(false);
+    onLootTutorialComplete?.();
+    handleSummaryContinue();
+  };
 
   // Auto-select first available item whenever inventory changes
   useEffect(() => {
@@ -1275,6 +1308,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
+    onTutorialActionUsed?.();
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
@@ -1472,6 +1506,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
+    onTutorialActionUsed?.();
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
@@ -2462,100 +2497,94 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
   const canMove = isPlayerTurn && (currentAction?.actionType === 'attack' || currentAction?.actionType === 'move');
   // Player movement distance based on his movement speed
   const moveDistance = Math.floor(MOVE_DISTANCE);
+  const isBattleTutorial = tutorialFocus !== null;
+  const isBattleFocus = tutorialFocus === 'battle';
+  const isArenaFocus = tutorialFocus === 'enemy';
+  const isBattlefieldFocus = tutorialFocus === 'turns-battlefield';
+  const isTimelineFocus = tutorialFocus === 'turns-timeline';
+  const isLogFocus = tutorialFocus === 'turns-log';
+  const isMoveFocus = tutorialFocus === 'speed-move';
+  const isAttackFocus = tutorialFocus === 'speed-attack';
+  const isCastFocus = tutorialFocus === 'haste-cast';
+  const isItemFocus = tutorialFocus === 'haste-item';
+  const getTutorialClass = (isHighlighted: boolean) => {
+    if (!isBattleTutorial) return '';
+    return isHighlighted ? 'battle-tutorial-highlight' : 'battle-tutorial-muted';
+  };
 
   return (
     <div className="battle-screen">
-      {/* Character Panels with Battlefield */}
-      <div className="battle-arena">
+      {/* Character Panels */}
+      <div className={`battle-arena ${getTutorialClass(isBattleFocus || isArenaFocus)}`}>
         <div className="team-player">
-          <CharacterStatus combatBuffs={playerBuffs} turnCounter={turnCounter} />
+          <div className="team-status-slot player-status-slot">
+            <CharacterStatus combatBuffs={playerBuffs} turnCounter={turnCounter} />
+          </div>
         </div>
-        
-        {/* Vertical Battlefield Display in Center */}
-        <BattlefieldDisplay
-          playerPosition={playerPosition}
-          enemyPosition={enemyPosition}
-          playerName={getCharacterName(playerChar)}
-          enemyName={getCharacterName(enemyChar)}
-          playerAttackRange={playerScaledStats.attackRange || 125}
-          enemyAttackRange={enemyScaledStats.attackRange || 125}
-          distance={currentDistance}
-          vertical={true}
-          aoeIndicators={aoeIndicators}
-        />
         
         <div className="team-enemy">
-          <CharacterStatus characterId={enemyChar.id} combatDebuffs={enemyDebuffs} isRevealed={store.isEnemyRevealed(enemyChar.id)} turnCounter={turnCounter} />
+          <div className="team-status-slot enemy-status-slot">
+            <CharacterStatus characterId={enemyChar.id} combatDebuffs={enemyDebuffs} isRevealed={store.isEnemyRevealed(enemyChar.id)} turnCounter={turnCounter} />
+          </div>
         </div>
       </div>
 
-      {/* Battle Log */}
-      <div className="battle-log">
-        <div className="log-entries" ref={logEntriesRef}>
-          {battleLog.map((entry, idx) => (
-            <div key={idx} className={`log-entry ${entry.type || ''}`}>
-              {entry.message}
-            </div>
-          ))}
-          {isPlayerTurn && !playerTurnDone && !battleEnded && currentAction && (
-            <div className="log-entry turn-indicator">
-              {currentAction.actionType === 'attack' || currentAction.actionType === 'move'
-                ? `It's ${playerName || 'your'} turn to Attack or Move`
-                : `It's ${playerName || 'your'} turn to use a Spell or Item`}
+      {/* Unified Combat Layout (desktop) */}
+      <div className="battle-combat-layout">
+        <div className={`battle-log battle-log-panel ${getTutorialClass(isLogFocus)}`}>
+          <div className="log-entries" ref={logEntriesRef}>
+            {battleLog.map((entry, idx) => (
+              <div key={idx} className={`log-entry ${entry.type || ''}`}>
+                {entry.message}
+              </div>
+            ))}
+            {isPlayerTurn && !playerTurnDone && !battleEnded && currentAction && (
+              <div className="log-entry turn-indicator">
+                {currentAction.actionType === 'attack' || currentAction.actionType === 'move'
+                  ? `It's ${playerName || 'your'} turn to Attack or Move`
+                  : `It's ${playerName || 'your'} turn to use a Spell or Item`}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className={`battlefield-panel ${getTutorialClass(isBattlefieldFocus)}`}>
+          <BattlefieldDisplay
+            playerPosition={playerPosition}
+            enemyPosition={enemyPosition}
+            playerName={getCharacterName(playerChar)}
+            enemyName={getCharacterName(enemyChar)}
+            playerAttackRange={playerScaledStats.attackRange || 125}
+            enemyAttackRange={enemyScaledStats.attackRange || 125}
+            distance={currentDistance}
+            vertical={true}
+            aoeIndicators={aoeIndicators}
+          />
+        </div>
+
+        <div className="battle-controls-panel">
+          {/* Turn Timeline - key forces full remount on new enemy */}
+          {!showSummary && (
+            <div className={getTutorialClass(isTimelineFocus)}>
+              <TurnTimeline
+                key={enemyChar.id}
+                turnSequence={turnSequence}
+                currentIndex={sequenceIndex}
+                playerName={getCharacterName(playerChar)}
+                enemyName={getCharacterName(enemyChar)}
+                isPlayerTurn={isPlayerTurn}
+                stunPeriods={stunPeriods}
+                onSimultaneousAction={handleSimultaneousAction}
+              />
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Turn Timeline - key forces full remount on new enemy */}
-      {!showSummary && (
-        <TurnTimeline
-          key={enemyChar.id}
-          turnSequence={turnSequence}
-          currentIndex={sequenceIndex}
-          playerName={getCharacterName(playerChar)}
-          enemyName={getCharacterName(enemyChar)}
-          isPlayerTurn={isPlayerTurn}
-          stunPeriods={stunPeriods}
-          onSimultaneousAction={handleSimultaneousAction}
-        />
-      )}
-
-      {/* Action Buttons */}
-      {!showSummary && (
-        <div className="battle-actions">
-        {battleEnded && battleResult === 'victory' && (
-          <div className="battle-result">
-            <h2>✅ Quest Complete!</h2>
-            <button className="action-btn" onClick={() => onBack ? onBack() : window.location.reload()}>
-              Back to Start
-            </button>
-          </div>
-        )}
-        {battleEnded && battleResult === 'reward_selection' && (
-          <div className="battle-result">
-            <h2>🎁 Choose Your Reward</h2>
-            <button className="action-btn" onClick={() => { setBattleResult(null); setBattleEnded(false); }}>
-              Continue to Next Fight
-            </button>
-          </div>
-        )}
-        {battleEnded && battleResult === 'defeat' && (
-          <div className="battle-result">
-            <h2>💀 Run Ended!</h2>
-            <p>Your journey has come to an end...</p>
-            <button className="action-btn" onClick={() => window.location.reload()}>
-              Return to Main Menu
-            </button>
-          </div>
-        )}
-        {!battleEnded && (
-          <>
-            <div className="battle-actions-container">
+          {!showSummary && !battleEnded && (
+            <div className={`battle-actions-container ${getTutorialClass(isMoveFocus || isAttackFocus || isCastFocus || isItemFocus)}`}>
               {/* Main Action Row */}
               <div className="main-actions-row">
                 {/* Move Section */}
-                <div className="action-section move-section">
+                <div className={`action-section move-section ${getTutorialClass(isMoveFocus)}`}>
                   <div className="section-label">Move</div>
                   <div className="move-buttons-vertical">
                     <button 
@@ -2582,7 +2611,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                 </div>
 
                 {/* Attack Section */}
-                <div className="action-section attack-section">
+                <div className={`action-section attack-section ${getTutorialClass(isAttackFocus)}`}>
                   <div className="section-label">Attack</div>
                   <button 
                     onClick={handleAttack} 
@@ -2611,7 +2640,7 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                 </div>
 
                 {/* Skip Section */}
-                <div className="action-section skip-section">
+                <div className={`action-section skip-section ${getTutorialClass(false)}`}>
                   <div className="section-label">Skip</div>
                   <button 
                     onClick={handleSkip} 
@@ -2624,8 +2653,29 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                   </button>
                 </div>
 
+                {/* Item Section */}
+                <div className={`action-section item-section ${getTutorialClass(isItemFocus)}`}>
+                  <div className="section-label">Item</div>
+                  <button 
+                    onClick={handleUseSelectedItem} 
+                    className={`main-action-btn item-btn ${!canSpell || !selectedItemId ? 'disabled' : ''}`}
+                    disabled={!canSpell || !selectedItemId}
+                    title={!canSpell ? 'Wait for your spell turn' : !selectedItemId ? 'Select an item first' : 'Use selected item'}
+                  >
+                    <span className="action-icon">🧪</span>
+                    <span className="action-text">Use Item</span>
+                  </button>
+                  {/* Item Bar - Always visible */}
+                  <ItemBar
+                    usableItems={getUsableItems(state.inventory)}
+                    onSelectItem={handleSelectItem}
+                    selectedItemId={selectedItemId}
+                    canUse={canSpell}
+                  />
+                </div>
+
                 {/* Spell Section */}
-                <div className="action-section spell-section">
+                <div className={`action-section spell-section ${getTutorialClass(isCastFocus)}`}>
                   <div className="section-label">Cast</div>
                   <button 
                     onClick={handleSpell} 
@@ -2652,11 +2702,11 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                         const spellId = state.spells[state.equippedSpellIndex];
                         const spell = spellId ? getSpellById(spellId) : null;
                         const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
-                        
+
                         if (cooldown > 0) {
                           return `${cooldown} Turn${cooldown > 1 ? 's' : ''} Cooldown`;
                         }
-                        
+
                         return spell ? `Cast ${spell.name}` : 'Cast Spell';
                       })()}
                     </span>
@@ -2665,10 +2715,10 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                       const spell = spellId ? getSpellById(spellId) : null;
                       const effects = formatSpellEffects(spell);
                       const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
-                      
+
                       // Don't show effects if on cooldown
                       if (cooldown > 0) return null;
-                      
+
                       return effects.length > 0 ? (
                         <span className="effect-preview">{effects.join(' + ')}</span>
                       ) : null;
@@ -2676,47 +2726,54 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
                   </button>
                   <SpellSelector attackRange={playerScaledStats.attackRange} />
                 </div>
-
-                {/* Item Section */}
-                <div className="action-section item-section">
-                  <div className="section-label">Item</div>
-                  <button 
-                    onClick={handleUseSelectedItem} 
-                    className={`main-action-btn item-btn ${!canSpell || !selectedItemId ? 'disabled' : ''}`}
-                    disabled={!canSpell || !selectedItemId}
-                    title={!canSpell ? 'Wait for your spell turn' : !selectedItemId ? 'Select an item first' : 'Use selected item'}
-                  >
-                    <span className="action-icon">🧪</span>
-                    <span className="action-text">Use Item</span>
-                  </button>
-                  {/* Item Bar - Always visible */}
-                  <ItemBar
-                    usableItems={getUsableItems(state.inventory)}
-                    onSelectItem={handleSelectItem}
-                    selectedItemId={selectedItemId}
-                    canUse={canSpell}
-                  />
-                </div>
               </div>
-              
-              {/* Removed separate item-bar-container - now inside item-section */}
             </div>
-            {playerChar.abilities.length > 0 && (
-              <div className="ability-buttons">
-                {playerChar.abilities.map((ability: any, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleAbility(idx)}
-                    className={`action-btn ability-btn ${!isPlayerTurn ? 'disabled' : ''}`}
-                    disabled={!isPlayerTurn}
-                    title={isPlayerTurn ? `Use ${ability.name}` : 'Wait for your turn'}
-                  >
-                    {ability.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
+          )}
+        </div>
+      </div>
+
+      {/* Action Results */}
+      {!showSummary && (battleEnded || playerChar.abilities.length > 0) && (
+        <div className="battle-actions">
+        {battleEnded && battleResult === 'victory' && (
+          <div className="battle-result">
+            <h2>✅ Quest Complete!</h2>
+            <button className="action-btn" onClick={() => onBack ? onBack() : window.location.reload()}>
+              Back to Start
+            </button>
+          </div>
+        )}
+        {battleEnded && battleResult === 'reward_selection' && (
+          <div className="battle-result">
+            <h2>🎁 Choose Your Reward</h2>
+            <button className="action-btn" onClick={() => { setBattleResult(null); setBattleEnded(false); }}>
+              Continue to Next Fight
+            </button>
+          </div>
+        )}
+        {battleEnded && battleResult === 'defeat' && (
+          <div className="battle-result">
+            <h2>💀 Run Ended!</h2>
+            <p>Your journey has come to an end...</p>
+            <button className="action-btn" onClick={() => window.location.reload()}>
+              Return to Main Menu
+            </button>
+          </div>
+        )}
+        {!battleEnded && playerChar.abilities.length > 0 && (
+          <div className="ability-buttons">
+            {playerChar.abilities.map((ability: any, idx: number) => (
+              <button
+                key={idx}
+                onClick={() => handleAbility(idx)}
+                className={`action-btn ability-btn ${!isPlayerTurn ? 'disabled' : ''}`}
+                disabled={!isPlayerTurn}
+                title={isPlayerTurn ? `Use ${ability.name}` : 'Wait for your turn'}
+              >
+                {ability.name}
+              </button>
+            ))}
+          </div>
         )}
         </div>
       )}
@@ -2742,6 +2799,9 @@ export const Battle: React.FC<BattleProps> = ({ onBack, onQuestComplete }) => {
             encountersFaced: state.currentFloor,
             unlocksEarned: [], // TODO: Track unlocks from this run
           } : undefined}
+          disableAutoContinue={showLootTutorialPrompt}
+          tutorialText={showLootTutorialPrompt ? t.tutorial.battle.loot : undefined}
+          onTutorialConfirm={showLootTutorialPrompt ? handleLootTutorialConfirm : undefined}
           onContinue={handleSummaryContinue}
         />
       )}

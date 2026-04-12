@@ -142,60 +142,74 @@ export const CharacterStatus: React.FC<{
   const allTemporaryStats = [...temporaryStats, ...temporaryDebuffs, ...statusEffectBuffs, ...statusEffectDebuffs];
 
   return (
-    <div className="character-status">
-      <div className="character-header">
-        <h2>{character.name}</h2>
-        {/* Class display next to name */}
-        <div 
-          className={`class-badge ${!isRevealed ? 'blurred-class-badge' : ''}`}
-          onMouseEnter={(e) => {
-            setHoveredClass(true);
-            const rect = e.currentTarget.getBoundingClientRect();
-            setTooltipPosition({
-              x: rect.left,
-              y: rect.bottom + 5,
-            });
-          }}
-          onMouseLeave={() => setHoveredClass(false)}
-        >
-          <span className="class-icon">{CLASS_ICONS[character.class]}</span>
-          {isRevealed && <span className="class-name">{getClassName(character.class)}</span>}
-        </div>
-        
-        {/* Class tooltip */}
-        {hoveredClass && isRevealed && (
-          <div className="class-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-            <div className="tooltip-title">{getClassName(character.class)} (Lvl {character.level})</div>
-            {(() => {
-              const classBonuses = getClassStatBonuses(character.class, character.level);
-              return (
-                <div className="tooltip-stats">
-                  {Object.entries(classBonuses)
-                    .filter(([_, value]) => value && value !== 0)
-                    .map(([stat, value]) => (
-                      <div key={stat} className="tooltip-stat">
-                        +{Math.round(value as number)} {getStatDisplayName(stat)}
-                      </div>
-                    ))}
+    <div className={`character-status ${character.role === 'enemy' ? 'enemy-status' : 'player-status'}`}>
+      <div className="character-status-layout">
+        <div className="character-main-content">
+          <div className="character-top-row">
+            <div className="character-header-wrap">
+              <div className="character-header">
+                <h2>{character.name}</h2>
+                {/* Class display next to name */}
+                <div 
+                  className={`class-badge ${!isRevealed ? 'blurred-class-badge' : ''}`}
+                  onMouseEnter={(e) => {
+                    setHoveredClass(true);
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTooltipPosition({
+                      x: rect.left,
+                      y: rect.bottom + 5,
+                    });
+                  }}
+                  onMouseLeave={() => setHoveredClass(false)}
+                >
+                  <span className="class-icon">{CLASS_ICONS[character.class]}</span>
+                  {isRevealed && <span className="class-name">{getClassName(character.class)}</span>}
                 </div>
-              );
-            })()}
+                
+                {/* Class tooltip */}
+                {hoveredClass && isRevealed && (
+                  <div className="class-tooltip" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
+                    <div className="tooltip-title">{getClassName(character.class)} (Lvl {character.level})</div>
+                    {(() => {
+                      const classBonuses = getClassStatBonuses(character.class, character.level);
+                      return (
+                        <div className="tooltip-stats">
+                          {Object.entries(classBonuses)
+                            .filter(([_, value]) => value && value !== 0)
+                            .map(([stat, value]) => (
+                              <div key={stat} className="tooltip-stat">
+                                +{Math.round(value as number)} {getStatDisplayName(stat)}
+                              </div>
+                            ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        )}
+
+          <div className={`status-art-slot ${character.role === 'enemy' ? 'enemy-art-slot' : 'player-art-slot'}`}>
+            {character.role === 'enemy' ? 'Enemy Art Slot' : 'Player Art Slot'}
+          </div>
+
+          <div className="character-bottom-row">
+            
+            
+            
+            <ItemsBar inventory={characterId ? character.inventory : state.inventory} isRevealed={isRevealed} />
+            
+            <StatsPanel character={character} combatBuffs={combatBuffs} combatDebuffs={combatDebuffs} isRevealed={isRevealed} turnCounter={turnCounter} />
+            <LevelDisplay character={character} />
+            <HealthDisplay character={character} />
+          </div>
+        </div>
+
+        <div className="status-buffs-container">
+          <BuffsDisplay temporaryStats={allTemporaryStats} />
+        </div>
       </div>
-
-      {/* Always Visible: Items Bar (shows equipment for both player and enemy) */}
-      <ItemsBar inventory={characterId ? character.inventory : state.inventory} isRevealed={isRevealed} />
-
-      {/* Always Visible: Health & Level */}
-      <HealthDisplay character={character} />
-      <LevelDisplay character={character} />
-
-      {/* Always Visible: Active Effects (Buffs/Debuffs) */}
-      <BuffsDisplay temporaryStats={allTemporaryStats} />
-
-      {/* Toggleable: Stats Panel */}
-      <StatsPanel character={character} combatBuffs={combatBuffs} combatDebuffs={combatDebuffs} isRevealed={isRevealed} turnCounter={turnCounter} />
     </div>
   );
 };

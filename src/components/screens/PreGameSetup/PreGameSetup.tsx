@@ -13,6 +13,7 @@ interface PreGameSetupProps {
   onStartRun: (region: Region, itemId: string) => void;
   onTestMode: () => void;
   onBack: () => void;
+  onTutorial?: () => void;
   tutorialEnabled?: boolean;
   onTutorialComplete?: () => void;
   onTutorialSkip?: () => void;
@@ -30,6 +31,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
   onStartRun,
   onTestMode,
   onBack,
+  onTutorial,
   tutorialEnabled = false,
   onTutorialComplete,
   onTutorialSkip,
@@ -45,6 +47,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
   const [tutorialStep, setTutorialStep] = useState<PreGameTutorialStep>(tutorialEnabled ? 'intro' : 'done');
 
   const isTutorialActive = tutorialEnabled && tutorialStep !== 'done';
+  const isIntroStep = tutorialStep === 'intro';
   const isStartStep = tutorialStep === 'start';
   const isBlockingTutorialStep = isTutorialActive && !isStartStep;
   const isRegionStep = tutorialStep === 'region' || tutorialStep === 'regionConfirm';
@@ -127,6 +130,12 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
       setError(t.preGameSetup.selectRegionAndItem);
       return;
     }
+
+    if (isTutorialActive && tutorialStep === 'start') {
+      setTutorialStep('done');
+      onTutorialComplete?.();
+    }
+
     onStartRun(selectedRegion as Region, selectedItem);
   };
 
@@ -158,12 +167,6 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
 
     if (tutorialStep === 'intro') {
       setTutorialStep('region');
-      return;
-    }
-
-    if (tutorialStep === 'start') {
-      setTutorialStep('done');
-      onTutorialComplete?.();
     }
   };
 
@@ -227,11 +230,16 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
         🔬
       </button>
 
+      <button className="tutorial-reenable-btn" onClick={onTutorial} title={t.tutorial.reenable}>
+        <span>Start tutorial</span>
+        <span className="tutorial-reenable-icon">❔</span>
+      </button>
+
       {isTutorialActive && <div className="tutorial-overlay" />}
 
       <div className="selection-container">
         {/* Region Selection */}
-        <div className={`selection-section ${isTutorialActive ? (isRegionStep ? 'tutorial-highlight' : isItemStep ? 'tutorial-muted' : '') : ''}`}>
+        <div className={`selection-section ${isTutorialActive ? (isRegionStep ? 'tutorial-highlight' : isIntroStep || isItemStep ? 'tutorial-muted' : '') : ''}`}>
           <h2 className="section-title">{t.preGameSetup.selectRegion}</h2>
           <div className="selection-grid regions">
             {REGIONS.map((region) => (
@@ -250,7 +258,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
         </div>
 
         {/* Item Selection */}
-        <div className={`selection-section ${isTutorialActive ? (isItemStep ? 'tutorial-highlight' : isRegionStep ? 'tutorial-muted' : '') : ''}`}>
+        <div className={`selection-section ${isTutorialActive ? (isItemStep ? 'tutorial-highlight' : isIntroStep || isRegionStep ? 'tutorial-muted' : '') : ''}`}>
           <h2 className="section-title">{t.preGameSetup.selectStartingItem}</h2>
           <div className="selection-grid items">
             {STARTER_ITEMS.map((item) => {
@@ -278,7 +286,7 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
       </div>
 
       {/* Start Button */}
-      <div className="start-button-container">
+      <div className={`start-button-container ${isTutorialActive ? (isStartStep ? 'tutorial-highlight' : 'tutorial-muted') : ''}`}>
         {error && <div className="error-message">{error}</div>}
         <button className="start-run-btn" onClick={handleStartRun} disabled={isBlockingTutorialStep}>
           {t.preGameSetup.startYourRun}
@@ -287,14 +295,15 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
 
       {isTutorialActive && (
         <div className="tutorial-dialogue-box">
+          <button className="tutorial-skip-top-btn" onClick={onTutorialSkip}>
+            {t.tutorial.skip}
+          </button>
           <div className="tutorial-character">🧙</div>
           <div className="tutorial-dialogue-content">
+            <p className="tutorial-speaker-name">{t.tutorial.npcName}</p>
             <p className="tutorial-dialogue-text">{tutorialText}</p>
             <div className="tutorial-dialogue-actions">
-              <button className="tutorial-action-btn skip" onClick={onTutorialSkip}>
-                {t.tutorial.skip}
-              </button>
-              {(tutorialStep === 'intro' || tutorialStep === 'start') && (
+              {tutorialStep === 'intro' && (
                 <button className="tutorial-action-btn" onClick={handleTutorialContinue}>
                   {t.common.continue}
                 </button>

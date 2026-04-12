@@ -15,7 +15,7 @@ interface QuestSelectProps {
   tutorialEnabled?: boolean;
   onTutorialComplete?: () => void;
   onTutorialSkip?: () => void;
-  onTutorialFocusChange?: (focus: 'path' | 'mechanics' | 'stats' | null) => void;
+  onTutorialFocusChange?: (focus: 'header' | 'path' | 'mechanics' | 'stats' | null) => void;
 }
 
 export const QuestSelect: React.FC<QuestSelectProps> = ({
@@ -31,15 +31,17 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
   const [tutorialStepIndex, setTutorialStepIndex] = useState(tutorialEnabled ? 0 : -1);
 
   const tutorialSteps = [
-    t.tutorial.questSelect.path,
-    t.tutorial.questSelect.mechanics,
+    t.tutorial.questSelect.header,
     t.tutorial.questSelect.stats,
+    t.tutorial.questSelect.mechanics,
+    t.tutorial.questSelect.path,
   ];
 
   const isTutorialActive = tutorialEnabled && tutorialStepIndex >= 0 && tutorialStepIndex < tutorialSteps.length;
-  const isPathStep = isTutorialActive && tutorialStepIndex === 0;
-  const isMechanicsStep = isTutorialActive && tutorialStepIndex === 1;
-  const isStatsStep = isTutorialActive && tutorialStepIndex === 2;
+  const isHeaderStep = isTutorialActive && tutorialStepIndex === 0;
+  const isStatsStep = isTutorialActive && tutorialStepIndex === 1;
+  const isMechanicsStep = isTutorialActive && tutorialStepIndex === 2;
+  const isPathStep = isTutorialActive && tutorialStepIndex === 3;
   
   // Get all available quests for this region
   const allQuests = useMemo(() => getQuestsByRegion(region), [region]);
@@ -55,6 +57,11 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
   React.useEffect(() => {
     if (!isTutorialActive) {
       onTutorialFocusChange?.(null);
+      return;
+    }
+
+    if (isHeaderStep) {
+      onTutorialFocusChange?.('header');
       return;
     }
 
@@ -74,7 +81,7 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
     }
 
     onTutorialFocusChange?.(null);
-  }, [isTutorialActive, isPathStep, isMechanicsStep, isStatsStep, onTutorialFocusChange]);
+  }, [isTutorialActive, isHeaderStep, isPathStep, isMechanicsStep, isStatsStep, onTutorialFocusChange]);
   
   // Filter out paths that have already been completed
   const availableQuests = useMemo(() => {
@@ -208,7 +215,11 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
                   key={path.id}
                   className={`quest-path ${path.difficulty}`}
                   onClick={() => {
-                    if (isTutorialActive) return;
+                    if (isTutorialActive && !isPathStep) return;
+                    if (isTutorialActive && isPathStep) {
+                      setTutorialStepIndex(-1);
+                      onTutorialComplete?.();
+                    }
                     onSelectPath(quest.id, path.id);
                   }}
                 >
@@ -249,16 +260,19 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
 
       {isTutorialActive && (
         <div className="quest-tutorial-dialogue-box">
+          <button className="quest-tutorial-skip-top-btn" onClick={onTutorialSkip}>
+            {t.tutorial.skip}
+          </button>
           <div className="quest-tutorial-character">🧭</div>
           <div className="quest-tutorial-content">
+            <p className="quest-tutorial-speaker-name">{t.tutorial.npcName}</p>
             <p className="quest-tutorial-text">{tutorialSteps[tutorialStepIndex]}</p>
             <div className="quest-tutorial-actions">
-              <button className="quest-tutorial-action-btn skip" onClick={onTutorialSkip}>
-                {t.tutorial.skip}
-              </button>
-              <button className="quest-tutorial-action-btn" onClick={handleTutorialNext}>
-                {tutorialStepIndex === tutorialSteps.length - 1 ? t.common.confirm : t.common.continue}
-              </button>
+              {!isPathStep && (
+                <button className="quest-tutorial-action-btn" onClick={handleTutorialNext}>
+                  {t.common.continue}
+                </button>
+              )}
             </div>
           </div>
         </div>

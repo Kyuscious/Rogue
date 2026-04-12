@@ -37,6 +37,9 @@ interface BattleSummaryProps {
     encountersFaced: number;
     unlocksEarned: string[];
   };
+  disableAutoContinue?: boolean;
+  tutorialText?: string;
+  onTutorialConfirm?: () => void;
   onContinue: () => void;
 }
 
@@ -46,6 +49,9 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
   rewards,
   rewardSelection,
   runStats,
+  disableAutoContinue = false,
+  tutorialText,
+  onTutorialConfirm,
   onContinue,
 }) => {
   const [showRewards, setShowRewards] = useState(false);
@@ -62,7 +68,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
 
   // Auto-skip timer for continue button (only on victory, not reward selection or defeat)
   useEffect(() => {
-    if (isVictory && !rewardSelection && showRewards) {
+    if (isVictory && !rewardSelection && showRewards && !disableAutoContinue) {
       const interval = setInterval(() => {
         setAutoSkipTimer((prev) => {
           const newTime = prev - 0.1;
@@ -77,7 +83,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
 
       return () => clearInterval(interval);
     }
-  }, [isVictory, rewardSelection, showRewards, onContinue]);
+  }, [isVictory, rewardSelection, showRewards, disableAutoContinue, onContinue]);
 
   return (
     <div className={`battle-summary ${isVictory ? 'victory' : 'defeat'}`}>
@@ -297,13 +303,24 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
         {/* Continue Button - Only show if NOT in reward selection mode */}
         {showRewards && !rewardSelection && (
           <div className="continue-section">
-            <button className="continue-btn" onClick={onContinue}>
-              {isVictory ? 'Continue ⟶' : 'Return to Menu'}
-            </button>
-            {isVictory && (
-              <div className="auto-skip-timer">
-                Auto-continue in {autoSkipTimer.toFixed(1)}s
-              </div>
+            {tutorialText && onTutorialConfirm ? (
+              <>
+                <div className="summary-tutorial-text">{tutorialText}</div>
+                <button className="continue-btn" onClick={onTutorialConfirm}>
+                  Continue to Next Encounter ⟶
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="continue-btn" onClick={onContinue}>
+                  {isVictory ? 'Continue ⟶' : 'Return to Menu'}
+                </button>
+                {isVictory && !disableAutoContinue && (
+                  <div className="auto-skip-timer">
+                    Auto-continue in {autoSkipTimer.toFixed(1)}s
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

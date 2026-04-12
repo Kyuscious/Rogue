@@ -135,6 +135,7 @@ export function resetProfile(profileId: number): void {
     };
     saveProfiles(profiles);
     localStorage.removeItem(`tutorialCompleted_profile_${profileId}`);
+    localStorage.removeItem(`eliteTutorialSeen_profile_${profileId}`);
   }
 }
 

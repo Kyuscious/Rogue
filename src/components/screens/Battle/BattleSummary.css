@@ -276,6 +276,17 @@
   text-shadow: 0 0 10px currentColor;
 }
 
+.summary-tutorial-text {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  border-radius: 10px;
+  background: rgba(74, 158, 255, 0.12);
+  color: #e9f2ff;
+  line-height: 1.4;
+  text-align: center;
+}
+
 /* Item Tooltip Portal (same as Index) */
 .item-tooltip-portal {
   position: fixed;

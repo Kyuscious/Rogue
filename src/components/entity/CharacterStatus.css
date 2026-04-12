@@ -1,8 +1,8 @@
 /* Main Character Status Container */
 .character-status {
   display: flex;
-  flex-direction: column;
-  gap: clamp(0.25rem, 0.75vh, 0.375rem);
+  flex-direction: row;
+  gap: clamp(0.25rem, 0.75vw, 0.375rem);
   padding: clamp(0.25rem, 0.75vh, 0.375rem);
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-color);
@@ -12,12 +12,153 @@
   overflow: hidden;
 }
 
+.character-status-layout {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.character-main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.1875rem, 0.45vh, 0.25rem);
+}
+
+.status-buffs-container {
+  display: flex;
+  width: 3rem;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.status-buffs-container .buffs-display {
+  margin-bottom: 0;
+}
+
+.status-buffs-container .buffs-grid {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.character-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: clamp(0.25rem, 0.75vw, 0.375rem);
+}
+
+.status-edge {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.character-header-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.status-art-slot {
+  flex: 0 0 clamp(78px, 12vh, 120px);
+  min-height: clamp(78px, 12vh, 120px);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(74, 158, 255, 0.45);
+  border-radius: clamp(4px, 1vh, 6px);
+  background: rgba(10, 14, 39, 0.45);
+  color: rgba(176, 190, 197, 0.85);
+  font-size: clamp(0.5rem, 1.1vw, 0.6875rem);
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.status-art-slot.enemy-art-slot {
+  border-color: rgba(255, 107, 107, 0.45);
+}
+
+.character-bottom-row {
+  display: flex;
+  flex-direction: column-reverse;
+
+  gap: clamp(0.1875rem, 0.5vh, 0.25rem);
+  min-width: 0;
+  flex: 2;
+}
+
+.player-status .character-status-layout {
+  flex-direction: row;
+}
+
+.enemy-status .character-status-layout {
+  flex-direction: row-reverse;
+}
+
+.status-edge .stats-panel-container {
+  flex-wrap: nowrap;
+}
+
+.status-edge .quick-stats {
+  gap: clamp(0.25rem, 0.7vw, 0.375rem);
+}
+
+.status-edge .quick-stat {
+  padding: 4px 6px;
+}
+
+.status-edge .stats-button {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.status-edge .buffs-display {
+  margin-bottom: 0;
+}
+
+.status-edge .buffs-grid {
+  justify-content: flex-end;
+}
+
+.enemy-status .status-edge .buffs-grid {
+  justify-content: flex-start;
+}
+
+.character-bottom-row .items-bar {
+  margin-bottom: 0;
+}
+
+.character-bottom-row .items-bar-container {
+  gap: 4px;
+}
+
+.character-bottom-row .item-icon-slot {
+  width: 30px;
+  height: 30px;
+}
+
 .character-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: clamp(0.1875rem, 0.5vh, 0.25rem);
   gap: 8px;
+}
+
+.character-header h2 {
+  margin: 0;
+  font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .class-badge {
@@ -160,7 +301,7 @@
 
 .hp-bar {
   flex: 1;
-  height: clamp(18px, 2.5vh, 24px);
+  height: clamp(14px, 2vh, 20px);
   background: #1a1a1a;
   border: 2px solid #4a4a4a;
   border-radius: clamp(3px, 0.75vh, 4px);
@@ -201,7 +342,7 @@
 
 .hp-text {
   color: #fff;
-  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
+  font-size: clamp(0.5625rem, 1.3vw, 0.6875rem);
   font-weight: bold;
   min-width: clamp(55px, 11vw, 70px);
   text-align: right;
@@ -381,8 +522,8 @@
 
 .buff-icon {
   position: relative;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -392,7 +533,7 @@
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .buff-icon:hover {
@@ -485,7 +626,48 @@
 }
 
 .buff-emoji {
-  font-size: 18px;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .character-status {
+    flex-direction: column;
+  }
+
+  .character-status-layout,
+  .player-status .character-status-layout,
+  .enemy-status .character-status-layout {
+    flex-direction: column;
+  }
+
+  .character-top-row {
+    align-items: stretch;
+  }
+
+  .status-art-slot {
+    min-width: 100%;
+    width: 100%;
+    min-height: clamp(56px, 10vh, 84px);
+  }
+
+  .status-buffs-container {
+    min-width: 100%;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .status-edge .buffs-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .character-bottom-row .item-icon-slot {
+    width: 26px;
+    height: 26px;
+  }
 }
 
 .buff-value {

@@ -303,6 +303,7 @@ export interface Translations {
   };
 
   tutorial: {
+    npcName: string;
     skip: string;
     sadskip: string;
     reenable: string;
@@ -318,14 +319,27 @@ export interface Translations {
       finishTutorial: string;
     };
     questSelect: {
+      header: string;
       path: string;
       mechanics: string;
       stats: string;
     };
     battle: {
-      options: string;
-      resources: string;
+      battle: string;
+      enemy: string;
       turns: string;
+      battlefield: string;
+      timeline: string;
+      log: string;
+      speed: string;
+      move: string;
+      attack: string;
+      haste: string;
+      cast: string;
+      items: string;
+      loot: string;
+      elite: string;
+      useSpellOrItem: string;
     };
     shop: {
       intro: string;

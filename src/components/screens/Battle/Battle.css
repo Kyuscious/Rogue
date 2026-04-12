@@ -1,4 +1,5 @@
 .battle-screen {
+  --battle-combat-layout-height: 50vh;
   display: flex;
   flex-direction: column;
   gap: clamp(0.25rem, 0.5vh, 0.375rem);
@@ -81,10 +82,45 @@
   align-items: stretch;
   gap: clamp(0.5rem, 1.5vw, 0.75rem);
   flex: 0 0 auto;
-  height: 33vh;
-  min-height: 33vh;
-  max-height: 33vh;
+  height: 50vh;
+  min-height: 50vh;
+  max-height: 50vh;
   overflow: hidden;
+}
+
+.battle-combat-layout {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.battlefield-panel {
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex;
+}
+
+.battlefield-panel .battlefield-display {
+  width: 100%;
+}
+
+.battle-controls-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.25rem, 0.5vh, 0.375rem);
+  overflow: hidden;
+}
+
+.battle-controls-panel > div {
+  min-height: 0;
+}
+
+.battle-log-panel {
+  width: 100%;
 }
 
 .team-player {
@@ -92,22 +128,27 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   height: 100%;
   max-height: 100%;
 }
 
 .team-enemy {
   flex: 1;
-  text-align: right;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   height: 100%;
   max-height: 100%;
 }
 
-.team-enemy .stats-panel {
-  align-self: flex-start;
+.team-status-slot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
 }
 
 .vs-text {
@@ -137,6 +178,47 @@
   max-height: 20vh;
   display: flex;
   overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .battle-screen {
+    --battle-combat-layout-height: 28vh;
+  }
+
+  .battle-combat-layout {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .battlefield-panel {
+    width: clamp(92px, 9vw, 130px);
+    max-width: clamp(92px, 9vw, 130px);
+  }
+
+  .battle-controls-panel {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .battle-controls-panel .turn-order {
+    height: 14vh;
+    min-height: 14vh;
+    max-height: 14vh;
+  }
+
+  .battle-controls-panel .battle-actions-container {
+    height: 22vh;
+    min-height: 22vh;
+    max-height: 22vh;
+  }
+
+  .battle-log-panel {
+    width: clamp(260px, 30vw, 440px);
+    max-width: clamp(260px, 30vw, 440px);
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
+  }
 }
 
 .log-entries {
@@ -929,8 +1011,32 @@
     gap: clamp(0.25rem, 1vw, 0.5rem);
   }
 
+  .team-player,
+  .team-enemy {
+    gap: 0;
+  }
+
+  .battle-combat-layout {
+    height: clamp(140px, 23vh, 200px);
+    min-height: clamp(140px, 23vh, 200px);
+    max-height: clamp(140px, 23vh, 200px);
+    gap: clamp(0.25rem, 1vw, 0.5rem);
+  }
+
+  .battlefield-panel {
+    width: 100%;
+  }
+
+  .turn-order {
+    height: clamp(60px, 10vh, 85px);
+    min-height: clamp(60px, 10vh, 85px);
+    max-height: clamp(60px, 10vh, 85px);
+  }
+
   .battle-log {
-    height: clamp(50px, 8vh, 80px);
+    height: clamp(70px, 12vh, 105px);
+    min-height: clamp(70px, 12vh, 105px);
+    max-height: clamp(70px, 12vh, 105px);
   }
 
   .main-actions-row {
@@ -972,6 +1078,10 @@
     flex-wrap: wrap;
   }
 
+  .battlefield-panel {
+    width: 100%;
+  }
+
   .main-actions-row {
     flex-wrap: wrap;
   }
@@ -982,26 +1092,15 @@
   }
 
   .move-section {
-    order: 1;
     flex-wrap: wrap;
     flex: 1 1 calc(50% - 0.25rem);
   }
 
-  .attack-section {
-    order: 2;
-  }
-
-  .spell-section {
-    order: 3;
-  }
-
   .skip-section {
-    order: 4;
     flex: 0 1 100%;
   }
 
   .item-section {
-    order: 5;
     flex: 0 1 100%;
   }
 }
@@ -1023,4 +1122,18 @@
 
 .log-entries::-webkit-scrollbar-thumb:hover {
   background: rgba(74, 158, 255, 0.7);
+}
+
+.battle-tutorial-highlight {
+  position: relative;
+  z-index: 55;
+  opacity: 1;
+  filter: none;
+}
+
+.battle-tutorial-muted {
+  position: relative;
+  z-index: 45;
+  opacity: 0.25;
+  pointer-events: none;
 }

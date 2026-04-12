@@ -30,8 +30,8 @@ import './App.css';
 import './ActComplete.css';
 
 type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'postRegionAction' | 'loading';
-type TutorialStage = 'none' | 'pregame' | 'quest' | 'battle' | 'shop';
-type QuestTutorialFocus = 'path' | 'mechanics' | 'stats' | null;
+type TutorialStage = 'none' | 'pregame' | 'quest' | 'battle' | 'battleLoot' | 'battleElite' | 'shop';
+type QuestTutorialFocus = 'header' | 'path' | 'mechanics' | 'stats' | null;
 
 interface ResetConfirmModalProps {
   isOpen: boolean;
@@ -173,6 +173,7 @@ export const App: React.FC = () => {
   const [questTutorialFocus, setQuestTutorialFocus] = useState<QuestTutorialFocus>(null);
 
   const getTutorialStorageKey = (profileId: number) => `tutorialCompleted_profile_${profileId}`;
+  const getEliteTutorialStorageKey = (profileId: number) => `eliteTutorialSeen_profile_${profileId}`;
 
   const shouldStartFirstTimeTutorial = () => {
     const profile = getActiveProfile();
@@ -186,8 +187,19 @@ export const App: React.FC = () => {
     localStorage.setItem(getTutorialStorageKey(profile.id), completed ? 'true' : 'false');
   };
 
+  const hasSeenEliteTutorial = () => {
+    const profile = getActiveProfile();
+    return localStorage.getItem(getEliteTutorialStorageKey(profile.id)) === 'true';
+  };
+
+  const markEliteTutorialSeen = (seen: boolean) => {
+    const profile = getActiveProfile();
+    localStorage.setItem(getEliteTutorialStorageKey(profile.id), seen ? 'true' : 'false');
+  };
+
   const startTutorialFromStage = (stage: Exclude<TutorialStage, 'none'>) => {
     markTutorialCompleted(false);
+    markEliteTutorialSeen(false);
     setSceneTutorialStep(0);
     setTutorialStage(stage);
     if (stage === 'pregame') {
@@ -197,6 +209,7 @@ export const App: React.FC = () => {
 
   const handleTutorialSkipAnytime = () => {
     markTutorialCompleted(true);
+    markEliteTutorialSeen(true);
     setSceneTutorialStep(0);
     setTutorialStage('none');
     setQuestTutorialFocus(null);
@@ -312,10 +325,6 @@ export const App: React.FC = () => {
     setScene('pregame');
   };
 
-  const handleMainMenuTutorial = () => {
-    startTutorialFromStage('pregame');
-  };
-
   const handleMainMenuProfiles = () => {
     setScene('profiles');
   };
@@ -360,10 +369,20 @@ export const App: React.FC = () => {
   const getSceneTutorialSteps = () => {
     if (scene === 'battle' && tutorialStage === 'battle') {
       return [
-        t.tutorial.battle.options,
-        t.tutorial.battle.resources,
-        t.tutorial.battle.turns,
+        t.tutorial.battle.battle,
+        t.tutorial.battle.enemy,
+        t.tutorial.battle.battlefield,
+        t.tutorial.battle.timeline,
+        t.tutorial.battle.log,
+        t.tutorial.battle.move,
+        t.tutorial.battle.attack,
+        t.tutorial.battle.items,
+        t.tutorial.battle.cast,
       ];
+    }
+
+    if (scene === 'battle' && tutorialStage === 'battleElite') {
+      return [t.tutorial.battle.elite];
     }
 
     if (scene === 'shop' && tutorialStage === 'shop') {
@@ -381,9 +400,16 @@ export const App: React.FC = () => {
     const steps = getSceneTutorialSteps();
     if (steps.length === 0) return;
 
+    if (scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 8) {
+      return;
+    }
+
     if (sceneTutorialStep >= steps.length - 1) {
       if (tutorialStage === 'battle') {
         setTutorialStage('shop');
+      } else if (tutorialStage === 'battleElite') {
+        markEliteTutorialSeen(true);
+        setTutorialStage('none');
       } else if (tutorialStage === 'shop') {
         markTutorialCompleted(true);
         setTutorialStage('none');
@@ -395,32 +421,62 @@ export const App: React.FC = () => {
     setSceneTutorialStep(prev => prev + 1);
   };
 
+  const handleBattleTutorialActionUsed = () => {
+    if (scene !== 'battle' || tutorialStage !== 'battle') return;
+
+    if (sceneTutorialStep >= 8) {
+      setTutorialStage('battleLoot');
+      setSceneTutorialStep(0);
+    }
+  };
+
+  const handleBattleLootTutorialComplete = () => {
+    if (tutorialStage === 'battleLoot') {
+      setTutorialStage('shop');
+    }
+  };
+
   useEffect(() => {
     if ((scene === 'battle' && tutorialStage === 'battle') || (scene === 'shop' && tutorialStage === 'shop')) {
       setSceneTutorialStep(0);
     }
   }, [scene, tutorialStage]);
 
+  useEffect(() => {
+    if (scene !== 'battle') return;
+    if (tutorialStage !== 'none') return;
+    if (state.currentFloor !== 5) return;
+    if (hasSeenEliteTutorial()) return;
+
+    setTutorialStage('battleElite');
+    setSceneTutorialStep(0);
+  }, [scene, tutorialStage, state.currentFloor]);
+
   const renderSceneTutorialOverlay = () => {
     const steps = getSceneTutorialSteps();
     if (steps.length === 0) return null;
 
     const text = steps[Math.min(sceneTutorialStep, steps.length - 1)];
+    const isBattleActionStep = scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep >= 5;
+    const blockContinue = scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 8;
 
     return (
       <>
         <div className="scene-tutorial-overlay" />
-        <div className="scene-tutorial-dialogue-box">
+        <div className={`scene-tutorial-dialogue-box ${isBattleActionStep ? 'scene-tutorial-dialogue-box-top' : ''}`}>
+          <button className="scene-tutorial-skip-top-btn" onClick={handleTutorialSkipAnytime}>
+            {t.tutorial.skip}
+          </button>
           <div className="scene-tutorial-character">🧙</div>
           <div className="scene-tutorial-content">
+            <p className="scene-tutorial-speaker-name">{t.tutorial.npcName}</p>
             <p className="scene-tutorial-text">{text}</p>
             <div className="scene-tutorial-actions">
-              <button className="scene-tutorial-action-btn skip" onClick={handleTutorialSkipAnytime}>
-                {t.tutorial.skip}
-              </button>
-              <button className="scene-tutorial-action-btn" onClick={handleSceneTutorialNext}>
-                {sceneTutorialStep >= steps.length - 1 ? t.common.confirm : t.common.continue}
-              </button>
+              {!blockContinue && (
+                <button className="scene-tutorial-action-btn" onClick={handleSceneTutorialNext}>
+                  {sceneTutorialStep >= steps.length - 1 ? t.common.confirm : t.common.continue}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -679,7 +735,6 @@ export const App: React.FC = () => {
         <MainMenu 
           username={state.username}
           onStart={handleMainMenuStart}
-          onTutorial={handleMainMenuTutorial}
           onProfiles={handleMainMenuProfiles}
           onIndex={handleMainMenuIndex}
           onOptions={handleMainMenuOptions}
@@ -723,6 +778,7 @@ export const App: React.FC = () => {
           onStartRun={handlePreGameSetup} 
           onTestMode={handleTestMode}
           onBack={() => setScene('mainMenu')}
+          onTutorial={handleReenableTutorial}
           tutorialEnabled={tutorialStage === 'pregame'}
           onTutorialComplete={handlePreGameTutorialComplete}
           onTutorialSkip={handleTutorialSkipAnytime}
@@ -742,6 +798,9 @@ export const App: React.FC = () => {
   }
 
   if (scene === 'quest' && state.selectedRegion) {
+    const isQuestTutorial = tutorialStage === 'quest';
+    const isQuestHeaderFocus = isQuestTutorial && questTutorialFocus === 'header';
+
     return (
       <div className="game-wrapper">
         <div className="ui-header">
@@ -751,7 +810,7 @@ export const App: React.FC = () => {
               <span className="saved-indicator">{t.uiHeader.progressSaved}</span>
             )}
           </div>
-          <div className="ui-stats">
+          <div className={`ui-stats ${isQuestHeaderFocus ? 'quest-tutorial-highlight-global' : isQuestTutorial ? 'quest-tutorial-muted-global' : ''}`}>
             <span 
               className="region-badge" 
               onClick={handleSkipClick}
@@ -778,9 +837,9 @@ export const App: React.FC = () => {
         </div>
 
         <div className="explore-screen quest-screen">
-          <div className="character-section">
+          <div className={`character-section ${isQuestHeaderFocus ? 'quest-tutorial-muted-global' : ''}`}>
             <h2 className="quest-title">Choose Your Path</h2>
-            <div className={`character-info ${tutorialStage === 'quest' && questTutorialFocus === 'stats' ? 'quest-tutorial-highlight-global' : tutorialStage === 'quest' && (questTutorialFocus === 'path' || questTutorialFocus === 'mechanics') ? 'quest-tutorial-muted-global' : ''}`}>
+            <div className={`character-info ${tutorialStage === 'quest' && questTutorialFocus === 'stats' ? 'quest-tutorial-highlight-global' : tutorialStage === 'quest' && (questTutorialFocus === 'header' || questTutorialFocus === 'path' || questTutorialFocus === 'mechanics') ? 'quest-tutorial-muted-global' : ''}`}>
               <CharacterStatus />
             </div>
             
@@ -879,6 +938,26 @@ export const App: React.FC = () => {
   }
 
   if (scene === 'battle' || scene === 'testBattle') {
+    const battleTutorialFocus = tutorialStage === 'battle' && scene === 'battle'
+      ? (sceneTutorialStep === 0
+          ? 'battle'
+          : sceneTutorialStep === 1
+            ? 'enemy'
+            : sceneTutorialStep === 2
+              ? 'turns-battlefield'
+              : sceneTutorialStep === 3
+                ? 'turns-timeline'
+                : sceneTutorialStep === 4
+                  ? 'turns-log'
+                  : sceneTutorialStep === 5
+                    ? 'speed-move'
+                    : sceneTutorialStep === 6
+                      ? 'speed-attack'
+                      : sceneTutorialStep === 7
+                        ? 'haste-item'
+                        : 'haste-cast')
+      : null;
+
     return (
       <div className="game-wrapper">
         <div className="ui-header">
@@ -903,7 +982,14 @@ export const App: React.FC = () => {
             </button>
           </div>
         </div>
-        <Battle onBack={() => setScene('pregame')} onQuestComplete={handleQuestComplete} />
+        <Battle
+          onBack={() => setScene('pregame')}
+          onQuestComplete={handleQuestComplete}
+          tutorialFocus={battleTutorialFocus}
+          onTutorialActionUsed={handleBattleTutorialActionUsed}
+          lootTutorialEnabled={tutorialStage === 'battleLoot'}
+          onLootTutorialComplete={handleBattleLootTutorialComplete}
+        />
 
         {renderSceneTutorialOverlay()}
 

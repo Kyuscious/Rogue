@@ -207,14 +207,14 @@
   border: 1px solid var(--border-color);
 }
 
-.character-info.quest-tutorial-highlight-global {
+.quest-tutorial-highlight-global {
   position: relative;
   z-index: 50;
   opacity: 1;
   filter: none;
 }
 
-.character-info.quest-tutorial-muted-global {
+.quest-tutorial-muted-global {
   position: relative;
   z-index: 45;
   opacity: 0.3;
@@ -382,9 +382,33 @@
   border-radius: 12px;
   display: flex;
   gap: 12px;
-  padding: 12px;
+  padding: 42px 12px 12px;
   z-index: 60;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.58);
+}
+
+.scene-tutorial-skip-top-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 1px solid rgba(255, 120, 120, 0.7);
+  background: rgba(255, 120, 120, 0.15);
+  color: #ffd8d8;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scene-tutorial-skip-top-btn:hover {
+  background: rgba(255, 120, 120, 0.3);
+}
+
+.scene-tutorial-dialogue-box.scene-tutorial-dialogue-box-top {
+  bottom: auto;
+  top: 84px;
 }
 
 .scene-tutorial-character {
@@ -406,6 +430,14 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 8px;
+}
+
+.scene-tutorial-speaker-name {
+  margin: 0;
+  color: #8fc3ff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .scene-tutorial-text {
