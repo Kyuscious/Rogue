@@ -15,7 +15,7 @@ interface CombatStats {
 }
 
 interface BattleSummaryProps {
-  isVictory: boolean;
+  resultType: 'victory' | 'defeat' | 'battle_fled';
   combatStats: CombatStats;
   rewards?: {
     gold: number;
@@ -41,10 +41,11 @@ interface BattleSummaryProps {
   tutorialText?: string;
   onTutorialConfirm?: () => void;
   onContinue: () => void;
+  fleeMessage?: string;
 }
 
 export const BattleSummary: React.FC<BattleSummaryProps> = ({
-  isVictory,
+  resultType,
   combatStats,
   rewards,
   rewardSelection,
@@ -53,7 +54,10 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
   tutorialText,
   onTutorialConfirm,
   onContinue,
+  fleeMessage,
 }) => {
+  const isVictory = resultType === 'victory';
+  const isBattleFled = resultType === 'battle_fled';
   const [showRewards, setShowRewards] = useState(false);
   const [hoveredRewardIndex, setHoveredRewardIndex] = useState<number | null>(null);
   const [autoSkipTimer, setAutoSkipTimer] = useState(5.0);
@@ -86,11 +90,13 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
   }, [isVictory, rewardSelection, showRewards, disableAutoContinue, onContinue]);
 
   return (
-    <div className={`battle-summary ${isVictory ? 'victory' : 'defeat'}`}>
+    <div className={`battle-summary ${resultType}`}>
       <div className="summary-container">
         {/* Header */}
         <div className="summary-header">
-          <h2>{isVictory ? '⚔️ Victory!' : '💀 Defeated'}</h2>
+          <h2>
+            {isVictory ? '⚔️ Victory!' : isBattleFled ? '🏃 Battle Fled' : '💀 Defeated'}
+          </h2>
         </div>
 
         {/* Combat Statistics */}
@@ -271,6 +277,20 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                   )}
                 </div>
               </>
+            ) : isBattleFled ? (
+              <>
+                <div className="rewards-header">Battle Ended</div>
+                <div className="run-stats-grid">
+                  <div className="run-stat">
+                    <span className="stat-icon">🏳️</span>
+                    <span className="stat-text">{fleeMessage || 'A combatant fled the battlefield.'}</span>
+                  </div>
+                  <div className="run-stat">
+                    <span className="stat-icon">🎁</span>
+                    <span className="stat-text">No rewards are granted when a battle is fled.</span>
+                  </div>
+                </div>
+              </>
             ) : (
               // DEFEAT MODE
               runStats && (
@@ -313,7 +333,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
             ) : (
               <>
                 <button className="continue-btn" onClick={onContinue}>
-                  {isVictory ? 'Continue ⟶' : 'Return to Menu'}
+                  {isVictory ? 'Continue ⟶' : isBattleFled ? 'Continue ⟶' : 'Return to Menu'}
                 </button>
                 {isVictory && !disableAutoContinue && (
                   <div className="auto-skip-timer">

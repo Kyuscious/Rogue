@@ -1,12 +1,15 @@
 /* Stats Panel Button */
 .stats-panel {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .stats-panel-container {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 34px;
 }
 
 .stats-panel-container.player-stats {
@@ -15,6 +18,7 @@
 
 .stats-panel-container.enemy-stats {
   flex-direction: row;
+  margin-bottom: 0;
 }
 
 .stats-button {
@@ -24,10 +28,15 @@
   border-radius: 6px;
   color: #4a9eff;
   font-size: 12px;
+  line-height: 1;
+  height: 30px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stats-button:hover {
@@ -55,6 +64,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  min-height: 30px;
 }
 
 .quick-stats-row {
@@ -73,11 +83,14 @@
 /* Hidden quick stats - show invisible icon instead */
 .quick-stats.hidden-stats {
   justify-content: center;
+  min-width: 30px;
 }
 
 .invisible-icon {
   font-size: 18px;
   opacity: 0.6;
+  line-height: 1;
+  display: block;
 }
 
 .quick-stat {

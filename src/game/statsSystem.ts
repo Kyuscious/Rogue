@@ -6,6 +6,7 @@
 import { CharacterClass } from './types';
 import { applyPassiveStatModifiers, PassiveId } from './itemPassives';
 import { MAX_TENACITY } from './crowdControlSystem';
+import { rollCriticalStrikeRng } from './critSystem';
 
 export type LootType = 
   | 'attackDamage' 
@@ -320,13 +321,11 @@ export function calculateMagicDamage(
 
 /**
  * Check if an attack critically strikes
- * Critical chance is stored as a decimal (25% = 0.25)
+ * Supports both decimal chance (0.25 = 25%) and percentage chance (25 = 25%)
  * Returns true if the attack crits
  */
 export function rollCriticalStrike(criticalChance: number): boolean {
-  if (criticalChance <= 0) return false;
-  const cappedChance = Math.min(1.0, Math.max(0, criticalChance));
-  return Math.random() < cappedChance;
+  return rollCriticalStrikeRng(criticalChance);
 }
 
 /**

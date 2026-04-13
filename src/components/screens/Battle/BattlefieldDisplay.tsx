@@ -1,5 +1,9 @@
 import React from 'react';
 import './BattlefieldDisplay.css';
+import {
+  BATTLEFIELD_MIN_X,
+  BATTLEFIELD_WIDTH,
+} from '../../../game/battlefield';
 
 export interface AoEIndicator {
   type: 'rectangle' | 'circle';
@@ -32,15 +36,12 @@ export const BattlefieldDisplay: React.FC<BattlefieldDisplayProps> = ({
   vertical = false,
   aoeIndicators = [],
 }) => {
-  // Battlefield is 5000 units (-1500 to 3000)
-  const BATTLEFIELD_MIN = -1500;
-  const BATTLEFIELD_WIDTH = 3000;
   const CANVAS_SIZE = vertical ? 280 : 600;
   const CANVAS_WIDTH = vertical ? 80 : 600;
   
   // Convert position to canvas coordinate
   const posToCanvasCoord = (pos: number) => {
-    const normalized = (pos - BATTLEFIELD_MIN) / BATTLEFIELD_WIDTH;
+    const normalized = (pos - BATTLEFIELD_MIN_X) / BATTLEFIELD_WIDTH;
     return normalized * CANVAS_SIZE;
   };
   

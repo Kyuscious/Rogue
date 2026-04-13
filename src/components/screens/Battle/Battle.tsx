@@ -50,6 +50,14 @@ import {
   getDefaultEnemyLoadout, 
   AIDecisionContext 
 } from '../../../game/enemyAI';
+import {
+  BATTLEFIELD_MIN_X,
+  BATTLEFIELD_MAX_X,
+  PLAYER_START_POSITION,
+  ENEMY_START_POSITION,
+  isOutsideBattlefield,
+  BattleFleeOutcome,
+} from '../../../game/battlefield';
 import './Battle.css';
 
 interface BattleProps {
@@ -133,11 +141,12 @@ export const Battle: React.FC<BattleProps> = ({
   const t = useTranslation();
   const store = useGameStore();
   const state = store.state;
-  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion, revealEnemy, decayRevealedEnemies, updatePersistentBuff } = store;
+  const { updateEnemyHp, updatePlayerHp, addInventoryItem, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion, revealEnemy, decayRevealedEnemies, updatePersistentBuff, incrementEncounterCount } = store;
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
-  const [battleResult, setBattleResult] = useState<'victory' | 'defeat' | 'reward_selection' | null>(null);
+  const [battleResult, setBattleResult] = useState<'victory' | 'defeat' | 'reward_selection' | 'battle_fled' | null>(null);
+  const [fleeOutcome, setFleeOutcome] = useState<BattleFleeOutcome | null>(null);
   const [turnCounter, setTurnCounter] = useState(0);
   const [rewardOptions, setRewardOptions] = useState<InventoryItem[]>([]);
   const [pendingBattleData, setPendingBattleData] = useState<any>(null);
@@ -166,8 +175,8 @@ export const Battle: React.FC<BattleProps> = ({
   const [enemySpellCooldowns, setEnemySpellCooldowns] = useState<Record<string, number>>({});
 
   // Movement and range system
-  const [playerPosition, setPlayerPosition] = useState(50);
-  const [enemyPosition, setEnemyPosition] = useState(-50);
+  const [playerPosition, setPlayerPosition] = useState(PLAYER_START_POSITION);
+  const [enemyPosition, setEnemyPosition] = useState(ENEMY_START_POSITION);
 
   const playerChar = state.playerCharacter;
   const enemyChar = state.enemyCharacters[0];
@@ -331,13 +340,14 @@ export const Battle: React.FC<BattleProps> = ({
     // Reset enemy AI cooldowns for new encounter
     setEnemyWeaponCooldowns({});
     setEnemySpellCooldowns({});
+    setFleeOutcome(null);
     
     // Don't reset combat stats or summary rewards here - they need to persist
     // for the summary display. They'll be reset after the user dismisses the summary.
     
     // Reset positions for new encounter
-    setPlayerPosition(50);
-    setEnemyPosition(-50);
+    setPlayerPosition(PLAYER_START_POSITION);
+    setEnemyPosition(ENEMY_START_POSITION);
   }, [enemyChar.id, playerChar.level, playerChar.class, state.currentFloor]);
 
   // Initialize battle log
@@ -507,6 +517,39 @@ export const Battle: React.FC<BattleProps> = ({
 
   // Calculate distance between player and enemy
   const currentDistance = Math.abs(playerPosition - enemyPosition);
+
+  useEffect(() => {
+    if (battleEnded) return;
+
+    if (isOutsideBattlefield(playerPosition)) {
+      const remainingEnemies = state.originalEnemyQueue.slice(1);
+      setBattleEnded(true);
+      setBattleResult('battle_fled');
+      setFleeOutcome('player_fled');
+      setPendingBattleData(remainingEnemies.length > 0 ? remainingEnemies : null);
+      setSummaryRewards(null);
+      setShowSummary(true);
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${playerChar.name} fled the battlefield at ${playerPosition} (bounds ${BATTLEFIELD_MIN_X} to ${BATTLEFIELD_MAX_X}).` },
+      ]);
+      return;
+    }
+
+    if (isOutsideBattlefield(enemyPosition)) {
+      const remainingEnemies = state.originalEnemyQueue.slice(1);
+      setBattleEnded(true);
+      setBattleResult('battle_fled');
+      setFleeOutcome('enemy_fled');
+      setPendingBattleData(remainingEnemies.length > 0 ? remainingEnemies : null);
+      setSummaryRewards(null);
+      setShowSummary(true);
+      setBattleLog((prev) => [
+        ...prev,
+        { message: `${enemyChar.name} fled the battlefield at ${enemyPosition} (bounds ${BATTLEFIELD_MIN_X} to ${BATTLEFIELD_MAX_X}).` },
+      ]);
+    }
+  }, [battleEnded, playerPosition, enemyPosition, playerChar.name, enemyChar.name, state.originalEnemyQueue]);
   
   // Check if player can attack (within attack range)
   const canPlayerAttack = currentDistance <= (playerScaledStats.attackRange || 125);
@@ -1366,17 +1409,6 @@ export const Battle: React.FC<BattleProps> = ({
       newPosition = playerPosition - MOVE_DISTANCE;
     }
     
-    // Check if player would escape/flee
-    if (newPosition > 1500 || newPosition < -1500) {
-      setBattleEnded(true);
-      setBattleResult('defeat');
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} fled the battlefield!` },
-      ]);
-      return;
-    }
-    
     setPlayerPosition(newPosition);
     const newDistance = Math.abs(newPosition - enemyPosition);
     
@@ -1557,17 +1589,6 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Out of range, so move towards player
     let newPosition = enemyPosition + enemyMoveDistance;
-    
-    // Check if enemy would escape
-    if (newPosition > 2500 || newPosition < -2500) {
-      setBattleEnded(true);
-      setBattleResult('victory');
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${enemyChar.name} fled the battlefield! (Out of range)` },
-      ]);
-      return;
-    }
     
     setEnemyPosition(newPosition);
     const newDistance = Math.abs(playerPosition - newPosition);
@@ -1883,17 +1904,6 @@ export const Battle: React.FC<BattleProps> = ({
         ? enemyPosition + moveDistance
         : enemyPosition - moveDistance;
       
-      // Check bounds
-      if (newPosition > 2500 || newPosition < -2500) {
-        setBattleEnded(true);
-        setBattleResult('victory');
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `${getCharacterName(enemyChar)} fled the battlefield!` },
-        ]);
-        return;
-      }
-      
       setEnemyPosition(newPosition);
       const newDistance = Math.abs(playerPosition - newPosition);
       
@@ -1955,6 +1965,35 @@ export const Battle: React.FC<BattleProps> = ({
       // Return to main menu on defeat
       localStorage.removeItem('savedRun');
       window.location.reload();
+    } else if (battleResult === 'battle_fled') {
+      console.log('🏃 Handling battle fled - skip encounter, no rewards');
+      incrementEncounterCount();
+
+      if (pendingBattleData && pendingBattleData.length > 0) {
+        setTimeout(() => {
+          setBattleEnded(false);
+          setPlayerTurnDone(false);
+          setBattleResult(null);
+          startBattle(pendingBattleData);
+          setPendingBattleData(null);
+          setFleeOutcome(null);
+        }, 100);
+      } else {
+        if (state.currentFloor >= 10 && state.selectedRegion) {
+          setCompletedRegion(state.selectedRegion);
+          if (onQuestComplete) {
+            setTimeout(() => {
+              onQuestComplete();
+            }, 50);
+          }
+        } else if (onQuestComplete) {
+          onQuestComplete();
+        } else if (onBack) {
+          onBack();
+        } else {
+          window.location.reload();
+        }
+      }
     } else if (battleResult === 'victory') {
       console.log('✅ Handling victory', { hasPendingData: !!pendingBattleData, count: pendingBattleData?.length });
       // Continue to next enemy if there are any
@@ -2807,9 +2846,9 @@ export const Battle: React.FC<BattleProps> = ({
       {/* Battle Summary Overlay */}
       {showSummary && (
         <BattleSummary
-          isVictory={battleResult !== 'defeat'}
+          resultType={battleResult === 'battle_fled' ? 'battle_fled' : battleResult === 'defeat' ? 'defeat' : 'victory'}
           combatStats={combatStats}
-          rewards={battleResult !== 'defeat' && battleResult !== 'reward_selection' ? summaryRewards || undefined : undefined}
+          rewards={battleResult === 'victory' ? summaryRewards || undefined : undefined}
           rewardSelection={battleResult === 'reward_selection' && rewardOptions.length > 0 ? {
             options: rewardOptions,
             onSelect: handleRewardSelection,
@@ -2829,6 +2868,13 @@ export const Battle: React.FC<BattleProps> = ({
           tutorialText={showLootTutorialPrompt ? t.tutorial.battle.loot : undefined}
           onTutorialConfirm={showLootTutorialPrompt ? handleLootTutorialConfirm : undefined}
           onContinue={handleSummaryContinue}
+          fleeMessage={
+            fleeOutcome === 'enemy_fled'
+              ? 'The enemy has fled the battle.'
+              : fleeOutcome === 'player_fled'
+                ? 'You have fled the battle.'
+                : undefined
+          }
         />
       )}
     </div>

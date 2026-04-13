@@ -21,12 +21,12 @@ export const LevelDisplay: React.FC<LevelDisplayProps> = ({ character }) => {
     <div className="level-display">
       <div className="level-exp-container">
         <span className="level">{t.common.level} {character.level}</span>
-        {showExpBar && (
-          <div className="exp-bar">
+        <div className={`exp-bar ${showExpBar ? '' : 'exp-bar-placeholder'}`} aria-hidden={!showExpBar}>
+          {showExpBar && (
             <div className="exp-fill" style={{ width: `${percentage}%` }}></div>
-            <span className="exp-text">{currentLevelExp}/{expForNextLevel}</span>
-          </div>
-        )}
+          )}
+          {showExpBar && <span className="exp-text">{currentLevelExp}/{expForNextLevel}</span>}
+        </div>
       </div>
     </div>
   );

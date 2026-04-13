@@ -244,7 +244,7 @@ export const DEMACIA_CHAMPIONS: Character[] = [
     class: 'juggernaut',
     region: 'demacia',
     tier: 'champion',
-    faction: 'guard',
+    faction: 'demacian_champion',
     hp: 200,
     abilities: [],
     level: 10,

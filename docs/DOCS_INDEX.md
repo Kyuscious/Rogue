@@ -17,6 +17,7 @@
 |----------|--------|-------------|
 | [combat-formulas.md](combat-formulas.md) | ✅ DONE | Damage calculation, armor reduction, lifesteal, crit formulas |
 | [TIMING_SYSTEM.md](TIMING_SYSTEM.md) | ✅ DONE | Hybrid timing model - instant effects vs duration effects |
+| [BATTLE_FLEE_IMPLEMENTATION.md](BATTLE_FLEE_IMPLEMENTATION.md) | ✅ DONE | Battlefield bounds, flee termination, and no-reward battle fled flow |
 | [DIFFICULTY_SCALING.md](DIFFICULTY_SCALING.md) | 🚧 WIP | Enemy scaling, region tiers, revisit penalty (planned) |
 | [STUN_IMPLEMENTATION_GUIDE.md](STUN_IMPLEMENTATION_GUIDE.md) | 📋 PH | Stun mechanics, Shield of Daybreak, Dazzle spell (next priority) |
 

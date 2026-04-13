@@ -265,6 +265,10 @@
   position: relative;
 }
 
+.exp-bar.exp-bar-placeholder {
+  visibility: hidden;
+}
+
 .exp-fill {
   height: 100%;
   background: linear-gradient(90deg, #9d4edd 0%, #c77dff 100%);
