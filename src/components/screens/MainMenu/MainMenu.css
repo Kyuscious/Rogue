@@ -501,24 +501,6 @@
   border-color: rgba(255, 65, 108, 0.8);
   box-shadow: 0 6px 16px rgba(255, 65, 108, 0.3);
 }
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-.tooltip-label {
-  font-size: 11px;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 4px;
-}
-
-.tooltip-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: #4a9eff;
-  text-shadow: 0 0 10px rgba(74, 158, 255, 0.5);
-}
 
 .version-tag {
   padding: 8px 16px;
