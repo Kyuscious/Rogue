@@ -51,20 +51,36 @@
   color: #d4af37;
 }
 
+.tooltip-title.item.rarity-starter {
+  color: #0f4c81;
+}
+
 .tooltip-title.item.rarity-common {
-  color: #9d9d9d;
+  color: #22c55e;
 }
 
 .tooltip-title.item.rarity-epic {
-  color: #a335ee;
+  color: #7dd3fc;
 }
 
 .tooltip-title.item.rarity-legendary {
-  color: #ff8000;
+  color: #ef4444;
+}
+
+.tooltip-title.item.rarity-mythic {
+  color: #a855f7;
+}
+
+.tooltip-title.item.rarity-ultimate {
+  color: #f97316;
+}
+
+.tooltip-title.item.rarity-exalted {
+  color: #fbbf24;
 }
 
 .tooltip-title.item.rarity-transcendent {
-  color: #ffffff;
+  color: #f8fafc;
 }
 
 .tooltip-description {

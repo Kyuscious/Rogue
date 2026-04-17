@@ -1,3 +1,5 @@
+import { Region } from './types';
+
 /**
  * Weapons System
  * Weapons replace the base attack action entirely
@@ -25,6 +27,7 @@ export interface Weapon {
   effects: WeaponEffect[];
   imagePath?: string;
   cooldown?: number; // Turns until can use again (0 = no cooldown)
+  originRegion?: Region; // Primary region this weapon originates from
   stats?: {
     // Survivability
     health?: number;
@@ -58,6 +61,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
         description: 'Deals 60% of your Attack Damage damage.',
       },
     ],
+    originRegion: 'demacia',
     stats: {
       magicResist: 10,
       attackDamage: 5,
@@ -81,6 +85,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
         description: 'Deals 30% of your Attack Damage and 30% of your Ability Power as damage.',
       },
     ],
+    originRegion: 'ionia',
     stats: {
       attackRange: 375,
       movementSpeed: 30,
@@ -103,6 +108,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
         description: 'Deals 20% of your Ability Power and 40% of your Attack Damage as damage.',
       },
     ],
+    originRegion: 'shurima',
     stats: {
       speed: 0.2,
       attackRange: 100,
@@ -125,6 +131,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       },
     ],
     cooldown: 0,
+    originRegion: 'runeterra',
   },
   // LOOTABLE WEAPONS
 
@@ -145,6 +152,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       },
     ],
     cooldown: 0,
+    originRegion: 'noxus',
   },
   
   // STUN WEAPON - Deals damage and stuns
@@ -168,6 +176,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       },
     ],
     cooldown: 3,
+    originRegion: 'targon',
   },
 
   // BLEEDING WEAPON - Applies stacking DoT debuff
@@ -190,6 +199,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       },
     ],
     cooldown: 0,
+    originRegion: 'freljord',
   },
 };
 

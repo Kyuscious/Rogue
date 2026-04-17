@@ -41,6 +41,8 @@ interface BattleSummaryProps {
     unlocksEarned: string[];
   };
   disableAutoContinue?: boolean;
+  rewardTutorialActive?: boolean;
+  rewardTutorialText?: string;
   tutorialText?: string;
   onTutorialConfirm?: () => void;
   onContinue: () => void;
@@ -54,6 +56,8 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
   rewardSelection,
   runStats,
   disableAutoContinue = false,
+  rewardTutorialActive = false,
+  rewardTutorialText,
   tutorialText,
   onTutorialConfirm,
   onContinue,
@@ -133,7 +137,10 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
               // REWARD SELECTION MODE (Floors 5, 10, etc.)
               <>
                 <div className="rewards-header">Choose Your Reward</div>
-                <div className="reward-selection-grid">
+                {rewardTutorialActive && rewardTutorialText && (
+                  <div className="summary-tutorial-text reward-selection-tutorial">{rewardTutorialText}</div>
+                )}
+                <div className={`reward-selection-grid ${rewardTutorialActive ? 'reward-selection-grid-tutorial' : ''}`}>
                   {rewardSelection.options.map((option, index) => {
                     const item = getItemById(option.itemId);
                     if (!item) return null;
@@ -143,7 +150,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                     return (
                       <div
                         key={`${option.itemId}-${index}`}
-                        className={`reward-selection-card ${isHovered ? 'hovered' : ''}`}
+                        className={`reward-selection-card ${isHovered ? 'hovered' : ''} ${rewardTutorialActive ? 'reward-selection-card-tutorial' : ''}`}
                         onMouseEnter={() => setHoveredRewardIndex(index)}
                         onMouseLeave={() => setHoveredRewardIndex(null)}
                         onClick={() => rewardSelection.onSelect(option)}
@@ -199,16 +206,16 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                           )}
                         </div>
 
-                        <button className="select-reward-btn">Select</button>
+                        <button className={`select-reward-btn ${rewardTutorialActive ? 'reward-action-btn-tutorial' : ''}`}>Select</button>
                       </div>
                     );
                   })}
                 </div>
                 
-                <div className="reward-selection-actions">
+                <div className={`reward-selection-actions ${rewardTutorialActive ? 'reward-selection-actions-tutorial' : ''}`}>
                   {rewardSelection.region && rewardSelection.enemyIds && rewardSelection.enemyIds.length > 0 && (
                     <button 
-                      className="preview-loot-btn" 
+                      className={`preview-loot-btn ${rewardTutorialActive ? 'reward-action-btn-tutorial' : ''}`} 
                       onClick={() => {
                         const magicFind = rewardSelection.playerMagicFind || 0;
                         const lootInfo = calculateQuestLoot(
@@ -229,11 +236,11 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                       👁️ View All Possible Loot
                     </button>
                   )}
-                  <button className="skip-reward-btn" onClick={rewardSelection.onSkip}>
+                  <button className={`skip-reward-btn ${rewardTutorialActive ? 'reward-action-btn-tutorial' : ''}`} onClick={rewardSelection.onSkip}>
                     ⏭️ Skip
                   </button>
                   <button 
-                    className="reroll-reward-btn" 
+                    className={`reroll-reward-btn ${rewardTutorialActive ? 'reward-action-btn-tutorial' : ''}`} 
                     onClick={rewardSelection.onReroll}
                     disabled={rewardSelection.rerollsRemaining <= 0}
                   >

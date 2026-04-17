@@ -1,3 +1,6 @@
+import { SPELL_DATABASE } from './spells';
+import { WEAPON_DATABASE } from './weapons';
+
 /**
  * Profile System
  * Tracks player progress across multiple save slots
@@ -13,6 +16,8 @@ export interface ProfileStats {
   discoveredQuests: string[]; // Array of discovered quest IDs
   discoveredShopItems: string[]; // Array of discovered shop item names per region
   discoveredEnemies: string[]; // Array of discovered enemy IDs
+  discoveredWeapons: string[]; // Array of weapon IDs used at least once on this profile
+  discoveredSpells: string[]; // Array of spell IDs cast at least once on this profile
   visitedRegions: string[]; // Array of region IDs that have been visited at least once
   unlockedItems: string[]; // Array of unlocked item IDs (for items with unlock requirements)
   hoursPlayed: number; // Total hours played
@@ -37,6 +42,8 @@ const DEFAULT_PROFILE_STATS: ProfileStats = {
   discoveredQuests: [],
   discoveredShopItems: [],
   discoveredEnemies: [],
+  discoveredWeapons: [],
+  discoveredSpells: [],
   visitedRegions: [],
   unlockedItems: [], // Initialize with empty array
   hoursPlayed: 0,
@@ -63,7 +70,23 @@ export function loadProfiles(): PlayerProfile[] {
   const stored = localStorage.getItem('playerProfiles');
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsedProfiles = JSON.parse(stored) as PlayerProfile[];
+      return parsedProfiles.map(profile => ({
+        ...profile,
+        stats: {
+          ...DEFAULT_PROFILE_STATS,
+          ...profile.stats,
+          itemsDiscovered: profile.stats?.itemsDiscovered || [],
+          discoveredConnections: profile.stats?.discoveredConnections || [],
+          discoveredQuests: profile.stats?.discoveredQuests || [],
+          discoveredShopItems: profile.stats?.discoveredShopItems || [],
+          discoveredEnemies: profile.stats?.discoveredEnemies || [],
+          discoveredWeapons: profile.stats?.discoveredWeapons || [],
+          discoveredSpells: profile.stats?.discoveredSpells || [],
+          visitedRegions: profile.stats?.visitedRegions || [],
+          unlockedItems: profile.stats?.unlockedItems || [],
+        },
+      }));
     } catch (e) {
       console.error('Failed to parse profiles:', e);
     }
@@ -136,6 +159,8 @@ export function resetProfile(profileId: number): void {
     saveProfiles(profiles);
     localStorage.removeItem(`tutorialCompleted_profile_${profileId}`);
     localStorage.removeItem(`eliteTutorialSeen_profile_${profileId}`);
+    localStorage.removeItem(`eliteRewardTutorialSeen_profile_${profileId}`);
+    localStorage.removeItem(`regionTravelTutorialSeen_profile_${profileId}`);
   }
 }
 
@@ -172,6 +197,24 @@ export function incrementEnemiesKilled(): void {
       lastPlayedTimestamp: Date.now(),
     },
   });
+}
+
+/**
+ * Mark an enemy as discovered after defeating it
+ */
+export function discoverEnemy(enemyId: string): void {
+  const profile = getActiveProfile();
+  const discoveredEnemies = profile.stats.discoveredEnemies || [];
+
+  if (!discoveredEnemies.includes(enemyId)) {
+    updateProfile(profile.id, {
+      stats: {
+        ...profile.stats,
+        discoveredEnemies: [...discoveredEnemies, enemyId],
+        lastPlayedTimestamp: Date.now(),
+      },
+    });
+  }
 }
 
 /**
@@ -212,6 +255,42 @@ export function discoverItem(itemId: string): void {
       stats: {
         ...profile.stats,
         itemsDiscovered: [...profile.stats.itemsDiscovered, itemId],
+        lastPlayedTimestamp: Date.now(),
+      },
+    });
+  }
+}
+
+/**
+ * Mark a weapon as discovered after it has been used in battle
+ */
+export function discoverWeapon(weaponId: string): void {
+  const profile = getActiveProfile();
+  const discoveredWeapons = profile.stats.discoveredWeapons || [];
+
+  if (!discoveredWeapons.includes(weaponId)) {
+    updateProfile(profile.id, {
+      stats: {
+        ...profile.stats,
+        discoveredWeapons: [...discoveredWeapons, weaponId],
+        lastPlayedTimestamp: Date.now(),
+      },
+    });
+  }
+}
+
+/**
+ * Mark a spell as discovered after it has been cast in battle
+ */
+export function discoverSpell(spellId: string): void {
+  const profile = getActiveProfile();
+  const discoveredSpells = profile.stats.discoveredSpells || [];
+
+  if (!discoveredSpells.includes(spellId)) {
+    updateProfile(profile.id, {
+      stats: {
+        ...profile.stats,
+        discoveredSpells: [...discoveredSpells, spellId],
         lastPlayedTimestamp: Date.now(),
       },
     });
@@ -372,6 +451,9 @@ export function unlockAllContent(profileId: number): void {
     'kaenic_rookern', 'warmogs_armor', 'lich_bane', 'guardian_angel', 'chalicar'
   ];
 
+  const allWeaponIds = Object.keys(WEAPON_DATABASE);
+  const allSpellIds = Object.keys(SPELL_DATABASE);
+
   // Get all region connections
   const allConnections = [
     // Starting regions
@@ -480,6 +562,8 @@ export function unlockAllContent(profileId: number): void {
       itemsDiscovered: allItemIds,
       discoveredConnections: allConnections,
       discoveredEnemies: allEnemyIds,
+      discoveredWeapons: allWeaponIds,
+      discoveredSpells: allSpellIds,
       discoveredQuests: allQuestIds,
       discoveredShopItems: allShopItems,
       visitedRegions: allRegions,

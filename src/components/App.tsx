@@ -30,7 +30,7 @@ import './App.css';
 import './ActComplete.css';
 
 type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'postRegionAction' | 'loading';
-type TutorialStage = 'none' | 'pregame' | 'quest' | 'battle' | 'battleLoot' | 'battleElite' | 'shop';
+type TutorialStage = 'none' | 'pregame' | 'quest' | 'battle' | 'battleLoot' | 'battleElite' | 'eliteReward' | 'regionTravel' | 'shop';
 type QuestTutorialFocus = 'header' | 'path' | 'mechanics' | 'stats' | null;
 
 interface ResetConfirmModalProps {
@@ -171,10 +171,13 @@ export const App: React.FC = () => {
   const [sceneTutorialStep, setSceneTutorialStep] = useState(0);
   const [showSadSkip, setShowSadSkip] = useState(false);
   const [showBattleActionPrompt, setShowBattleActionPrompt] = useState(false);
+  const [showEliteRewardPrompt, setShowEliteRewardPrompt] = useState(false);
   const [questTutorialFocus, setQuestTutorialFocus] = useState<QuestTutorialFocus>(null);
 
   const getTutorialStorageKey = (profileId: number) => `tutorialCompleted_profile_${profileId}`;
   const getEliteTutorialStorageKey = (profileId: number) => `eliteTutorialSeen_profile_${profileId}`;
+  const getEliteRewardTutorialStorageKey = (profileId: number) => `eliteRewardTutorialSeen_profile_${profileId}`;
+  const getRegionTravelTutorialStorageKey = (profileId: number) => `regionTravelTutorialSeen_profile_${profileId}`;
 
   const shouldStartFirstTimeTutorial = () => {
     const profile = getActiveProfile();
@@ -198,9 +201,31 @@ export const App: React.FC = () => {
     localStorage.setItem(getEliteTutorialStorageKey(profile.id), seen ? 'true' : 'false');
   };
 
+  const hasSeenEliteRewardTutorial = () => {
+    const profile = getActiveProfile();
+    return localStorage.getItem(getEliteRewardTutorialStorageKey(profile.id)) === 'true';
+  };
+
+  const markEliteRewardTutorialSeen = (seen: boolean) => {
+    const profile = getActiveProfile();
+    localStorage.setItem(getEliteRewardTutorialStorageKey(profile.id), seen ? 'true' : 'false');
+  };
+
+  const hasSeenRegionTravelTutorial = () => {
+    const profile = getActiveProfile();
+    return localStorage.getItem(getRegionTravelTutorialStorageKey(profile.id)) === 'true';
+  };
+
+  const markRegionTravelTutorialSeen = (seen: boolean) => {
+    const profile = getActiveProfile();
+    localStorage.setItem(getRegionTravelTutorialStorageKey(profile.id), seen ? 'true' : 'false');
+  };
+
   const startTutorialFromStage = (stage: Exclude<TutorialStage, 'none'>) => {
     markTutorialCompleted(false);
     markEliteTutorialSeen(false);
+    markEliteRewardTutorialSeen(false);
+    markRegionTravelTutorialSeen(false);
     setSceneTutorialStep(0);
     setTutorialStage(stage);
     if (stage === 'pregame') {
@@ -211,8 +236,11 @@ export const App: React.FC = () => {
   const handleTutorialSkipAnytime = () => {
     markTutorialCompleted(true);
     markEliteTutorialSeen(true);
+    markEliteRewardTutorialSeen(true);
+    markRegionTravelTutorialSeen(true);
     setSceneTutorialStep(0);
     setShowBattleActionPrompt(false);
+    setShowEliteRewardPrompt(false);
     setTutorialStage('none');
     setQuestTutorialFocus(null);
     setShowSadSkip(true);
@@ -230,6 +258,10 @@ export const App: React.FC = () => {
     }
     if (scene === 'shop') {
       startTutorialFromStage('shop');
+      return;
+    }
+    if (scene === 'regionSelection') {
+      startTutorialFromStage('regionTravel');
       return;
     }
     startTutorialFromStage('pregame');
@@ -390,6 +422,10 @@ export const App: React.FC = () => {
       return [t.tutorial.battle.elite];
     }
 
+    if (scene === 'battle' && tutorialStage === 'eliteReward') {
+      return [t.tutorial.battle.eliteReward];
+    }
+
     if (scene === 'shop' && tutorialStage === 'shop') {
       return [
         t.tutorial.shop.intro,
@@ -407,6 +443,11 @@ export const App: React.FC = () => {
 
     if (scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 11) {
       setShowBattleActionPrompt(true);
+      return;
+    }
+
+    if (scene === 'battle' && tutorialStage === 'eliteReward') {
+      setShowEliteRewardPrompt(true);
       return;
     }
 
@@ -443,6 +484,33 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleEliteRewardTutorialTrigger = () => {
+    if (scene !== 'battle') return;
+    if (tutorialStage !== 'none') return;
+    if (hasSeenEliteRewardTutorial()) return;
+
+    setTutorialStage('eliteReward');
+    setSceneTutorialStep(0);
+  };
+
+  const handleEliteRewardTutorialComplete = () => {
+    setShowEliteRewardPrompt(false);
+
+    if (tutorialStage === 'eliteReward') {
+      markEliteRewardTutorialSeen(true);
+      setTutorialStage('none');
+      setSceneTutorialStep(0);
+    }
+  };
+
+  const handleRegionTravelTutorialComplete = () => {
+    if (tutorialStage === 'regionTravel') {
+      markRegionTravelTutorialSeen(true);
+      setTutorialStage('none');
+      setSceneTutorialStep(0);
+    }
+  };
+
   useEffect(() => {
     if ((scene === 'battle' && tutorialStage === 'battle') || (scene === 'shop' && tutorialStage === 'shop')) {
       setSceneTutorialStep(0);
@@ -452,6 +520,10 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (scene !== 'battle' || tutorialStage !== 'battle') {
       setShowBattleActionPrompt(false);
+    }
+
+    if (scene !== 'battle' || tutorialStage !== 'eliteReward') {
+      setShowEliteRewardPrompt(false);
     }
   }, [scene, tutorialStage]);
 
@@ -465,11 +537,25 @@ export const App: React.FC = () => {
     setSceneTutorialStep(0);
   }, [scene, tutorialStage, state.currentFloor]);
 
+  useEffect(() => {
+    if (scene !== 'regionSelection') return;
+    if (tutorialStage !== 'none') return;
+    if (!state.completedRegion) return;
+    if (hasSeenRegionTravelTutorial()) return;
+
+    setTutorialStage('regionTravel');
+    setSceneTutorialStep(0);
+  }, [scene, tutorialStage, state.completedRegion]);
+
   const renderSceneTutorialOverlay = () => {
     const steps = getSceneTutorialSteps();
     if (steps.length === 0) return null;
 
     if (scene === 'battle' && tutorialStage === 'battle' && sceneTutorialStep === 11 && showBattleActionPrompt) {
+      return null;
+    }
+
+    if (scene === 'battle' && tutorialStage === 'eliteReward' && showEliteRewardPrompt) {
       return null;
     }
 
@@ -1012,6 +1098,9 @@ export const App: React.FC = () => {
           onQuestComplete={handleQuestComplete}
           tutorialFocus={battleTutorialFocus}
           tutorialActionPromptActive={isBattleActionPromptActive}
+          eliteRewardTutorialEnabled={tutorialStage === 'eliteReward'}
+          onEliteRewardTutorialTrigger={handleEliteRewardTutorialTrigger}
+          onEliteRewardTutorialComplete={handleEliteRewardTutorialComplete}
           onTutorialActionUsed={handleBattleTutorialActionUsed}
           lootTutorialEnabled={tutorialStage === 'battleLoot'}
           onLootTutorialComplete={handleBattleLootTutorialComplete}
@@ -1021,6 +1110,10 @@ export const App: React.FC = () => {
 
         {isBattleActionPromptActive && (
           <div className="sad-skip-toast">{t.tutorial.battle.useSpellOrItem}</div>
+        )}
+
+        {scene === 'battle' && tutorialStage === 'eliteReward' && showEliteRewardPrompt && (
+          <div className="sad-skip-toast">{t.tutorial.battle.eliteRewardPrompt}</div>
         )}
 
         {showSadSkip && (
@@ -1098,7 +1191,12 @@ export const App: React.FC = () => {
             </button>
           </div>
         </div>
-        <RegionSelection onSelectRegion={handleSelectRegion} />
+        <RegionSelection
+          onSelectRegion={handleSelectRegion}
+          tutorialEnabled={tutorialStage === 'regionTravel'}
+          onTutorialComplete={handleRegionTravelTutorialComplete}
+          onTutorialSkip={handleTutorialSkipAnytime}
+        />
         <ResetConfirmModal 
           isOpen={showResetConfirm} 
           onConfirm={handleResetConfirm} 

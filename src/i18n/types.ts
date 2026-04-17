@@ -340,7 +340,17 @@ export interface Translations {
       items: string;
       loot: string;
       elite: string;
+      eliteReward: string;
+      eliteRewardPrompt: string;
       useSpellOrItem: string;
+    };
+    regionTravel: {
+      actions: string;
+      actionNeedSelection: string;
+      actionSelected: string;
+      region: string;
+      regionNeedSelection: string;
+      regionSelected: string;
     };
     shop: {
       intro: string;

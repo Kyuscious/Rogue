@@ -287,6 +287,25 @@
   text-align: center;
 }
 
+.reward-selection-tutorial {
+  border-color: rgba(255, 215, 0, 0.55);
+  background: rgba(255, 215, 0, 0.1);
+  color: #fff7cc;
+}
+
+.reward-selection-grid-tutorial {
+  position: relative;
+}
+
+.reward-selection-card-tutorial,
+.reward-action-btn-tutorial {
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.55), 0 0 18px rgba(255, 215, 0, 0.25);
+}
+
+.reward-selection-actions-tutorial {
+  border-radius: 12px;
+}
+
 /* Item Tooltip Portal (same as Index) */
 .item-tooltip-portal {
   position: fixed;
@@ -446,6 +465,10 @@
   border-color: #4a9eff;
   box-shadow: 0 0 30px rgba(74, 158, 255, 0.5);
   background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+}
+
+.reward-selection-card-tutorial {
+  border-color: rgba(255, 215, 0, 0.8);
 }
 
 .reward-card-header h4 {

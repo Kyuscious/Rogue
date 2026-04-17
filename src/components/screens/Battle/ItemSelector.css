@@ -56,18 +56,16 @@
 .item-bar-btn:hover:not(.disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  border-color: #fff;
+  filter: brightness(1.08);
 }
 
 .item-bar-btn.selected {
-  border-color: #22c55e;
-  background: rgba(34, 197, 94, 0.2);
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.14), 0 0 12px rgba(255, 255, 255, 0.12);
 }
 
 .item-bar-btn.selected:hover:not(.disabled) {
-  border-color: #22c55e;
-  box-shadow: 0 0 16px rgba(34, 197, 94, 0.7);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 255, 255, 0.18);
 }
 
 .item-bar-btn.disabled {
@@ -87,16 +85,44 @@
   font-size: clamp(1.5rem, 4vw, 2rem);
 }
 
+.item-bar-btn.rarity-starter {
+  border-color: #0f4c81;
+  background: rgba(15, 76, 129, 0.18);
+}
+
 .item-bar-btn.rarity-common {
-  border-color: #9d9d9d;
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.16);
 }
 
 .item-bar-btn.rarity-epic {
-  border-color: #a335ee;
+  border-color: #7dd3fc;
+  background: rgba(125, 211, 252, 0.16);
 }
 
 .item-bar-btn.rarity-legendary {
-  border-color: #ff8000;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.item-bar-btn.rarity-mythic {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.16);
+}
+
+.item-bar-btn.rarity-ultimate {
+  border-color: #f97316;
+  background: rgba(249, 115, 22, 0.16);
+}
+
+.item-bar-btn.rarity-exalted {
+  border-color: #fbbf24;
+  background: rgba(251, 191, 36, 0.16);
+}
+
+.item-bar-btn.rarity-transcendent {
+  border-color: #f8fafc;
+  background: rgba(248, 250, 252, 0.14);
 }
 
 .item-icon {
@@ -179,16 +205,36 @@
   font-weight: bold;
 }
 
+.item-name.rarity-starter {
+  color: #0f4c81;
+}
+
 .item-name.rarity-common {
-  color: #9d9d9d;
+  color: #22c55e;
 }
 
 .item-name.rarity-epic {
-  color: #a335ee;
+  color: #7dd3fc;
 }
 
 .item-name.rarity-legendary {
-  color: #ff8000;
+  color: #ef4444;
+}
+
+.item-name.rarity-mythic {
+  color: #a855f7;
+}
+
+.item-name.rarity-ultimate {
+  color: #f97316;
+}
+
+.item-name.rarity-exalted {
+  color: #fbbf24;
+}
+
+.item-name.rarity-transcendent {
+  color: #f8fafc;
 }
 
 .item-rarity {

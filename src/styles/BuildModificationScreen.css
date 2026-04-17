@@ -173,6 +173,15 @@
   align-items: center;
 }
 
+.inventory-item.rarity-starter { border-color: #0f4c81; background: rgba(15, 76, 129, 0.14); }
+.inventory-item.rarity-common { border-color: #22c55e; background: rgba(34, 197, 94, 0.14); }
+.inventory-item.rarity-epic { border-color: #7dd3fc; background: rgba(125, 211, 252, 0.14); }
+.inventory-item.rarity-legendary { border-color: #ef4444; background: rgba(239, 68, 68, 0.14); }
+.inventory-item.rarity-mythic { border-color: #a855f7; background: rgba(168, 85, 247, 0.14); }
+.inventory-item.rarity-ultimate { border-color: #f97316; background: rgba(249, 115, 22, 0.14); }
+.inventory-item.rarity-exalted { border-color: #fbbf24; background: rgba(251, 191, 36, 0.14); }
+.inventory-item.rarity-transcendent { border-color: #f8fafc; background: rgba(248, 250, 252, 0.16); }
+
 .item-info {
   display: flex;
   gap: 15px;

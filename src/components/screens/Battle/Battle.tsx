@@ -37,7 +37,7 @@ import {
 import { generateRewardOptions } from '../../../game/rewardPool';
 import { getQuestById } from '../../../game/questDatabase';
 import { checkLevelUp } from '../../../game/experienceSystem';
-import { incrementEnemiesKilled } from '../../../game/profileSystem';
+import { discoverEnemy, discoverSpell, discoverWeapon, incrementEnemiesKilled } from '../../../game/profileSystem';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { ItemBar } from './ItemSelector';
 import { BattleSummary } from './BattleSummary';
@@ -66,6 +66,9 @@ interface BattleProps {
   onQuestComplete?: () => void;
   tutorialFocus?: 'battle' | 'enemy' | 'turns-battlefield' | 'turns-timeline' | 'turns-log' | 'actions' | 'speed' | 'speed-move' | 'speed-attack' | 'haste' | 'haste-item' | 'cast' | null;
   tutorialActionPromptActive?: boolean;
+  eliteRewardTutorialEnabled?: boolean;
+  onEliteRewardTutorialTrigger?: () => void;
+  onEliteRewardTutorialComplete?: () => void;
   onTutorialActionUsed?: () => void;
   lootTutorialEnabled?: boolean;
   onLootTutorialComplete?: () => void;
@@ -135,6 +138,9 @@ export const Battle: React.FC<BattleProps> = ({
   onQuestComplete,
   tutorialFocus = null,
   tutorialActionPromptActive = false,
+  eliteRewardTutorialEnabled = false,
+  onEliteRewardTutorialTrigger,
+  onEliteRewardTutorialComplete,
   onTutorialActionUsed,
   lootTutorialEnabled = false,
   onLootTutorialComplete,
@@ -552,6 +558,15 @@ export const Battle: React.FC<BattleProps> = ({
     }
   }, [battleEnded, playerPosition, enemyPosition, playerChar.name, enemyChar.name, state.originalEnemyQueue]);
   
+  useEffect(() => {
+    if (!showSummary) return;
+    if (battleResult !== 'reward_selection') return;
+    if (state.currentFloor !== 5) return;
+    if (eliteRewardTutorialEnabled) return;
+
+    onEliteRewardTutorialTrigger?.();
+  }, [showSummary, battleResult, state.currentFloor, eliteRewardTutorialEnabled, onEliteRewardTutorialTrigger]);
+
   // Check if player can attack (within attack range)
   const canPlayerAttack = currentDistance <= (playerScaledStats.attackRange || 125);
   
@@ -562,6 +577,8 @@ export const Battle: React.FC<BattleProps> = ({
   const MOVE_DISTANCE = Math.floor((playerScaledStats.movementSpeed || 350) / 10);
 
   const handleRewardSelection = (selectedItem: InventoryItem) => {
+    onEliteRewardTutorialComplete?.();
+
     // Add selected reward to inventory
     addInventoryItem(selectedItem);
     
@@ -613,6 +630,7 @@ export const Battle: React.FC<BattleProps> = ({
   };
 
   const handleSkipReward = () => {
+    onEliteRewardTutorialComplete?.();
     appendLog('⏭️ Reward skipped');
     
     // Hide summary and continue
@@ -774,6 +792,8 @@ export const Battle: React.FC<BattleProps> = ({
       return;
     }
     
+    discoverWeapon(equippedWeaponId);
+
     // Calculate damage based on weapon effects
     let totalDamage = 0;
     const logMessages: Array<{ message: string }> = [];
@@ -1091,6 +1111,8 @@ export const Battle: React.FC<BattleProps> = ({
       return;
     }
     
+    discoverSpell(equippedSpellId);
+
     // Calculate damage/effects based on spell
     let totalDamage = 0;
     let totalHealing = 0;
@@ -2344,7 +2366,8 @@ export const Battle: React.FC<BattleProps> = ({
       setBattleEnded(true);
       console.log('📍 Called setBattleEnded(true)');
       
-      // Track enemy kill in profile
+      // Track enemy defeat in profile
+      discoverEnemy(enemyChar.id);
       incrementEnemiesKilled();
       
       // Check for Glory passive (Dark Seal / Mejai's Soulstealer)
@@ -2900,6 +2923,8 @@ export const Battle: React.FC<BattleProps> = ({
             unlocksEarned: [], // TODO: Track unlocks from this run
           } : undefined}
           disableAutoContinue={showLootTutorialPrompt}
+          rewardTutorialActive={eliteRewardTutorialEnabled}
+          rewardTutorialText={eliteRewardTutorialEnabled ? t.tutorial.battle.eliteRewardPrompt : undefined}
           tutorialText={showLootTutorialPrompt ? t.tutorial.battle.loot : undefined}
           onTutorialConfirm={showLootTutorialPrompt ? handleLootTutorialConfirm : undefined}
           onContinue={handleSummaryContinue}

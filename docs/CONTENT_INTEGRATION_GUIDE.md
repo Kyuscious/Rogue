@@ -17,6 +17,15 @@
 
 ---
 
+## Cross-Cutting Content Rules
+
+Before adding new items, weapons, or spells:
+- use the approved rarity palette and rarity-colored borders defined in [RARITY_VISUAL_GUIDE.md](RARITY_VISUAL_GUIDE.md)
+- if a weapon or spell has a known homeland, set `originRegion?: Region` in its data entry so the Index can group it by regional origin
+- keep names/descriptions spoiler-safe for undiscovered index entries
+
+---
+
 ## Adding New Items
 
 ### 1. Define Item Data

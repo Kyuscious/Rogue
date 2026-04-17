@@ -544,7 +544,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                 return (
                   <div 
                     key={item.id}
-                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    className={`item-slot-with-quantity rarity-${item.rarity} ${selected ? 'selected' : ''}`}
                     title={item.name}
                   >
                     <div 
@@ -578,7 +578,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                 return (
                   <div 
                     key={item.id}
-                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    className={`item-slot-with-quantity rarity-${item.rarity} ${selected ? 'selected' : ''}`}
                     title={item.name}
                   >
                     <div 
@@ -610,7 +610,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
               {getAllWeapons().map(weapon => (
                 <div 
                   key={weapon.id}
-                  className={`item-slot ${playerWeapons.includes(weapon.id) ? 'selected' : ''} ${playerWeapons.length >= 3 && !playerWeapons.includes(weapon.id) ? 'disabled' : ''}`}
+                  className={`item-slot rarity-${weapon.rarity || 'starter'} ${playerWeapons.includes(weapon.id) ? 'selected' : ''} ${playerWeapons.length >= 3 && !playerWeapons.includes(weapon.id) ? 'disabled' : ''}`}
                   onClick={() => handlePlayerWeaponToggle(weapon.id)}
                   title={weapon.name}
                 >
@@ -627,7 +627,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
               {getAllSpells().map(spell => (
                 <div 
                   key={spell.id}
-                  className={`item-slot ${playerSpells.includes(spell.id) ? 'selected' : ''} ${playerSpells.length >= 5 && !playerSpells.includes(spell.id) ? 'disabled' : ''}`}
+                  className={`item-slot rarity-${spell.rarity || 'starter'} ${playerSpells.includes(spell.id) ? 'selected' : ''} ${playerSpells.length >= 5 && !playerSpells.includes(spell.id) ? 'disabled' : ''}`}
                   onClick={() => handlePlayerSpellToggle(spell.id)}
                   title={spell.name}
                 >
@@ -830,7 +830,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                 return (
                   <div 
                     key={item.id}
-                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    className={`item-slot-with-quantity rarity-${item.rarity} ${selected ? 'selected' : ''}`}
                     title={item.name}
                   >
                     <div 
@@ -864,7 +864,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
                 return (
                   <div 
                     key={item.id}
-                    className={`item-slot-with-quantity ${selected ? 'selected' : ''}`}
+                    className={`item-slot-with-quantity rarity-${item.rarity} ${selected ? 'selected' : ''}`}
                     title={item.name}
                   >
                     <div 
@@ -896,7 +896,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
               {getAllWeapons().map(weapon => (
                 <div 
                   key={weapon.id}
-                  className={`item-slot ${enemyWeapons.includes(weapon.id) ? 'selected' : ''} ${enemyWeapons.length >= 2 && !enemyWeapons.includes(weapon.id) ? 'disabled' : ''}`}
+                  className={`item-slot rarity-${weapon.rarity || 'starter'} ${enemyWeapons.includes(weapon.id) ? 'selected' : ''} ${enemyWeapons.length >= 2 && !enemyWeapons.includes(weapon.id) ? 'disabled' : ''}`}
                   onClick={() => handleEnemyWeaponToggle(weapon.id)}
                   title={weapon.name}
                 >
@@ -913,7 +913,7 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
               {getAllSpells().map(spell => (
                 <div 
                   key={spell.id}
-                  className={`item-slot ${enemySpells.includes(spell.id) ? 'selected' : ''} ${enemySpells.length >= 3 && !enemySpells.includes(spell.id) ? 'disabled' : ''}`}
+                  className={`item-slot rarity-${spell.rarity || 'starter'} ${enemySpells.includes(spell.id) ? 'selected' : ''} ${enemySpells.length >= 3 && !enemySpells.includes(spell.id) ? 'disabled' : ''}`}
                   onClick={() => handleEnemySpellToggle(spell.id)}
                   title={spell.name}
                 >

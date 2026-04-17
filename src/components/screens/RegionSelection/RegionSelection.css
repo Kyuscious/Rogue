@@ -7,6 +7,28 @@
   align-items: center;
   overflow-y: auto;
   box-sizing: border-box;
+  position: relative;
+}
+
+.region-selection.tutorial-active > *:not(.scene-tutorial-overlay):not(.scene-tutorial-dialogue-box) {
+  position: relative;
+  z-index: 50;
+}
+
+.region-selection-tutorial-highlight {
+  position: relative;
+  z-index: 55;
+  opacity: 1;
+  filter: brightness(1.05);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.65), 0 0 24px rgba(74, 158, 255, 0.25);
+  border-radius: 12px;
+}
+
+.region-selection-tutorial-muted {
+  position: relative;
+  z-index: 45;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .region-selection-header {

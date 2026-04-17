@@ -286,6 +286,60 @@
   padding: 0px 2px;
 }
 
+/* Shared Rarity Borders */
+.gear-slot.rarity-starter,
+.inventory-item.rarity-starter {
+  border-color: rgba(15, 76, 129, 0.7);
+  background: rgba(15, 76, 129, 0.12);
+}
+
+.gear-slot.rarity-common,
+.inventory-item.rarity-common {
+  border-color: rgba(34, 197, 94, 0.7);
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.gear-slot.rarity-epic,
+.inventory-item.rarity-epic {
+  border-color: rgba(125, 211, 252, 0.78);
+  background: rgba(125, 211, 252, 0.12);
+}
+
+.gear-slot.rarity-legendary,
+.inventory-item.rarity-legendary {
+  border-color: rgba(239, 68, 68, 0.78);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.gear-slot.rarity-mythic,
+.inventory-item.rarity-mythic {
+  border-color: rgba(168, 85, 247, 0.78);
+  background: rgba(168, 85, 247, 0.12);
+}
+
+.gear-slot.rarity-ultimate,
+.inventory-item.rarity-ultimate {
+  border-color: rgba(249, 115, 22, 0.78);
+  background: rgba(249, 115, 22, 0.12);
+}
+
+.gear-slot.rarity-exalted,
+.inventory-item.rarity-exalted {
+  border-color: rgba(251, 191, 36, 0.82);
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.gear-slot.rarity-transcendent,
+.inventory-item.rarity-transcendent {
+  border-color: rgba(248, 250, 252, 0.9);
+  background: rgba(248, 250, 252, 0.1);
+}
+
+.gear-slot[class*='rarity-']:hover,
+.inventory-item[class*='rarity-']:hover {
+  filter: brightness(1.08);
+}
+
 /* Inventory Item Tooltip */
 .inventory-item-tooltip {
   position: absolute;

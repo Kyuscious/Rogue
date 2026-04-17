@@ -43,7 +43,7 @@ export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect }) => {
     return (
       <button
         key={i}
-        className={`weapon-slot ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''}`}
+        className={`weapon-slot ${weapon ? `rarity-${weapon.rarity}` : ''} ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''}`}
         onClick={() => handleSelectWeapon(i)}
         disabled={!isAvailable}
         onMouseEnter={(e) => weapon && handleWeaponMouseEnter(weapon.id, e)}

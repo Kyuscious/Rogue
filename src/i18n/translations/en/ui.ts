@@ -243,7 +243,17 @@ export const ui = {
       cast: 'Cast your selected Spell Scroll to unleash it\s power and effects.',
       loot: 'Great work. This panel shows the rewards you just earned. After this, the next enemy in the encounter sequence will spawn.',
       elite: 'This is an Elite encounter. It is tougher than previous enemies, so plan your cooldowns and positioning carefully.',
-      useSpellOrItem: 'That\s all ! Since it\s your turn because you were more hasty, you can start the fight by either casting your spell or using your items. Good Luck !.',
+      eliteReward: 'Excellent. Elite rewards let you choose a stronger power spike for your build. Look over the reward cards, and remember that Skip passes on the reward while Reroll refreshes your options.',
+      eliteRewardPrompt: 'Choose one of these rewards to strengthen your build. You can also skip it or reroll the choices if needed.',
+      useSpellOrItem: 'That\'s all! Since you are acting first thanks to your haste, open the fight now by either casting your spell or using one of your items. Good luck!',
+    },
+    regionTravel: {
+      actions: 'Before travelling onward, choose one of these three travel actions. They give you one last chance to recover, refine your build, or explore before the next region.',
+      actionNeedSelection: 'Select one travel action to continue.',
+      actionSelected: 'You\'ve selected: {{action}}. {{description}}',
+      region: 'Now choose your next destination. Each region offers different enemies, rewards, and routes for the run ahead.',
+      regionNeedSelection: 'Select a region to continue your journey.',
+      regionSelected: 'You\'ve selected: {{region}}. {{description}}',
     },
     shop: {
       intro: 'Welcome to the shop. Upgrade your build before the next encounter.',

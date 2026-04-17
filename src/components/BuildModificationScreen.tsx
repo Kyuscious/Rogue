@@ -197,10 +197,13 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
 
             {character.inventory && character.inventory.length > 0 ? (
               <div className="inventory-list">
-                {character.inventory.map((item, index) => (
-                  <div key={index} className="inventory-item">
+                {character.inventory.map((item, index) => {
+                  const itemData = getItemById(item.itemId);
+
+                  return (
+                  <div key={index} className={`inventory-item ${itemData?.rarity ? `rarity-${itemData.rarity}` : ''}`}>
                     <div className="item-info">
-                      <span className="item-name">{item.itemId}</span>
+                      <span className="item-name">{itemData?.name || item.itemId}</span>
                       <span className="item-qty">x{item.quantity}</span>
                     </div>
                     <button 
@@ -211,7 +214,8 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                       Discard
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <p className="empty-inventory">No items in inventory</p>

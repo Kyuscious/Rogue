@@ -269,7 +269,10 @@ export function importProfileUnlocks(data: any): void {
     discoveredQuests: [...new Set([...(localStats.discoveredQuests || []), ...(remoteStats.discoveredQuests || [])])],
     discoveredShopItems: [...new Set([...(localStats.discoveredShopItems || []), ...(remoteStats.discoveredShopItems || [])])],
     discoveredEnemies: [...new Set([...(localStats.discoveredEnemies || []), ...(remoteStats.discoveredEnemies || [])])],
+    discoveredWeapons: [...new Set([...(localStats.discoveredWeapons || []), ...(remoteStats.discoveredWeapons || [])])],
+    discoveredSpells: [...new Set([...(localStats.discoveredSpells || []), ...(remoteStats.discoveredSpells || [])])],
     visitedRegions: [...new Set([...(localStats.visitedRegions || []), ...(remoteStats.visitedRegions || [])])],
+    unlockedItems: [...new Set([...(localStats.unlockedItems || []), ...(remoteStats.unlockedItems || [])])],
     lastPlayedTimestamp: Math.max(localStats.lastPlayedTimestamp || 0, remoteStats.lastPlayedTimestamp || 0),
     achievementsDisabled: localStats.achievementsDisabled || remoteStats.achievementsDisabled,
   };

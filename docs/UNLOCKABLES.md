@@ -168,6 +168,7 @@ importProfileUnlocks(data);
 3. **Fallback Values**: Always use `|| 0` or `?.length || 0` for safety
 4. **Test Unlocks**: Verify unlock logic with both new and existing profiles
 5. **Version Control**: Update export version when changing data structure
+6. **Keep Index Rules Centralized**: Profile-based index visibility for weapons/spells and other codex categories is documented in [INDEX_GUIDE.md](INDEX_GUIDE.md)
 
 ## Adding New Requirement Types
 

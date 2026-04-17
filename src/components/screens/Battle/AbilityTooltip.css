@@ -40,19 +40,35 @@
 }
 
 .tooltip-name.rarity-starter {
-  color: #9ca3af;
+  color: #0f4c81;
 }
 
 .tooltip-name.rarity-common {
-  color: #60a5fa;
+  color: #22c55e;
 }
 
 .tooltip-name.rarity-epic {
-  color: #a855f7;
+  color: #7dd3fc;
 }
 
 .tooltip-name.rarity-legendary {
-  color: #f59e0b;
+  color: #ef4444;
+}
+
+.tooltip-name.rarity-mythic {
+  color: #a855f7;
+}
+
+.tooltip-name.rarity-ultimate {
+  color: #f97316;
+}
+
+.tooltip-name.rarity-exalted {
+  color: #fbbf24;
+}
+
+.tooltip-name.rarity-transcendent {
+  color: #f8fafc;
 }
 
 .tooltip-type {

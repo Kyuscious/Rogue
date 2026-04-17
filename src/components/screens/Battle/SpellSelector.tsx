@@ -44,7 +44,7 @@ export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
     return (
       <button
         key={i}
-        className={`spell-slot ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''} ${isOnCooldown ? 'on-cooldown' : ''}`}
+        className={`spell-slot ${spell ? `rarity-${spell.rarity}` : ''} ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''} ${isOnCooldown ? 'on-cooldown' : ''}`}
         onClick={() => handleSelectSpell(i)}
         disabled={!isAvailable}
         onMouseEnter={(e) => spell && handleSpellMouseEnter(spell.id, e)}

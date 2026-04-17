@@ -1,3 +1,5 @@
+import { Region } from './types';
+
 /**
  * Spells System
  * Spells replace the base spell action entirely
@@ -37,6 +39,7 @@ export interface Spell {
   castTime?: number; // Cast time in turns before effect applies
   imagePath?: string;
   cooldown?: number; // Turns until can use again (0 = no cooldown)
+  originRegion?: Region; // Primary region this spell originates from
   manaCost?: number; // Future: mana system
   areaOfEffect?: {
     type: 'rectangle' | 'circle';
@@ -59,6 +62,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       },
     ],
     cooldown: 0,
+    originRegion: 'demacia',
   },
 
   rejuvenation: { // Ionia starter spell
@@ -77,6 +81,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       },
     ],
     cooldown: 0,
+    originRegion: 'ionia',
   },
 
   quicksand: { // Shurima starter spell
@@ -101,6 +106,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       },
     ],
     cooldown: 0,
+    originRegion: 'shurima',
   },
 
 
@@ -119,6 +125,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       },
     ],
     cooldown: 0,
+    originRegion: 'runeterra',
   },
 
 
@@ -136,6 +143,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       },
     ],
     cooldown: 1,
+    originRegion: 'demacia',
   },
   // Epic Spells
 
@@ -161,6 +169,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       },
     ],
     cooldown: 5, // 5 turn cooldown for legendary
+    originRegion: 'targon',
   },
   
   // CROWD CONTROL SPELL - Dazzle
@@ -183,6 +192,7 @@ export const SPELL_DATABASE: Record<string, Spell> = {
       size: 625, // Shows range as a rectangle
     },
     cooldown: 3,
+    originRegion: 'targon',
   },
 };
 

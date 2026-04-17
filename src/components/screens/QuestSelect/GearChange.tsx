@@ -105,7 +105,7 @@ export const GearChange: React.FC = () => {
     return (
       <div
         key={`weapon-${index}`}
-        className={`gear-slot weapon-slot ${hoveredSlot === `w-${index}` ? 'hovered' : ''}`}
+        className={`gear-slot weapon-slot ${weapon ? `rarity-${weapon.rarity}` : ''} ${hoveredSlot === `w-${index}` ? 'hovered' : ''}`}
         onMouseEnter={(e) => {
           setHoveredSlot(`w-${index}`);
           if (weaponId) handleItemMouseEnter(e, 'weapon', weaponId);
@@ -141,7 +141,7 @@ export const GearChange: React.FC = () => {
     return (
       <div
         key={`spell-${index}`}
-        className={`gear-slot spell-slot ${hoveredSlot === `s-${index}` ? 'hovered' : ''}`}
+        className={`gear-slot spell-slot ${spell ? `rarity-${spell.rarity}` : ''} ${hoveredSlot === `s-${index}` ? 'hovered' : ''}`}
         onMouseEnter={(e) => {
           setHoveredSlot(`s-${index}`);
           if (spellId) handleItemMouseEnter(e, 'spell', spellId);
@@ -177,7 +177,7 @@ export const GearChange: React.FC = () => {
     return (
       <div
         key={`item-${index}`}
-        className={`gear-slot item-slot ${hoveredSlot === `i-${index}` ? 'hovered' : ''}`}
+        className={`gear-slot item-slot ${itemData ? `rarity-${itemData.rarity}` : ''} ${hoveredSlot === `i-${index}` ? 'hovered' : ''}`}
         onMouseEnter={(e) => {
           setHoveredSlot(`i-${index}`);
           if (item) handleItemMouseEnter(e, 'item', item.itemId);
@@ -229,7 +229,7 @@ export const GearChange: React.FC = () => {
     return (
       <div
         key={`inv-${invItem.type}-${invItem.id}`}
-        className="inventory-item"
+        className={`inventory-item ${displayData?.rarity ? `rarity-${displayData.rarity}` : ''}`}
         draggable
         onDragStart={(e) => handleDragStart(e, { type: invItem.type, id: invItem.id, sourceType: 'inventory', sourceIndex: invItem.index })}
         onMouseEnter={(e) => handleItemMouseEnter(e, invItem.type, invItem.id)}

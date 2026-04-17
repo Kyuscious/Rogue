@@ -45,21 +45,39 @@
 }
 
 .weapon-slot:hover:not(.disabled) {
-  border-color: rgba(74, 158, 255, 0.6);
-  background: rgba(74, 158, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
   transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
 .weapon-slot.equipped {
-  border-color: #4a9eff;
-  background: rgba(74, 158, 255, 0.2);
-  box-shadow: 0 0 10px rgba(74, 158, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16), 0 0 10px rgba(255, 255, 255, 0.14);
 }
 
 .weapon-slot.disabled {
   opacity: 0.3;
   cursor: not-allowed;
   border-style: dashed;
+}
+
+.weapon-slot.rarity-starter {
+  border-color: #0f4c81;
+  background: rgba(15, 76, 129, 0.14);
+}
+
+.weapon-slot.rarity-common {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.weapon-slot.rarity-epic {
+  border-color: #7dd3fc;
+  background: rgba(125, 211, 252, 0.14);
+}
+
+.weapon-slot.rarity-legendary {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .weapon-icon {

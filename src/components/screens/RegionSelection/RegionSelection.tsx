@@ -15,14 +15,40 @@ import './RegionSelection.css';
 
 interface RegionSelectionProps {
   onSelectRegion: (region: Region) => void;
+  tutorialEnabled?: boolean;
+  onTutorialComplete?: () => void;
+  onTutorialSkip?: () => void;
 }
 
-export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion }) => {
+type RegionSelectionTutorialStep = 'action' | 'actionConfirm' | 'region' | 'regionConfirm' | 'done';
+
+export const RegionSelection: React.FC<RegionSelectionProps> = ({
+  onSelectRegion,
+  tutorialEnabled = false,
+  onTutorialComplete,
+  onTutorialSkip,
+}) => {
   const t = useTranslation();
   const store = useGameStore();
   const { state } = store;
   const [selectedDestination, setSelectedDestination] = useState<Region | null>(null);
   const [selectedAction, setSelectedAction] = useState<PostRegionChoice | null>(null);
+  const [tutorialStep, setTutorialStep] = useState<RegionSelectionTutorialStep>(tutorialEnabled ? 'action' : 'done');
+
+  useEffect(() => {
+    if (tutorialEnabled) {
+      setTutorialStep('action');
+      return;
+    }
+
+    setTutorialStep('done');
+  }, [tutorialEnabled]);
+
+  const isTutorialActive = tutorialEnabled && tutorialStep !== 'done';
+  const isActionTutorialStep = tutorialStep === 'action' || tutorialStep === 'actionConfirm';
+  const isRegionTutorialStep = tutorialStep === 'region' || tutorialStep === 'regionConfirm';
+  const canInteractActions = !isTutorialActive || isActionTutorialStep;
+  const canInteractRegions = !isTutorialActive || isRegionTutorialStep;
   
   if (!state.selectedRegion) {
     return <div>{t.regionSelection.errorNoRegion}</div>;
@@ -43,11 +69,21 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
   }, [state.selectedRegion, availableRegions]);
   
   const handleRegionClick = (region: Region) => {
+    if (!canInteractRegions) return;
     setSelectedDestination(region);
+
+    if (isTutorialActive && tutorialStep === 'region') {
+      setTutorialStep('regionConfirm');
+    }
   };
 
   const handleActionClick = (action: PostRegionChoice) => {
+    if (!canInteractActions) return;
     setSelectedAction(action);
+
+    if (isTutorialActive && tutorialStep === 'action') {
+      setTutorialStep('actionConfirm');
+    }
   };
 
   const handleProceed = () => {
@@ -69,6 +105,63 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
     // Then navigate to selected destination
     // NOTE: Do NOT clear completedRegion - the postRegionAction scene needs it
     onSelectRegion(selectedDestination);
+  };
+
+  const getActionTitle = (action: PostRegionChoice) => {
+    if (action === 'rest') return t.postRegion.restTitle;
+    if (action === 'trade') return t.postRegion.modifyBuildTitle;
+    if (action === 'event') return t.postRegion.exploreTitle;
+    return '';
+  };
+
+  const getActionDescription = (action: PostRegionChoice) => {
+    if (action === 'rest') return t.postRegion.restDescription;
+    if (action === 'trade') return t.postRegion.modifyBuildDescription;
+    if (action === 'event') return t.postRegion.exploreDescription;
+    return '';
+  };
+
+  const handleTutorialContinue = () => {
+    if (!isTutorialActive) return;
+
+    if (tutorialStep === 'actionConfirm') {
+      if (!selectedAction) return;
+      setTutorialStep('region');
+      return;
+    }
+
+    if (tutorialStep === 'regionConfirm') {
+      if (!selectedDestination) return;
+      onTutorialComplete?.();
+      handleProceed();
+    }
+  };
+
+  const getTutorialText = () => {
+    if (tutorialStep === 'action') {
+      return t.tutorial.regionTravel.actions;
+    }
+
+    if (tutorialStep === 'actionConfirm') {
+      if (!selectedAction) return t.tutorial.regionTravel.actionNeedSelection;
+      return t.tutorial.regionTravel.actionSelected
+        .replace('{{action}}', getActionTitle(selectedAction))
+        .replace('{{description}}', getActionDescription(selectedAction));
+    }
+
+    if (tutorialStep === 'region') {
+      return t.tutorial.regionTravel.region;
+    }
+
+    if (tutorialStep === 'regionConfirm') {
+      if (!selectedDestination) return t.tutorial.regionTravel.regionNeedSelection;
+      const regionDescription = t.regionSelection.regionDescriptions[selectedDestination] || '';
+      return t.tutorial.regionTravel.regionSelected
+        .replace('{{region}}', getRegionDisplayName(selectedDestination))
+        .replace('{{description}}', regionDescription);
+    }
+
+    return '';
   };
 
   // Don't show rest screen here - just select the action
@@ -111,8 +204,32 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
     return <span className="region-badge">{category}</span>;
   };
   
+  const tutorialText = getTutorialText();
+
   return (
-    <div className="region-selection">
+    <div className={`region-selection ${isTutorialActive ? 'tutorial-active' : ''}`}>
+      {isTutorialActive && state.completedRegion && <div className="scene-tutorial-overlay" />}
+
+      {isTutorialActive && state.completedRegion && (
+        <div className="scene-tutorial-dialogue-box">
+          <button className="scene-tutorial-skip-top-btn" onClick={onTutorialSkip}>
+            {t.tutorial.skip}
+          </button>
+          <div className="scene-tutorial-character">🧙</div>
+          <div className="scene-tutorial-content">
+            <p className="scene-tutorial-speaker-name">{t.tutorial.npcName}</p>
+            <p className="scene-tutorial-text">{tutorialText}</p>
+            <div className="scene-tutorial-actions">
+              {(tutorialStep === 'actionConfirm' || tutorialStep === 'regionConfirm') && (
+                <button className="scene-tutorial-action-btn" onClick={handleTutorialContinue}>
+                  {tutorialStep === 'regionConfirm' ? t.common.confirm : t.common.continue}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="region-selection-header">
         <h2>{t.regionSelection.chooseDestination}</h2>
         <div className="region-selection-info">
@@ -124,7 +241,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
 
       {/* Travel Actions Section */}
       {state.completedRegion && (
-        <div className="travel-actions-section">
+        <div className={`travel-actions-section ${isTutorialActive ? (isActionTutorialStep ? 'region-selection-tutorial-highlight' : 'region-selection-tutorial-muted') : ''}`}>
           <h3>{t.regionSelection.chooseTravelAction}</h3>
           <p className="travel-actions-subtitle">{t.regionSelection.travelActionSubtitle}</p>
           <div className="travel-actions-grid">
@@ -133,31 +250,16 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
                 (!state.completedRegion || !hasRegionEvents(state.completedRegion));
               const isSelected = selectedAction === option.type;
 
-              // Get translated text based on option type
-              const getTitle = () => {
-                if (option.type === 'rest') return t.postRegion.restTitle;
-                if (option.type === 'trade') return t.postRegion.modifyBuildTitle;
-                if (option.type === 'event') return t.postRegion.exploreTitle;
-                return '';
-              };
-
-              const getDescription = () => {
-                if (option.type === 'rest') return t.postRegion.restDescription;
-                if (option.type === 'trade') return t.postRegion.modifyBuildDescription;
-                if (option.type === 'event') return t.postRegion.exploreDescription;
-                return '';
-              };
-
               return (
                 <button
                   key={option.type}
                   className={`travel-action-card ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
                   onClick={() => !isDisabled && handleActionClick(option.type)}
-                  disabled={isDisabled}
+                  disabled={isDisabled || !canInteractActions}
                 >
                   <div className="action-icon">{option.icon}</div>
-                  <h4>{getTitle()}</h4>
-                  <p>{getDescription()}</p>
+                  <h4>{getActionTitle(option.type)}</h4>
+                  <p>{getActionDescription(option.type)}</p>
                   {isDisabled && <span className="disabled-badge">{t.regionSelection.unavailable}</span>}
                   {isSelected && <div className="selected-indicator">{t.regionSelection.selected}</div>}
                 </button>
@@ -167,7 +269,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
         </div>
       )}
       
-      <div className="regions-container">
+      <div className={`regions-container ${isTutorialActive ? (isRegionTutorialStep ? 'region-selection-tutorial-highlight' : state.completedRegion ? 'region-selection-tutorial-muted' : '') : ''}`}>
         <h3>{t.regionSelection.selectDestination}</h3>
         {availableRegions.length === 0 ? (
           <div className="no-regions">
@@ -216,7 +318,7 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({ onSelectRegion
           <button
             className="proceed-button"
             onClick={handleProceed}
-            disabled={selectedDestination === null || (!!state.completedRegion && selectedAction === null)}
+            disabled={selectedDestination === null || (!!state.completedRegion && selectedAction === null) || isTutorialActive}
           >
             {state.completedRegion 
               ? `${t.regionSelection.proceedTo} ${selectedDestination ? getRegionDisplayName(selectedDestination) : '...'}`

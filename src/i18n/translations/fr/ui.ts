@@ -243,7 +243,17 @@ export const ui = {
       items: 'Utiliser un objet peut soigner, infliger des dégâts ou appliquer des bonus/malus.',
       loot: 'Bien joué. Ce panneau affiche les récompenses obtenues. Ensuite, l\'ennemi suivant de la rencontre apparaîtra.',
       elite: 'C\'est une rencontre Élite. Elle est plus difficile que les précédentes, préparez bien vos cooldowns et votre positionnement.',
+      eliteReward: 'Très bien. Les récompenses d\'élite vous permettent de choisir un vrai pic de puissance pour votre build. Regardez les cartes proposées, puis notez que Passer ignore la récompense et Relance renouvelle les choix.',
+      eliteRewardPrompt: 'Choisissez l\'une de ces récompenses pour renforcer votre build. Vous pouvez aussi passer ou relancer les choix si besoin.',
       useSpellOrItem: 'Utilisez un sort ou un objet pour terminer cette étape.',
+    },
+    regionTravel: {
+      actions: 'Avant de repartir, choisissez l\'une de ces trois actions de voyage. Elles vous offrent une dernière occasion de vous reposer, d\'ajuster votre build ou d\'explorer.',
+      actionNeedSelection: 'Sélectionnez une action de voyage pour continuer.',
+      actionSelected: 'Vous avez sélectionné : {{action}}. {{description}}',
+      region: 'Choisissez maintenant votre prochaine destination. Chaque région propose des ennemis, des récompenses et des routes différentes.',
+      regionNeedSelection: 'Sélectionnez une région pour poursuivre votre voyage.',
+      regionSelected: 'Vous avez sélectionné : {{region}}. {{description}}',
     },
     shop: {
       intro: 'Bienvenue à la boutique. Vous pouvez y acheter de l\'équipement pour renforcer votre build.',

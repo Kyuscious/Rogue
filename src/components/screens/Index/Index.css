@@ -117,10 +117,9 @@
   border: 2px solid rgba(74, 158, 255, 0.3);
   border-radius: 16px;
   padding: 30px;
-  min-height: calc(100vh - 250px);
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
-  overflow-x: visible;
+  min-height: calc(90vh - 250px);
+  max-height: none;
+  overflow: visible;
   backdrop-filter: blur(10px);
 }
 
@@ -194,6 +193,24 @@
   padding-bottom: 12px;
   border-bottom: 2px solid currentColor;
   opacity: 0.9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-counter {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: rgba(20, 20, 30, 0.72);
+  color: inherit;
+  font-size: 0.6em;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-shadow: none;
+  white-space: nowrap;
 }
 
 /* Achievements Grid */
@@ -265,6 +282,53 @@
 }
 
 /* Enemies List */
+.enemy-controls,
+.catalog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.enemy-search-input,
+.enemy-sort-select,
+.catalog-search-input,
+.catalog-sort-select {
+  background: rgba(20, 20, 30, 0.8);
+  border: 2px solid rgba(74, 158, 255, 0.28);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 14px;
+  padding: 12px 14px;
+}
+
+.enemy-search-input,
+.catalog-search-input {
+  flex: 1;
+  min-width: 240px;
+}
+
+.enemy-search-input:focus,
+.enemy-sort-select:focus,
+.catalog-search-input:focus,
+.catalog-sort-select:focus {
+  outline: none;
+  border-color: #4a9eff;
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.16);
+}
+
+.enemy-sort-label,
+.catalog-sort-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .faction-section {
   margin-bottom: 40px;
 }
@@ -280,6 +344,10 @@
   border-radius: 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .enemies-list {
@@ -416,22 +484,22 @@
 /* Items Grid */
 .items-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(800px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
   width: 100%;
-  overflow: visible;
   height: auto;
   position: relative;
   z-index: 1;
+  align-items: stretch;
 }
 
 .item-card {
   background: rgba(30, 30, 30, 0.8);
   border: 2px solid rgba(74, 158, 255, 0.2);
   border-radius: 12px;
-  padding: 16px;
+  padding: 14px 12px;
   height: auto;
-  min-height: 150px;
+  min-height: 128px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -454,6 +522,15 @@
   z-index: 10000;
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
+
+.item-card.rarity-starter { border-color: rgba(15, 76, 129, 0.55); background: linear-gradient(135deg, rgba(15, 76, 129, 0.18) 0%, rgba(30, 30, 30, 0.82) 60%); }
+.item-card.rarity-common { border-color: rgba(34, 197, 94, 0.55); background: linear-gradient(135deg, rgba(34, 197, 94, 0.16) 0%, rgba(30, 30, 30, 0.82) 60%); }
+.item-card.rarity-epic { border-color: rgba(125, 211, 252, 0.6); background: linear-gradient(135deg, rgba(125, 211, 252, 0.16) 0%, rgba(30, 30, 30, 0.82) 60%); }
+.item-card.rarity-legendary { border-color: rgba(239, 68, 68, 0.6); background: linear-gradient(135deg, rgba(239, 68, 68, 0.16) 0%, rgba(30, 30, 30, 0.82) 60%); }
+.item-card.rarity-mythic { border-color: rgba(168, 85, 247, 0.6); background: linear-gradient(135deg, rgba(168, 85, 247, 0.16) 0%, rgba(30, 30, 30, 0.82) 60%); }
+.item-card.rarity-ultimate { border-color: rgba(249, 115, 22, 0.6); background: linear-gradient(135deg, rgba(249, 115, 22, 0.16) 0%, rgba(30, 30, 30, 0.82) 60%); }
+.item-card.rarity-exalted { border-color: rgba(251, 191, 36, 0.6); background: linear-gradient(135deg, rgba(251, 191, 36, 0.16) 0%, rgba(30, 30, 30, 0.82) 60%); }
+.item-card.rarity-transcendent { border-color: rgba(248, 250, 252, 0.7); background: linear-gradient(135deg, rgba(248, 250, 252, 0.18) 0%, rgba(30, 30, 30, 0.82) 60%); }
 
 .item-card .item-image {
   width: 64px;
@@ -481,6 +558,13 @@
   text-shadow: 0 0 10px currentColor;
   text-align: center;
   margin: 0;
+}
+
+.item-meta-line {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.68);
+  text-transform: capitalize;
+  text-align: center;
 }
 
 /* Item Tooltip Portal - rendered at document.body level */
@@ -594,6 +678,163 @@
   display: none;
 }
 
+/* Weapons & Spells Catalog */
+.loadout-index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.catalog-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.catalog-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loadout-card {
+  background: rgba(30, 30, 30, 0.82);
+  border: 2px solid rgba(74, 158, 255, 0.25);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: all 0.25s ease;
+}
+
+.loadout-card.discovered:hover {
+  transform: translateY(-2px);
+  border-color: rgba(74, 158, 255, 0.55);
+  box-shadow: 0 6px 18px rgba(74, 158, 255, 0.18);
+}
+
+.loadout-card.undiscovered {
+  opacity: 0.58;
+  border-color: rgba(120, 120, 120, 0.28);
+  filter: grayscale(0.35);
+}
+
+.loadout-card.rarity-starter { border-color: rgba(15, 76, 129, 0.55); }
+.loadout-card.rarity-common { border-color: rgba(34, 197, 94, 0.55); }
+.loadout-card.rarity-epic { border-color: rgba(125, 211, 252, 0.6); }
+.loadout-card.rarity-legendary { border-color: rgba(239, 68, 68, 0.6); }
+
+.weapon-card {
+  border-left: 4px solid rgba(255, 183, 77, 0.8);
+}
+
+.spell-card {
+  border-left: 4px solid rgba(0, 255, 255, 0.8);
+}
+
+.loadout-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.loadout-card-header h4 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+}
+
+.loadout-card-description {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.loadout-rarity-badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(74, 158, 255, 0.18);
+  color: #9fd1ff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  white-space: nowrap;
+}
+
+.loadout-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.loadout-meta span,
+.loadout-stat-chip {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(20, 20, 30, 0.7);
+  border: 1px solid rgba(74, 158, 255, 0.18);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.loadout-stat-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.loadout-effects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.loadout-effect {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(20, 20, 30, 0.58);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.45;
+}
+
+.loadout-locked-notice {
+  padding: 12px 14px;
+  background: rgba(20, 20, 30, 0.72);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.misc-placeholder {
+  padding: 32px 20px;
+  border: 2px dashed rgba(74, 158, 255, 0.28);
+  border-radius: 12px;
+  background: rgba(20, 20, 30, 0.5);
+  text-align: center;
+}
+
+.misc-placeholder h3 {
+  margin: 0 0 10px 0;
+  color: #4a9eff;
+  font-size: 24px;
+}
+
+.misc-placeholder p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
 /* Regions */
 .regions-section {
   margin-bottom: 30px;
@@ -606,6 +847,10 @@
   text-align: center;
   padding-bottom: 10px;
   border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .regions-list {

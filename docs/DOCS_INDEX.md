@@ -60,6 +60,8 @@
 | Document | Status | Description |
 |----------|--------|-------------|
 | [VIEWPORT_SCROLLING_FIX.md](VIEWPORT_SCROLLING_FIX.md) | ✅ DONE | Global CSS reset, viewport height fixes |
+| [INDEX_GUIDE.md](INDEX_GUIDE.md) | ✅ DONE | Game Index tabs, discovery rules, and codex visibility behavior |
+| [RARITY_VISUAL_GUIDE.md](RARITY_VISUAL_GUIDE.md) | ✅ DONE | Rarity palette, icon borders, and origin metadata conventions |
 
 ### Content Creation
 | Document | Status | Description |
@@ -115,6 +117,7 @@ docs/
 - **Turn timing** → [TIMING_SYSTEM.md](TIMING_SYSTEM.md)
 - **How buffs work** → [TIMING_SYSTEM.md](TIMING_SYSTEM.md) + [PASSIVE_SYSTEM_REFACTOR.md](PASSIVE_SYSTEM_REFACTOR.md)
 - **Item unlocks** → [UNLOCKABLES.md](UNLOCKABLES.md)
+- **Index / codex rules** → [INDEX_GUIDE.md](INDEX_GUIDE.md)
 
 ### I'm fixing a bug in...
 - **Battle system** → Check [combat-formulas.md](combat-formulas.md) + [TIMING_SYSTEM.md](TIMING_SYSTEM.md)

@@ -191,7 +191,7 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                     if (!item) return null;
 
                     return (
-                      <div key={index} className="inventory-item">
+                      <div key={index} className={`inventory-item rarity-${item.rarity}`}>
                         <div className="item-info">
                           <div className="item-name">{getItemName(item)}</div>
                           <div className="item-description">{getItemDescription(item)}</div>
