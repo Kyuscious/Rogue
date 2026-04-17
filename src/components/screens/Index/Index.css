@@ -1,10 +1,12 @@
 /* Index Screen */
 .index-screen {
   min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1729 100%);
   padding: 20px;
   position: relative;
-  overflow: visible;
+  overflow-x: visible;
+  overflow-y: auto;
 }
 
 .index-screen::before {
@@ -117,9 +119,11 @@
   border: 2px solid rgba(74, 158, 255, 0.3);
   border-radius: 16px;
   padding: 30px;
-  min-height: calc(90vh - 250px);
-  max-height: none;
-  overflow: visible;
+  min-height: calc(100vh - 240px);
+  max-height: calc(100vh - 170px);
+  overflow-y: auto;
+  overflow-x: visible;
+  overscroll-behavior: contain;
   backdrop-filter: blur(10px);
 }
 
