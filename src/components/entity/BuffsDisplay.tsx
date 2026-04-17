@@ -66,7 +66,7 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [] 
       <div className="buffs-grid">
         {/* Total Icon */}
         <div
-          className="buff-icon total-slot"
+          className="buff-icon total-slot bar-total-button"
           onMouseEnter={(e) => {
             setShowTotalTooltip(true);
             const rect = e.currentTarget.getBoundingClientRect();
@@ -77,7 +77,7 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [] 
           }}
           onMouseLeave={() => setShowTotalTooltip(false)}
         >
-          <span className="total-icon">Σ</span>
+          <span className="total-icon">B</span>
         </div>
 
         {/* Temporary buffs/debuffs as individual slots */}
@@ -124,8 +124,8 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [] 
       {/* Total Stats Tooltip */}
       {showTotalTooltip && (
         <div className="stat-bonus-tooltip total-tooltip" style={{ left: `${totalTooltipPosition.x}px`, top: `${totalTooltipPosition.y}px` }}>
-          <div className="tooltip-title">{t.common.totalStats}</div>
-          <div className="tooltip-level">All bonuses combined</div>
+          <div className="tooltip-title">Total Buffs Stats</div>
+          <div className="tooltip-level">All active buffs and debuffs combined</div>
           {Object.entries(totalStats)
             .filter(([_, value]) => value && value !== 0)
             .map(([stat, value]) => {

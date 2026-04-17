@@ -64,7 +64,7 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
       <div className="items-bar-container">
         {/* Total Icon */}
         <div
-          className="item-icon-slot total-slot"
+          className="item-icon-slot total-slot bar-total-button"
           onMouseEnter={(e) => {
             if (!isRevealed) return; // Don't show total tooltip when hidden
             setShowTotalTooltip(true);
@@ -76,7 +76,7 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
           }}
           onMouseLeave={() => setShowTotalTooltip(false)}
         >
-          <span className="total-icon">Σ</span>
+          <span className="total-icon">I</span>
         </div>
 
         {/* Item Slots */}
@@ -121,7 +121,7 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
       {/* Total Stats Tooltip */}
       {showTotalTooltip && isRevealed && Object.keys(totalStats).length > 0 && (
         <div className="item-tooltip-bar total-tooltip" style={{ left: `${totalTooltipPosition.x}px`, top: `${totalTooltipPosition.y}px` }}>
-          <h4 className="tooltip-item-name">{t.common.totalStats}</h4>
+          <h4 className="tooltip-item-name">Total Items Stats</h4>
           <p className="tooltip-item-description">Combined stats from all items</p>
           <div className="tooltip-item-stats">
             {totalStats.attackDamage && (

@@ -35,6 +35,7 @@ import {
   applyVictoryRewards,
 } from '../../../game/battleFlow';
 import { generateRewardOptions } from '../../../game/rewardPool';
+import { getQuestById } from '../../../game/questDatabase';
 import { checkLevelUp } from '../../../game/experienceSystem';
 import { incrementEnemiesKilled } from '../../../game/profileSystem';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -650,7 +651,19 @@ export const Battle: React.FC<BattleProps> = ({
     if (!useReroll()) return;
     
     // Generate new rewards
-    const newRewards = generateRewardOptions(state.selectedRegion, state.currentFloor, playerChar.class);
+    const newRewards = generateRewardOptions(
+      state.selectedRegion,
+      state.currentFloor,
+      playerChar.class,
+      currentQuestPath
+        ? {
+            difficulty: currentQuestPath.difficulty,
+            lootType: currentQuestPath.lootType,
+            pathName: currentQuestPath.name,
+            pathDescription: currentQuestPath.description,
+          }
+        : undefined
+    );
     setRewardOptions(newRewards);
     
     setBattleLog((prev) => [
@@ -2518,7 +2531,19 @@ export const Battle: React.FC<BattleProps> = ({
       // Handle next steps - store data for user-triggered progression
       if (victoryResult.shouldShowRewardSelection) {
         // Generate reward options and integrate into summary
-        const rewards = generateRewardOptions(state.selectedRegion, state.currentFloor, playerChar.class);
+        const rewards = generateRewardOptions(
+          state.selectedRegion,
+          state.currentFloor,
+          playerChar.class,
+          currentQuestPath
+            ? {
+                difficulty: currentQuestPath.difficulty,
+                lootType: currentQuestPath.lootType,
+                pathName: currentQuestPath.name,
+                pathDescription: currentQuestPath.description,
+              }
+            : undefined
+        );
         setRewardOptions(rewards);
         
         // Store next enemies for after reward selection
@@ -2556,6 +2581,13 @@ export const Battle: React.FC<BattleProps> = ({
   const canMove = isPlayerTurn && (currentAction?.actionType === 'attack' || currentAction?.actionType === 'move');
   // Player movement distance based on his movement speed
   const moveDistance = Math.floor(MOVE_DISTANCE);
+  const currentQuestPath = useMemo(() => {
+    if (!state.selectedQuest) return null;
+
+    const selectedQuest = getQuestById(state.selectedQuest.questId);
+    return selectedQuest?.paths.find((path) => path.id === state.selectedQuest?.pathId) || null;
+  }, [state.selectedQuest]);
+
   const isBattleTutorial = tutorialFocus !== null;
   const isBattleFocus = tutorialFocus === 'battle';
   const isArenaFocus = tutorialFocus === 'enemy';
@@ -2856,8 +2888,11 @@ export const Battle: React.FC<BattleProps> = ({
             onReroll: handleRerollRewards,
             rerollsRemaining: state.rerolls,
             region: state.selectedRegion || undefined,
-            enemyIds: [], // TODO: Track quest path enemy IDs in Battle component
+            enemyIds: currentQuestPath?.enemyIds || [],
             playerMagicFind: playerChar.stats.magicFind || 0,
+            pathLootType: currentQuestPath?.lootType,
+            pathDifficulty: currentQuestPath?.difficulty,
+            pathName: currentQuestPath?.name,
           } : undefined}
           runStats={battleResult === 'defeat' ? {
             itemsOwned: state.inventory.length,

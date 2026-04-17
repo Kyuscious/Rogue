@@ -51,13 +51,13 @@ export const LootPreviewModal: React.FC<LootPreviewModalProps> = ({
         </div>
 
         <div className="loot-preview-stats">
-          <div className="stat-item">
-            <span className="stat-label">Total Unique Items:</span>
-            <span className="stat-value">{lootInfo.uniqueItemCount}</span>
+          <div className="loot-preview-stat-card">
+            <span className="loot-preview-stat-label">Total Unique Items</span>
+            <span className="loot-preview-stat-value">{lootInfo.uniqueItemCount}</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-label">Average Rarity:</span>
-            <span className="stat-value" style={{ color: rarityColors[lootInfo.averageRarity] }}>
+          <div className="loot-preview-stat-card">
+            <span className="loot-preview-stat-label">Average Rarity</span>
+            <span className="loot-preview-stat-value" style={{ color: rarityColors[lootInfo.averageRarity] }}>
               {lootInfo.averageRarity.toUpperCase()}
             </span>
           </div>
@@ -75,7 +75,7 @@ export const LootPreviewModal: React.FC<LootPreviewModalProps> = ({
                   <span style={{ color: rarityColors[rarity] }}>
                     {rarity.toUpperCase()}
                   </span>
-                  <span className="item-count">({items.length} items)</span>
+                  <span className="loot-preview-item-count">({items.length} items)</span>
                 </div>
                 <div className="items-grid">
                   {items.map(item => (
@@ -85,19 +85,19 @@ export const LootPreviewModal: React.FC<LootPreviewModalProps> = ({
                       style={{ borderColor: rarityColors[rarity] }}
                     >
                       {item.imagePath && (
-                        <div className="item-image-container">
+                        <div className="loot-preview-item-image-container">
                           <img 
                             src={item.imagePath} 
                             alt={item.itemName}
-                            className="item-image"
+                            className="loot-preview-item-image"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
                             }}
                           />
                         </div>
                       )}
-                      <div className="item-info">
-                        <div className="item-name">{item.itemName}</div>
+                      <div className="loot-preview-item-info">
+                        <div className="loot-preview-item-name" title={item.itemName}>{item.itemName}</div>
                         <div className="item-drop-chance">
                           {item.dropChance.toFixed(2)}% drop
                         </div>

@@ -31,6 +31,9 @@ interface BattleSummaryProps {
     region?: Region; // For loot preview
     enemyIds?: string[]; // For loot preview
     playerMagicFind?: number; // For loot preview calculations
+    pathLootType?: string;
+    pathDifficulty?: 'safe' | 'fair' | 'risky';
+    pathName?: string;
   };
   runStats?: {
     itemsOwned: number;
@@ -208,7 +211,16 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                       className="preview-loot-btn" 
                       onClick={() => {
                         const magicFind = rewardSelection.playerMagicFind || 0;
-                        const lootInfo = calculateQuestLoot(rewardSelection.enemyIds!, rewardSelection.region!, magicFind);
+                        const lootInfo = calculateQuestLoot(
+                          rewardSelection.enemyIds!,
+                          rewardSelection.region!,
+                          magicFind,
+                          {
+                            lootType: rewardSelection.pathLootType,
+                            difficulty: rewardSelection.pathDifficulty,
+                            pathName: rewardSelection.pathName,
+                          }
+                        );
                         setSelectedLootInfo(lootInfo);
                         setLootPreviewOpen(true);
                       }}

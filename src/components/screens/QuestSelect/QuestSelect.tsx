@@ -7,6 +7,7 @@ import { isPathCompleted } from '../../../game/questPathSystem';
 import { GearChange } from './GearChange';
 import { LootPreviewModal } from '../../shared/LootPreviewModal';
 import { calculateQuestLoot, QuestLootInfo } from '../../../game/lootCalculator';
+import { getPathVisualDifficulty } from '../../../game/rewardPool';
 import './QuestSelect.css';
 
 interface QuestSelectProps {
@@ -130,12 +131,12 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
     setDisplayedQuests(newDisplayedQuests);
   };
 
-  const renderDifficultyBadge = (difficulty: 'safe' | 'risky') => {
-    if (difficulty === 'risky') {
-      return <span className="difficulty-badge risky">{t.questSelect.risky}</span>;
-    }
-    return <span className="difficulty-badge safe">{t.questSelect.safe}</span>;
-  };
+  const getPathContext = (path: QuestPath) => ({
+    difficulty: path.difficulty,
+    lootType: path.lootType,
+    pathName: path.name,
+    pathDescription: path.description,
+  });
 
   const renderRewardIcon = (lootType: string) => {
     const iconMap: Record<string, string> = {
@@ -150,7 +151,7 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
       utility: '🎯',
       critical: '💥',
     };
-    return iconMap[lootType] || '?';
+    return iconMap[lootType] || '❔';
   };
 
   const handleShowLootPreview = (path: QuestPath, pathName: string, e: React.MouseEvent) => {
@@ -158,9 +159,9 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
 
     e.stopPropagation(); // Prevent path selection
     const playerMagicFind = state.playerCharacter?.stats.magicFind || 0;
-    const lootInfo = calculateQuestLoot(path.enemyIds, region, playerMagicFind);
+    const lootInfo = calculateQuestLoot(path.enemyIds, region, playerMagicFind, getPathContext(path));
     setSelectedLootInfo(lootInfo);
-    setPreviewTitle(`${pathName} - Possible Loot`);
+    setPreviewTitle(`${pathName} Loot Pool`);
     setLootPreviewOpen(true);
   };
 
@@ -213,7 +214,7 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
               {quest.paths.map((path: QuestPath) => (
                 <button
                   key={path.id}
-                  className={`quest-path ${path.difficulty}`}
+                  className={`quest-path ${getPathVisualDifficulty(getPathContext(path))}`}
                   onClick={() => {
                     if (isTutorialActive && !isPathStep) return;
                     if (isTutorialActive && isPathStep) {
@@ -229,8 +230,13 @@ export const QuestSelect: React.FC<QuestSelectProps> = ({
                       <p className="path-description">{path.description}</p>
                     </div>
                     <div className="path-icons">
-                      {renderDifficultyBadge(path.difficulty)}
-                      <span className="reward-icon" title={`${t.questSelect.reward}: ${path.lootType}`}>{renderRewardIcon(path.lootType)}</span>
+                      <span
+                        className={`path-trait-icon ${getPathVisualDifficulty(getPathContext(path))}`}
+                        title={`${path.lootType} loot`}
+                        aria-label={`${path.lootType} loot`}
+                      >
+                        {renderRewardIcon(path.lootType)}
+                      </span>
                       <button 
                         className="loot-preview-btn" 
                         title="Preview possible loot"

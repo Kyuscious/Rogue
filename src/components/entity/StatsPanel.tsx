@@ -7,15 +7,27 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { CombatBuff, computeBuffDisplayValues } from '../../game/itemSystem';
 import './StatsPanel.css';
 
-interface StatsPanelProps {
+export interface StatsPanelProps {
   character: Character;
   combatBuffs?: CombatBuff[];
   combatDebuffs?: CombatBuff[];
   isRevealed?: boolean; // Whether to show stats or hide them
   turnCounter?: number; // Current turn counter for accurate buff duration display
+  classBadge?: React.ReactNode;
+  weaponBadge?: React.ReactNode;
+  spellBadge?: React.ReactNode;
 }
 
-export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, combatDebuffs, isRevealed = true, turnCounter = 0 }) => {
+export const StatsPanel: React.FC<StatsPanelProps> = ({
+  character,
+  combatBuffs,
+  combatDebuffs,
+  isRevealed = true,
+  turnCounter = 0,
+  classBadge,
+  weaponBadge,
+  spellBadge,
+}) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -183,58 +195,83 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
   return (
     <div className="stats-panel">
       <div className={`stats-panel-container ${character.role === 'enemy' ? 'enemy-stats' : 'player-stats'}`}>
-        <button 
-          className={`stats-button ${!isRevealed ? 'invisible-button' : ''}`}
-          onMouseEnter={isRevealed ? handleMouseEnter : undefined}
-          onMouseLeave={isRevealed ? handleMouseLeave : undefined}
-        >
-          {isRevealed ? '📊 Stats' : '👁️‍🗨️'}
-        </button>
-        
-        {(character.role === 'player' || isRevealed) ? (
+        <div className="stats-rail">
+          <div className="stats-rail-top">
+            {classBadge || <span className="invisible-icon">👁️‍🗨️</span>}
+          </div>
 
-          
-          <div className={`quick-stats ${character.role === 'player' ? 'player-quick-stats' : 'enemy-quick-stats'}`}>
-            <div className="quick-stat" title={t.common.attackDamage}>
-              <span className="quick-stat-icon">⚔️</span>
-              <span className="quick-stat-value">{Math.round(stats?.attackDamage || 0)}</span>
+          {(character.role === 'player' || isRevealed) ? (
+            <div className={`quick-stats ${character.role === 'player' ? 'player-quick-stats' : 'enemy-quick-stats'}`}>
+              <div className="quick-stat-group physical-group">
+                <div className="quick-stat-group-icon">{weaponBadge || <span className="invisible-icon">⚔️</span>}</div>
+                <div className="quick-stat" title={t.common.attackDamage}>
+                  <span className="quick-stat-icon">⚔️</span>
+                  <span className="quick-stat-value">{Math.round(stats?.attackDamage || 0)}</span>
+                </div>
+                <div className="quick-stat" title={t.common.speed}>
+                  <span className="quick-stat-icon">⚡</span>
+                  <span className="quick-stat-value">{(stats?.speed || 0).toFixed(1)}</span>
+                </div>
+                <div className="quick-stat" title={t.common.armor}>
+                  <span className="quick-stat-icon">🛡️</span>
+                  <span className="quick-stat-value">{Math.round(stats?.armor || 0)}</span>
+                </div>
+              </div>
+
+              <div className="quick-stat-separator"></div>
+
+              <div className="quick-stat-group magical-group">
+                <div className="quick-stat-group-icon">{spellBadge || <span className="invisible-icon">✦</span>}</div>
+                <div className="quick-stat" title={t.common.abilityPower}>
+                  <span className="quick-stat-icon">✨</span>
+                  <span className="quick-stat-value">{Math.round(stats?.abilityPower || 0)}</span>
+                </div>
+                <div className="quick-stat" title={t.common.haste}>
+                  <span className="quick-stat-icon">⏱️</span>
+                  <span className="quick-stat-value">{Math.round(stats?.haste || 0)}</span>
+                </div>
+                <div className="quick-stat" title={t.common.magicResist}>
+                  <span className="quick-stat-icon">🔷</span>
+                  <span className="quick-stat-value">{Math.round(stats?.magicResist || 0)}</span>
+                </div>
+              </div>
             </div>
-            <div className="quick-stat" title={t.common.speed}>
-              <span className="quick-stat-icon">⚡</span>
-              <span className="quick-stat-value">{(stats?.speed || 0).toFixed(1)}</span>
+          ) : (
+            <div className="quick-stats hidden-stats">
+              <div className="quick-stat-group physical-group hidden-stat-group">
+                <div className="quick-stat-group-icon"><span className="invisible-icon">?</span></div>
+                <div className="quick-stat"><span className="quick-stat-value">?</span></div>
+                <div className="quick-stat"><span className="quick-stat-value">?</span></div>
+                <div className="quick-stat"><span className="quick-stat-value">?</span></div>
+              </div>
+              <div className="quick-stat-separator"></div>
+              <div className="quick-stat-group magical-group hidden-stat-group">
+                <div className="quick-stat-group-icon"><span className="invisible-icon">?</span></div>
+                <div className="quick-stat"><span className="quick-stat-value">?</span></div>
+                <div className="quick-stat"><span className="quick-stat-value">?</span></div>
+                <div className="quick-stat"><span className="quick-stat-value">?</span></div>
+              </div>
             </div>
-            <div className="quick-stat" title={t.common.armor}>
-              <span className="quick-stat-icon">🛡️</span>
-              <span className="quick-stat-value">{Math.round(stats?.armor || 0)}</span>
-            </div>
-            <div className="quick-stat-separator"></div>
-            <div className="quick-stat" title={t.common.abilityPower}>
-              <span className="quick-stat-icon">✨</span>
-              <span className="quick-stat-value">{Math.round(stats?.abilityPower || 0)}</span>
-            </div>
-            <div className="quick-stat" title={t.common.haste}>
-              <span className="quick-stat-icon">⏱️</span>
-              <span className="quick-stat-value">{Math.round(stats?.haste || 0)}</span>
-            </div>
-            <div className="quick-stat" title={t.common.magicResist}>
-              <span className="quick-stat-icon">🔷</span>
-              <span className="quick-stat-value">{Math.round(stats?.magicResist || 0)}</span>
-            </div>
-          </div>
-        ) : (
-          <div className="quick-stats hidden-stats">
-            <span className="invisible-icon">👁️‍🗨️</span>
-          </div>
-        )}
+          )}
+
+          <button
+            className={`stats-button bar-total-button ${!isRevealed ? 'invisible-button' : ''}`}
+            onMouseEnter={isRevealed ? handleMouseEnter : undefined}
+            onMouseLeave={isRevealed ? handleMouseLeave : undefined}
+            aria-label="Total Character Stats"
+          >
+            <span className="stats-button-label">S</span>
+          </button>
+        </div>
       </div>
 
       {tooltipVisible && isRevealed && (
-        <div 
+        <div
           ref={tooltipRef}
           className={`stats-tooltip ${character.role === 'enemy' ? 'tooltip-left' : 'tooltip-right'}`}
           style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}
         >
-          <h3 className="stats-tooltip-header">{character.name}'s Stats</h3>
+          <h3 className="stats-tooltip-header">Total Character Stats</h3>
           <div className="stats-columns">
             <div className="stats-column stats-column-left">
               {renderStatCategory(t.common.mobilityStats, mobilityStats)}
@@ -245,7 +282,6 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({ character, combatBuffs, 
               {renderStatCategory(t.common.survivalStats, survivalStats)}
               {renderStatCategory(t.common.spellStats, spellStats)}
             </div>
-            
           </div>
         </div>
       )}

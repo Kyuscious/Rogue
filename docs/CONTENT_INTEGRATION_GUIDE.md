@@ -311,6 +311,15 @@ character_id: {
 - [ ] Starting items set (for playable)
 - [ ] Unlock requirements set (if locked)
 
+**Battle Card Visual Conventions**:
+- Enemy name color is tier-driven in battle UI:
+  - `minion` → white
+  - `elite` → red
+  - `champion` → dark blue
+  - `boss` → orange
+  - `legend` → gold reserve styling
+- `faction` is shown on the battle card as an icon and should be set for enemies whenever possible.
+
 ---
 
 ### 2. Add to Enemy Pools (for enemies)

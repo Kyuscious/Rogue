@@ -369,13 +369,19 @@
   transform: translateY(-1px);
 }
 
-.quest-path.safe:hover {
-  border-color: #00dd00;
-  background: rgba(0, 221, 0, 0.1);
-  box-shadow: 0 0 8px rgba(0, 221, 0, 0.2);
+.quest-path.easy:hover {
+  border-color: #20d66b;
+  background: rgba(32, 214, 107, 0.1);
+  box-shadow: 0 0 8px rgba(32, 214, 107, 0.2);
 }
 
-.quest-path.risky:hover {
+.quest-path.fair:hover {
+  border-color: #ff9f43;
+  background: rgba(255, 159, 67, 0.12);
+  box-shadow: 0 0 8px rgba(255, 159, 67, 0.22);
+}
+
+.quest-path.hard:hover {
   border-color: #ff4444;
   background: rgba(255, 68, 68, 0.1);
   box-shadow: 0 0 8px rgba(255, 68, 68, 0.2);
@@ -423,31 +429,35 @@
   white-space: nowrap;
 }
 
-.difficulty-badge {
-  font-size: 10px;
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-weight: bold;
-  white-space: nowrap;
-  display: inline-block;
+.path-trait-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.08);
 }
 
-.difficulty-badge.safe {
-  background: rgba(0, 221, 0, 0.2);
-  color: #00ff00;
-  border: 1px solid #00dd00;
+.path-trait-icon.easy {
+  background: rgba(32, 214, 107, 0.22);
+  color: #77ff9f;
+  border-color: rgba(32, 214, 107, 0.45);
 }
 
-.difficulty-badge.risky {
-  background: rgba(255, 68, 68, 0.2);
-  color: #ff6666;
-  border: 1px solid #ff4444;
+.path-trait-icon.fair {
+  background: rgba(255, 159, 67, 0.22);
+  color: #ffc27a;
+  border-color: rgba(255, 159, 67, 0.45);
 }
 
-.reward-icon {
-  font-size: 20px;
-  opacity: 0.9;
-  padding-left: 3px;
+.path-trait-icon.hard {
+  background: rgba(255, 68, 68, 0.22);
+  color: #ff8c8c;
+  border-color: rgba(255, 68, 68, 0.45);
 }
 
 .loot-preview-btn {

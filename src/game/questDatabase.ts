@@ -20,9 +20,9 @@ export interface QuestPath {
   id: string;
   name: string;
   description: string;
-  difficulty: 'safe' | 'risky';
+  difficulty: 'safe' | 'fair' | 'risky';
   enemyIds: string[];
-  lootType: 'damage' | 'defense' | 'mixed';
+  lootType: 'damage' | 'defense' | 'mixed' | 'attackDamage' | 'abilityPower' | 'tankDefense' | 'hybrid' | 'mobility' | 'utility' | 'critical';
   rewardGoldMultiplier: number;
   rewardExpMultiplier: number;
   finalBossId?: string; // ID of the final boss for UI preview

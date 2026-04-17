@@ -7,6 +7,7 @@ import {
   CHAMPION_RARITY_POOL,
   BOSS_RARITY_POOL
 } from './items';
+import { getContextualRewardItems, getRewardRarityWeights, PathRewardContext } from './rewardPool';
 import { resolveEnemyIdByRegion, getEnemyById } from './regions/enemyResolver';
 import { Region } from './types';
 
@@ -86,53 +87,7 @@ function calculateItemDropChance(item: Item, tier: 'minion' | 'elite' | 'champio
  * @param magicFind - Player's magic find stat
  * @returns Aggregated loot information with drop chances
  */
-export function calculateQuestLoot(enemyIds: string[], region: Region, magicFind: number = 0): QuestLootInfo {
-  const lootMap = new Map<string, LootOdds>();
-  
-  // Process each enemy
-  for (const enemyId of enemyIds) {
-    // Resolve the enemy (handles "random:tier:faction" format)
-    const resolvedEnemyId = resolveEnemyIdByRegion(enemyId, region);
-    const enemy = getEnemyById(resolvedEnemyId);
-    if (!enemy) continue;
-    
-    // Skip legend tier enemies (they don't drop random loot)
-    if (enemy.tier === 'legend') continue;
-    
-    const tier = (enemy.tier || 'minion') as 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
-    
-    // Get all possible items this enemy can drop
-    const possibleItems = Object.values(ITEM_DATABASE).filter(
-      (item) => item.stats && Object.keys(item.stats).length > 0
-    );
-    
-    // Calculate drop chance for each item
-    for (const item of possibleItems) {
-      const dropChance = calculateItemDropChance(item, tier, magicFind);
-      
-      if (dropChance > 0) {
-        const existing = lootMap.get(item.id);
-        if (existing) {
-          // If item already exists, average the drop chances
-          existing.dropChance = (existing.dropChance + dropChance) / 2;
-        } else {
-          lootMap.set(item.id, {
-            itemId: item.id,
-            itemName: item.name || item.id,
-            rarity: item.rarity,
-            dropChance: dropChance,
-            imagePath: item.imagePath,
-          });
-        }
-      }
-    }
-  }
-  
-  // Convert to array and sort by drop chance (highest first)
-  const allPossibleItems = Array.from(lootMap.values())
-    .sort((a, b) => b.dropChance - a.dropChance);
-  
-  // Calculate average rarity
+function calculateAverageRarity(allPossibleItems: LootOdds[]): string {
   const rarityWeight = {
     starter: 1,
     common: 2,
@@ -143,21 +98,103 @@ export function calculateQuestLoot(enemyIds: string[], region: Region, magicFind
     exalted: 7,
     transcendent: 8,
   };
-  
+
+  if (allPossibleItems.length === 0) {
+    return 'common';
+  }
+
   const avgWeight = allPossibleItems.reduce((sum, item) => 
     sum + rarityWeight[item.rarity], 0) / allPossibleItems.length;
-  
+
   let averageRarity = 'common';
   if (avgWeight >= 7) averageRarity = 'exalted';
   else if (avgWeight >= 5.5) averageRarity = 'ultimate';
   else if (avgWeight >= 4.5) averageRarity = 'mythic';
   else if (avgWeight >= 3.5) averageRarity = 'legendary';
   else if (avgWeight >= 2.5) averageRarity = 'epic';
-  
+
+  return averageRarity;
+}
+
+export function calculateQuestLoot(
+  enemyIds: string[],
+  region: Region,
+  magicFind: number = 0,
+  rewardContext?: PathRewardContext
+): QuestLootInfo {
+  const lootMap = new Map<string, LootOdds>();
+
+  if (rewardContext?.lootType) {
+    const isBossTier = enemyIds.length >= 10;
+    const contextualItems = getContextualRewardItems(rewardContext, isBossTier);
+    const rarityWeights = getRewardRarityWeights(rewardContext, isBossTier).map((entry, index, entries) => {
+      const divisor = entries.length > 1 ? entries.length - 1 : 1;
+      const rarityBonus = magicFind * (index / divisor);
+      return {
+        ...entry,
+        weight: Math.max(1, entry.weight + rarityBonus),
+      };
+    });
+
+    const totalWeight = rarityWeights.reduce((sum, entry) => sum + entry.weight, 0);
+
+    for (const item of contextualItems) {
+      const rarityEntry = rarityWeights.find((entry) => entry.rarity === item.rarity);
+      if (!rarityEntry) continue;
+
+      const itemsOfRarity = contextualItems.filter((candidate) => candidate.rarity === item.rarity);
+      const dropChance = ((rarityEntry.weight / totalWeight) * 100) / Math.max(1, itemsOfRarity.length);
+
+      lootMap.set(item.id, {
+        itemId: item.id,
+        itemName: item.name || item.id,
+        rarity: item.rarity,
+        dropChance,
+        imagePath: item.imagePath,
+      });
+    }
+  } else {
+    for (const enemyId of enemyIds) {
+      const resolvedEnemyId = resolveEnemyIdByRegion(enemyId, region);
+      const enemy = getEnemyById(resolvedEnemyId);
+      if (!enemy) continue;
+
+      if (enemy.tier === 'legend') continue;
+
+      const tier = (enemy.tier || 'minion') as 'minion' | 'elite' | 'champion' | 'boss' | 'legend';
+
+      const possibleItems = Object.values(ITEM_DATABASE).filter(
+        (item) => item.stats && Object.keys(item.stats).length > 0
+      );
+
+      for (const item of possibleItems) {
+        const dropChance = calculateItemDropChance(item, tier, magicFind);
+
+        if (dropChance > 0) {
+          const existing = lootMap.get(item.id);
+          if (existing) {
+            existing.dropChance = (existing.dropChance + dropChance) / 2;
+          } else {
+            lootMap.set(item.id, {
+              itemId: item.id,
+              itemName: item.name || item.id,
+              rarity: item.rarity,
+              dropChance: dropChance,
+              imagePath: item.imagePath,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  const allPossibleItems = Array.from(lootMap.values())
+    .sort((a, b) => b.dropChance - a.dropChance);
+
   return {
     allPossibleItems,
     uniqueItemCount: allPossibleItems.length,
-    averageRarity,
+    averageRarity: calculateAverageRarity(allPossibleItems),
   };
 }
 
@@ -175,9 +212,10 @@ export function generateUniqueLoot(
   region: Region, 
   magicFind: number = 0, 
   count: number = 3,
-  excludeIds: string[] = []
+  excludeIds: string[] = [],
+  rewardContext?: PathRewardContext
 ): string[] {
-  const lootInfo = calculateQuestLoot(enemyIds, region, magicFind);
+  const lootInfo = calculateQuestLoot(enemyIds, region, magicFind, rewardContext);
   
   // Filter out excluded items
   const availableItems = lootInfo.allPossibleItems.filter(
@@ -227,9 +265,10 @@ export function canReroll(
   enemyIds: string[], 
   region: Region, 
   excludeIds: string[],
-  requiredCount: number = 3
+  requiredCount: number = 3,
+  rewardContext?: PathRewardContext
 ): boolean {
-  const lootInfo = calculateQuestLoot(enemyIds, region, 0);
+  const lootInfo = calculateQuestLoot(enemyIds, region, 0, rewardContext);
   const availableItems = lootInfo.allPossibleItems.filter(
     item => !excludeIds.includes(item.itemId)
   );

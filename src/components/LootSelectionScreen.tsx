@@ -13,6 +13,9 @@ interface LootSelectionScreenProps {
   enemyIds?: string[]; // Enemy IDs from current quest path for loot calculation
   onReroll?: () => void; // Callback to request re-roll from parent
   rerollsRemaining?: number;
+  pathLootType?: string;
+  pathDifficulty?: 'safe' | 'fair' | 'risky';
+  pathName?: string;
 }
 
 export const LootSelectionScreen: React.FC<LootSelectionScreenProps> = ({
@@ -23,6 +26,9 @@ export const LootSelectionScreen: React.FC<LootSelectionScreenProps> = ({
   enemyIds = [],
   onReroll,
   rerollsRemaining = 0,
+  pathLootType,
+  pathDifficulty,
+  pathName,
 }) => {
   const [lootPreviewOpen, setLootPreviewOpen] = useState(false);
   const [selectedLootInfo, setSelectedLootInfo] = useState<QuestLootInfo | null>(null);
@@ -37,7 +43,11 @@ export const LootSelectionScreen: React.FC<LootSelectionScreenProps> = ({
   // Check if re-roll is possible
   useEffect(() => {
     if (region && enemyIds.length > 0) {
-      const canRerollCheck = canReroll(enemyIds, region, Array.from(offeredItems), 3);
+      const canRerollCheck = canReroll(enemyIds, region, Array.from(offeredItems), 3, {
+        lootType: pathLootType,
+        difficulty: pathDifficulty,
+        pathName,
+      });
       setCanRerollMore(canRerollCheck);
     }
   }, [region, enemyIds, offeredItems]);
@@ -49,7 +59,11 @@ export const LootSelectionScreen: React.FC<LootSelectionScreenProps> = ({
     }
     
     const playerMagicFind = character.stats.magicFind || 0;
-    const lootInfo = calculateQuestLoot(enemyIds, region, playerMagicFind);
+    const lootInfo = calculateQuestLoot(enemyIds, region, playerMagicFind, {
+      lootType: pathLootType,
+      difficulty: pathDifficulty,
+      pathName,
+    });
     setSelectedLootInfo(lootInfo);
     setLootPreviewOpen(true);
   };

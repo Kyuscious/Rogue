@@ -250,21 +250,18 @@ export const GearChange: React.FC = () => {
   return (
     <div className="gear-change">
       <div className="equipped-section">
-        <div className="section-title">{t.gearChange.equippedWeapons}</div>
         <div className="gear-row">
           {Array.from({ length: 3 }).map((_, i) => renderEquippedWeapon(i))}
         </div>
       </div>
 
       <div className="equipped-section">
-        <div className="section-title">{t.gearChange.equippedSpells}</div>
         <div className="gear-row">
           {Array.from({ length: 5 }).map((_, i) => renderEquippedSpell(i))}
         </div>
       </div>
 
       <div className="equipped-section">
-        <div className="section-title">{t.gearChange.equippedItems}</div>
         <div className="gear-row">
           {Array.from({ length: 6 }).map((_, i) => renderEquippedItem(i))}
         </div>

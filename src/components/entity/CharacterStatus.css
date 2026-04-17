@@ -27,20 +27,32 @@
   gap: clamp(0.1875rem, 0.45vh, 0.25rem);
 }
 
+.status-stats-container {
+  display: flex;
+  flex: 0 0 auto;
+  width: fit-content;
+  align-items: stretch;
+  justify-content: center;
+  overflow: visible;
+}
+
 .status-buffs-container {
   display: flex;
   width: 3rem;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   overflow: hidden;
 }
 
 .status-buffs-container .buffs-display {
   margin-bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
 }
 
 .status-buffs-container .buffs-grid {
-  flex-direction: column;
+  flex-direction: column-reverse;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-start;
@@ -92,6 +104,14 @@
   gap: clamp(0.1875rem, 0.5vh, 0.25rem);
   min-width: 0;
   flex: 2;
+}
+
+.player-status .character-bottom-row {
+  align-items: stretch;
+}
+
+.enemy-status .character-bottom-row {
+  align-items: stretch;
 }
 
 .player-status .character-status-layout {
@@ -150,6 +170,7 @@
   align-items: center;
   margin-bottom: clamp(0.1875rem, 0.5vh, 0.25rem);
   gap: 8px;
+  position: relative;
 }
 
 .character-header h2 {
@@ -160,36 +181,109 @@
   text-overflow: ellipsis;
 }
 
-.class-badge {
+.character-name {
+  color: #f5f7fa;
+}
+
+.enemy-tier-minion {
+  color: #f5f7fa;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.16);
+}
+
+.enemy-tier-elite {
+  color: #ff5b5b;
+  text-shadow: 0 0 8px rgba(255, 91, 91, 0.28);
+}
+
+.enemy-tier-champion {
+  color: #2d5fb8;
+  text-shadow: 0 0 8px rgba(45, 95, 184, 0.28);
+}
+
+.enemy-tier-boss {
+  color: #ff9f1a;
+  text-shadow: 0 0 8px rgba(255, 159, 26, 0.3);
+}
+
+.enemy-tier-legend {
+  color: #ffd24a;
+  text-shadow: 0 0 8px rgba(255, 210, 74, 0.32);
+}
+
+.status-name-group {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(74, 158, 255, 0.2);
-  border: 1px solid rgba(74, 158, 255, 0.5);
-  border-radius: 4px;
-  padding: 4px 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.player-status .status-name-group {
+  justify-content: flex-end;
+}
+
+.enemy-name-group,
+.enemy-status .status-name-group {
+  justify-content: flex-start;
+}
+
+.player-status .status-name-group h2 {
+  text-align: right;
+}
+
+.enemy-status .status-name-group h2 {
+  text-align: left;
+}
+
+.status-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid rgba(74, 158, 255, 0.45);
+  background: rgba(74, 158, 255, 0.18);
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
 }
 
-.class-badge:hover {
-  background: rgba(74, 158, 255, 0.3);
-  border-color: rgba(74, 158, 255, 0.7);
-  box-shadow: 0 0 8px rgba(74, 158, 255, 0.3);
+.status-icon-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(74, 158, 255, 0.25);
 }
 
-.class-badge.blurred-class-badge {
-  background: rgba(100, 100, 100, 0.4);
-  border-color: rgba(100, 100, 100, 0.7);
-  filter: blur(1.5px);
+.class-badge {
+  border-color: rgba(74, 158, 255, 0.55);
+  background: rgba(74, 158, 255, 0.18);
+}
+
+.faction-badge {
+  border-color: rgba(91, 192, 120, 0.55);
+  background: rgba(91, 192, 120, 0.18);
+}
+
+.weapon-badge {
+  border-color: rgba(255, 196, 87, 0.55);
+  background: rgba(255, 196, 87, 0.16);
+}
+
+.spell-badge {
+  border-color: rgba(182, 122, 255, 0.55);
+  background: rgba(182, 122, 255, 0.16);
+}
+
+.blurred-status-badge {
+  filter: blur(3px) saturate(0);
+  opacity: 0.8;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
-.class-badge.blurred-class-badge:hover {
-  background: rgba(100, 100, 100, 0.4);
-  border-color: rgba(100, 100, 100, 0.7);
-  box-shadow: none;
+.status-icon {
+  font-size: 14px;
+  line-height: 1;
 }
 
 .class-icon {
@@ -197,17 +291,10 @@
   line-height: 1;
 }
 
-.class-name {
-  font-size: 11px;
-  font-weight: 600;
-  color: #4a9eff;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-/* Class tooltip */
+/* Hover tooltip */
 .class-tooltip {
   position: fixed;
+  transform: translateX(-50%);
   background: rgba(20, 20, 35, 0.98);
   border: 1.5px solid rgba(74, 158, 255, 0.6);
   border-radius: 6px;
@@ -216,12 +303,49 @@
   pointer-events: none;
   font-size: 12px;
   box-shadow: 0 0 15px rgba(74, 158, 255, 0.3);
+  max-width: min(280px, 70vw);
+}
+
+.status-hover-tooltip.weapon {
+  border-color: rgba(255, 196, 87, 0.7);
+  box-shadow: 0 0 15px rgba(255, 196, 87, 0.25);
+}
+
+.status-hover-tooltip.spell {
+  border-color: rgba(182, 122, 255, 0.7);
+  box-shadow: 0 0 15px rgba(182, 122, 255, 0.25);
+}
+
+.status-hover-tooltip.faction {
+  border-color: rgba(91, 192, 120, 0.7);
+  box-shadow: 0 0 15px rgba(91, 192, 120, 0.25);
 }
 
 .class-tooltip .tooltip-title {
   color: #4a9eff;
   font-weight: 600;
   line-height: 1.4;
+}
+
+.status-hover-tooltip.weapon .tooltip-title {
+  color: #ffc457;
+}
+
+.status-hover-tooltip.spell .tooltip-title {
+  color: #c89cff;
+}
+
+.status-hover-tooltip.faction .tooltip-title {
+  color: #78d78d;
+}
+
+.class-tooltip .tooltip-subtitle {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(220, 230, 255, 0.72);
 }
 
 .class-tooltip .tooltip-stats {
@@ -242,6 +366,14 @@
   align-items: center;
   gap: clamp(0.25rem, 0.75vw, 0.375rem);
   flex: 1;
+}
+
+.player-status .level-exp-container {
+  flex-direction: row-reverse;
+}
+
+.enemy-status .level-exp-container {
+  flex-direction: row;
 }
 
 .level {
@@ -302,6 +434,10 @@
   gap: clamp(0.1875rem, 0.6vw, 0.25rem);
 }
 
+.enemy-status .hp-bar-container {
+  flex-direction: row-reverse;
+}
+
 .hp-bar {
   flex: 1;
   height: clamp(14px, 2vh, 20px);
@@ -350,6 +486,28 @@
   min-width: clamp(55px, 11vw, 70px);
   text-align: right;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.enemy-status .hp-text {
+  text-align: left;
+}
+
+.player-status .items-bar {
+  align-self: flex-end;
+}
+
+.enemy-status .items-bar {
+  align-self: flex-start;
+}
+
+.player-status .items-bar-container {
+  justify-content: flex-start;
+  flex-direction: row-reverse;
+}
+
+.enemy-status .items-bar-container {
+  justify-content: flex-start;
+  flex-direction: row;
 }
 
 .shield-text {
@@ -558,6 +716,23 @@
 }
 
 /* Blurred class icon - when enemy is hidden */
+
+.bar-total-button {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px;
+  padding: 0 !important;
+  border-radius: 6px;
+}
+
+.bar-total-button .total-icon,
+.bar-total-button .stats-button-label {
+  font-size: 16px;
+  font-weight: 900;
+  color: #4a9eff;
+  text-shadow: 0 0 8px rgba(74, 158, 255, 0.8);
+  line-height: 1;
+}
 
 .buff-icon.total-slot {
   background: linear-gradient(135deg, rgba(74, 158, 255, 0.2) 0%, rgba(124, 58, 237, 0.2) 100%);

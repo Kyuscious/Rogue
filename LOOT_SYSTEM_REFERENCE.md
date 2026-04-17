@@ -1,7 +1,12 @@
 # Loot System Reference Guide
 
 ## Overview
-This document defines what items can drop from which enemy tiers and how rarity pools work throughout the game.
+This document defines how path loot works, which item families are shown by each route, and how rarity pools behave throughout the game.
+
+The current system is path-aware:
+- the path icon shows both loot type and difficulty
+- the icon background color indicates difficulty: green = easy, orange = fair, red = hard
+- the possible loot preview and elite or boss reward choices are filtered by the selected path context, not by the full global item list
 
 ---
 
@@ -125,13 +130,46 @@ Elite enemy, 50 Magic Find, trying to drop a specific Legendary item:
 
 ## Quest Path Loot Calculations
 
-Each quest path has multiple enemies. The loot preview aggregates ALL possible drops:
+Each quest path now carries its own reward context:
+- difficulty: safe, fair, or risky
+- loot type: damage, defense, mixed, and related variants
+- path name and description, used to support the fair route presentation
 
-1. **Resolve all enemy IDs** in the path (by region)
-2. **Get each enemy's tier** (minion/elite/champion/boss)
-3. **Calculate drop odds** for each tier using player's Magic Find
-4. **Aggregate unique items** across all possible rarities
-5. **Display grouped by rarity** with drop percentages
+The preview and reward selection now work like this:
+
+1. **Read the selected path context** from Quest Select
+2. **Map the loot icon to a class family**
+3. **Apply a difficulty-based rarity bias**
+4. **Filter the item pool** to items that match both the loot family and the allowed rarity band
+5. **Display grouped by rarity** with drop percentages based on that filtered pool
+
+### Current path rules
+
+#### Easy routes (green)
+- mainly Common rewards
+- intended for cleaner, lower-risk progression
+
+#### Fair routes (orange)
+- Common and Epic mix
+- used for balanced paths
+
+#### Hard routes (red)
+- mostly Epic, with some Legendary on stronger reward rolls
+- intended for higher-risk, higher-upgrade paths
+
+### Loot-type class mapping
+
+#### Sword or damage paths
+- classes favored: Assassin, Skirmisher, Marksman, Juggernaut
+
+#### Shield or tanky paths
+- classes favored: Vanguard, Warden, Juggernaut
+
+#### Magic paths
+- classes favored: Mage, Enchanter
+
+#### Mixed paths
+- allow a broader combined pool
 
 ---
 
@@ -175,16 +213,16 @@ Different regions should have different loot tier distributions:
 ## Loot Preview System
 
 ### Quest Select Preview
-- **Location**: QuestSelect screen, 👁️ button on each path
-- **Shows**: All possible items from ALL enemies in that path
-- **Calculations**: Uses player's current Magic Find stat
-- **Display**: Grouped by rarity with drop percentages
+- **Location**: Quest Select screen, via the eye button on each path
+- **Shows**: the filtered loot pool that route can offer for elite or boss reward selection
+- **Calculations**: uses the player's current Magic Find stat and the path's loot context
+- **Display**: grouped by rarity with drop percentages
 
 ### Battle Summary Preview
-- **Location**: BattleSummary screen during reward selection
-- **Shows**: All possible items from the boss/boss pool
-- **Purpose**: Let players see what else COULD have dropped
-- **Display**: Same format as quest select
+- **Location**: Battle Summary screen during reward selection
+- **Shows**: the same filtered loot pool for the currently selected route
+- **Purpose**: let players see what else could have appeared from that route's reward pool
+- **Display**: same format as Quest Select preview
 
 ---
 
@@ -227,13 +265,15 @@ Different regions should have different loot tier distributions:
 ### Issue: "I can see Starter items in loot preview"
 **Solution**: This has been fixed. MINION_RARITY_POOL no longer includes starter rarity.
 
-### Issue: "Every quest shows all 75 items as possible drops"
-**Cause**: Loot calculator aggregates ALL items of valid rarities
-**Clarification**: This is correct behavior! The preview shows what COULD drop, not what WILL drop. Individual drop chances are very low (usually <2% per item).
+### Issue: "A route preview shows too many unrelated items"
+**Cause**: Missing or incorrect path loot context
+**Current Behavior**: This is now fixed. Route previews should be filtered by the selected path's loot type and difficulty.
 
-### Issue: "I can see Legendary/Mythic/Exalted from Floor 1"
-**Cause**: If fighting Elite/Champion/Boss enemies, these rarities ARE possible
-**Solution**: If this feels wrong, we need to gate enemy tiers by floor/region (future enhancement)
+### Issue: "A hard shield path should not show mage or marksman gear"
+**Expected Behavior**: Hard shield paths should primarily show Vanguard, Warden, and Juggernaut items, with a mostly Epic bias and some Legendary results.
+
+### Issue: "An easy damage path should not show all rarities"
+**Expected Behavior**: Easy green sword-style routes should stay mostly Common and focus on Assassin, Skirmisher, Marksman, and Juggernaut gear
 
 ### Issue: "Loot preview button doesn't show on LootSelectionScreen"
 **Cause**: LootSelectionScreen needs `region` and `enemyIds` props passed from parent
@@ -246,11 +286,8 @@ Different regions should have different loot tier distributions:
 ### 1. Region-Specific Loot Pools
 Some items should only drop in certain regions (e.g., Freljord-themed items only in Freljord)
 
-### 2. Floor-Based Tier Gating
-- Floors 1-3: Minions only
-- Floors 4-6: Minions + Elites
-- Floors 7-9: Elites + Champions
-- Floor 10: Boss
+### 2. Encounter-Based Tier Gating
+- Not sure
 
 ### 3. Pity System
 Guarantee a Legendary+ item after X bosses with no good drops
@@ -272,7 +309,15 @@ Increase drop rate for items usable by your character's class
 | Champion  | -      | 5%   | 10%       | 15%    | 55%      | 15%     |
 | Boss      | -      | 5%   | 45%       | 35%    | 10%      | 5%      |
 
-**Note**: Percentages are base weights before Magic Find modifiers.
+### Path Reward Bias Quick Table
+
+| Path Color | Meaning | Main Rarity Bias | Typical Class Pool |
+|-----------|---------|------------------|--------------------|
+| Green | Easy | Common | Damage or defense classes based on icon |
+| Orange | Fair | Common + Epic | Balanced pool based on icon |
+| Red | Hard | Mostly Epic, some Legendary | Higher-upgrade pool based on icon |
+
+**Note**: Enemy-tier percentages are base weights before Magic Find modifiers. Path color then narrows the reward selection pool further.
 
 ---
 
