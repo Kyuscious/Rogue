@@ -33,16 +33,20 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({
   const { state } = store;
   const [selectedDestination, setSelectedDestination] = useState<Region | null>(null);
   const [selectedAction, setSelectedAction] = useState<PostRegionChoice | null>(null);
-  const [tutorialStep, setTutorialStep] = useState<RegionSelectionTutorialStep>(tutorialEnabled ? 'action' : 'done');
+  const hasTravelActions = Boolean(state.completedRegion);
+  const initialTutorialStep: RegionSelectionTutorialStep = tutorialEnabled
+    ? (hasTravelActions ? 'action' : 'region')
+    : 'done';
+  const [tutorialStep, setTutorialStep] = useState<RegionSelectionTutorialStep>(initialTutorialStep);
 
   useEffect(() => {
     if (tutorialEnabled) {
-      setTutorialStep('action');
+      setTutorialStep(hasTravelActions ? 'action' : 'region');
       return;
     }
 
     setTutorialStep('done');
-  }, [tutorialEnabled]);
+  }, [tutorialEnabled, hasTravelActions]);
 
   const isTutorialActive = tutorialEnabled && tutorialStep !== 'done';
   const isActionTutorialStep = tutorialStep === 'action' || tutorialStep === 'actionConfirm';
@@ -208,9 +212,9 @@ export const RegionSelection: React.FC<RegionSelectionProps> = ({
 
   return (
     <div className={`region-selection ${isTutorialActive ? 'tutorial-active' : ''}`}>
-      {isTutorialActive && state.completedRegion && <div className="scene-tutorial-overlay" />}
+      {isTutorialActive && <div className="scene-tutorial-overlay" />}
 
-      {isTutorialActive && state.completedRegion && (
+      {isTutorialActive && (
         <div className="scene-tutorial-dialogue-box">
           <button className="scene-tutorial-skip-top-btn" onClick={onTutorialSkip}>
             {t.tutorial.skip}

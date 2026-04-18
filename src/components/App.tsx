@@ -1183,6 +1183,9 @@ export const App: React.FC = () => {
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
+            <button className="btn-settings" onClick={handleReenableTutorial} title={t.tutorial.reenable}>
+              ❔
+            </button>
             <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>
               ⚙️
             </button>

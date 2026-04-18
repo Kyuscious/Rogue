@@ -207,8 +207,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
         return (
           <>
             {/* Single Item Stats */}
-            <div className="item-tooltip-bar" style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
-              <h4 className="tooltip-item-name">{itemData?.name} {isStacked && '(×1)'}</h4>
+            <div className={`item-tooltip-bar ${itemData?.rarity ? `rarity-${itemData.rarity}` : ''}`} style={{ left: `${tooltipPosition.x}px`, top: `${tooltipPosition.y}px` }}>
+              <h4 className={`tooltip-item-name ${itemData?.rarity ? `rarity-${itemData.rarity}` : ''}`}>{itemData?.name} {isStacked && '(×1)'}</h4>
               <p className="tooltip-item-description">{itemData?.description}</p>
               <div className="tooltip-item-stats">
                 {itemData?.stats.attackDamage && (
@@ -290,8 +290,8 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
 
             {/* Stacked Total Tooltip (only if quantity > 1) */}
             {isStacked && (
-              <div className="item-tooltip-bar stack-tooltip" style={{ left: `${tooltipPosition.x + 260}px`, top: `${tooltipPosition.y}px` }}>
-                <h4 className="tooltip-item-name">{itemData?.name} (×{quantity})</h4>
+              <div className={`item-tooltip-bar stack-tooltip ${itemData?.rarity ? `rarity-${itemData.rarity}` : ''}`} style={{ left: `${tooltipPosition.x + 260}px`, top: `${tooltipPosition.y}px` }}>
+                <h4 className={`tooltip-item-name ${itemData?.rarity ? `rarity-${itemData.rarity}` : ''}`}>{itemData?.name} (×{quantity})</h4>
                 <p className="tooltip-item-description">Total from stack</p>
                 <div className="tooltip-item-stats">
                   {itemData?.stats.attackDamage && (

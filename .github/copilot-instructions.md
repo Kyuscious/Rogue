@@ -22,6 +22,7 @@
 - Do not import React/component code into `src/game/`.
 - Keep API and game layers decoupled; pass data through function args instead of coupling store access into API clients.
 - Follow existing inventory/item patterns (`{ itemId, quantity }` + `ITEM_DATABASE` lookups).
+- UI tutorial convention: every major screen should support a reopenable contextual tutorial explaining that page, and the ❔ help button should live in the top banner/header whenever that screen has one.
 
 ## Critical Gotchas
 - Timing model is easy to break: duration effects use the documented +1 turn handling and integer-turn boundary reduction rules. Read `docs/TIMING_SYSTEM.md` before changing combat timing/buffs/cooldowns.
