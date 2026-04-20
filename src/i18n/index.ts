@@ -1,8 +1,8 @@
-import { Language, Translations } from '@game/types';
+import type { Language, Translations } from './types';
 import { en } from './translations/en/index';
 import { fr } from './translations/fr/index';
 export { LANGUAGES } from './types';
-export type { Language, LanguageOption } from './types';
+export type { Language, LanguageOption, Translations } from './types';
 
 // Translation registry
 const translations: Record<Language, Translations> = {

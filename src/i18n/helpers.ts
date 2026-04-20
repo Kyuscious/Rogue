@@ -6,7 +6,7 @@
 import { useGameStore } from '@game/store';
 import { en } from './translations/en/index';
 import { fr } from './translations/fr/index';
-import { Translations } from '@game/types';
+import type { Translations } from './types';
 
 /**
  * Get the current translations object based on selected language

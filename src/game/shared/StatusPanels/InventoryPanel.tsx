@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useGameStore } from '../../game/store';
-import { getItemById, getPassiveDescription } from '../../game/items';
+import { useGameStore } from '@game/store';
+import { getItemById, getPassiveDescription } from '@data/items';
 
 export const InventoryPanel: React.FC = () => {
   const { state } = useGameStore();
@@ -21,7 +21,7 @@ export const InventoryPanel: React.FC = () => {
         <div className="inventory-dropdown">
           {state.inventory.length > 0 ? (
             <div className="inventory-items">
-              {state.inventory.map((item, idx) => {
+              {state.inventory.map((item: { itemId: string; quantity: number }, idx: number) => {
                 const itemData = getItemById(item.itemId);
                 return (
                   <div
