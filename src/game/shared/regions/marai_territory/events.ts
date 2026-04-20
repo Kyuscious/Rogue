@@ -1,0 +1,75 @@
+import { GameEvent } from '@screens/PostRegionChoice/events/eventTypes';
+
+export const MARAI_TERRITORY_EVENTS: GameEvent[] = [
+  {
+    id: 'marai_coral_treasure',
+    title: 'Coral Treasure Cache',
+    description: 'Ancient coral structures conceal valuable treasures',
+    type: 'treasure',
+    icon: '🐚',
+    rarity: 'rare',
+    originRegions: ['marai_territory'],
+    data: {
+      treasureType: 'cache',
+      items: ['mana_crystal', 'negatron_cloak'],
+      gold: 300,
+      risk: 'none',
+    },
+  },
+  {
+    id: 'marai_siren_blessing',
+    title: 'Siren\'s Blessing',
+    description: 'The sirens recognize your strength and offer aid',
+    type: 'dialogue',
+    icon: '🌊',
+    rarity: 'epic',
+    originRegions: ['marai_territory'],
+    data: {
+      npcName: 'Sirens',
+      dialogue: 'Ethereal voices echo through the water as you are blessed with their power.',
+    },
+  },
+  {
+    id: 'marai_deep_guardian',
+    title: 'Deep Guardian\'s Trial',
+    description: 'An ancient guardian tests your worth',
+    type: 'encounter',
+    icon: '🦑',
+    rarity: 'epic',
+    originRegions: ['marai_territory'],
+    data: {
+      enemyName: 'Deep Guardian',
+      enemyLevel: 10,
+      goldReward: 350,
+      experienceReward: 175,
+    },
+  },
+  {
+    id: 'marai_leviathan_whisper',
+    title: 'Leviathan\'s Whisper',
+    description: 'The ancient Leviathan imparts forbidden knowledge',
+    type: 'dialogue',
+    icon: '👁️',
+    rarity: 'legendary',
+    originRegions: ['marai_territory'],
+    data: {
+      npcName: 'Ancient Leviathan',
+      dialogue: 'Telepathic thoughts flood your mind with ancient wisdom and power.',
+    },
+  },
+  {
+    id: 'marai_pearl_wisdom',
+    title: 'Pearl of Wisdom',
+    description: 'A luminous pearl contains knowledge of the ages',
+    type: 'treasure',
+    icon: '💎',
+    rarity: 'rare',
+    originRegions: ['marai_territory'],
+    data: {
+      treasureType: 'cache',
+      items: ['void_staff', 'mana_crystal'],
+      gold: 250,
+      risk: 'none',
+    },
+  },
+];

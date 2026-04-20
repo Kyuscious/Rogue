@@ -1,0 +1,647 @@
+.quest-select {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.35fr);
+  grid-template-rows: 1fr;
+  gap: 6px;
+  padding: 0;
+  animation: slideIn 0.3s ease-out;
+  background: transparent;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.quest-tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  z-index: 40;
+  pointer-events: none;
+}
+
+.quest-tutorial-highlight {
+  position: relative;
+  z-index: 50;
+  opacity: 1;
+  filter: none;
+}
+
+.quest-tutorial-muted {
+  position: relative;
+  z-index: 45;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.quest-tutorial-dialogue-box {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(860px, calc(100% - 30px));
+  min-height: 112px;
+  background: linear-gradient(135deg, rgba(17, 23, 39, 0.96) 0%, rgba(26, 24, 48, 0.96) 100%);
+  border: 2px solid rgba(74, 158, 255, 0.75);
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 42px 12px 12px;
+  z-index: 60;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+}
+
+.quest-tutorial-skip-top-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 1px solid rgba(255, 120, 120, 0.7);
+  background: rgba(255, 120, 120, 0.15);
+  color: #ffd8d8;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.quest-tutorial-skip-top-btn:hover {
+  background: rgba(255, 120, 120, 0.3);
+  box-shadow: 0 0 10px rgba(255, 120, 120, 0.35);
+}
+
+.quest-tutorial-character {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: rgba(74, 158, 255, 0.18);
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  flex-shrink: 0;
+}
+
+.quest-tutorial-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.quest-tutorial-speaker-name {
+  margin: 0;
+  color: #8fc3ff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.quest-tutorial-text {
+  margin: 0;
+  color: #e9f2ff;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.quest-tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quest-tutorial-action-btn {
+  border: 1px solid rgba(74, 158, 255, 0.7);
+  background: rgba(74, 158, 255, 0.2);
+  color: #e9f2ff;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.quest-tutorial-action-btn:hover {
+  background: rgba(74, 158, 255, 0.35);
+  box-shadow: 0 0 10px rgba(74, 158, 255, 0.4);
+}
+
+.quest-tutorial-action-btn.skip {
+  border-color: rgba(255, 120, 120, 0.7);
+  background: rgba(255, 120, 120, 0.15);
+  color: #ffd8d8;
+  margin-right: 8px;
+}
+
+.quest-tutorial-action-btn.skip:hover {
+  background: rgba(255, 120, 120, 0.3);
+  box-shadow: 0 0 10px rgba(255, 120, 120, 0.35);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Character Status - Top Left */
+.character-panel {
+  display: none; /* Removed - using character-section from parent instead */
+}
+
+/* Team Management - Left */
+.team-panel {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.team-panel-title,
+.team-panel-subtitle {
+  color: #8fc3ff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.team-panel-player {
+  min-width: 0;
+}
+
+.team-panel-familiars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(8, 12, 20, 0.82), rgba(5, 9, 16, 0.92));
+  border: 1px solid rgba(74, 158, 255, 0.22);
+}
+
+.team-familiar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.team-no-familiars {
+  font-size: 12px;
+  color: rgba(191, 219, 254, 0.78);
+  line-height: 1.35;
+}
+
+/* Inventory Management - Center */
+.inventory-panel {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.inventory-section {
+  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
+  border: 2px solid #4a9eff;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: fit-content;
+}
+
+.inventory-section.overflow-section {
+  border-color: #9370db;
+  background: linear-gradient(135deg, rgba(147, 112, 219, 0.1) 0%, rgba(147, 112, 219, 0.05) 100%);
+}
+
+.overflow-title {
+  color: #9370db;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+  text-shadow: 0 0 6px rgba(147, 112, 219, 0.4);
+}
+
+.overflow-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 8px;
+}
+
+.overflow-item {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(147, 112, 219, 0.5);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.overflow-item:hover {
+  border-color: #9370db;
+  background: rgba(147, 112, 219, 0.2);
+  transform: scale(1.05);
+  box-shadow: 0 0 8px rgba(147, 112, 219, 0.4);
+}
+
+.overflow-item:active {
+  cursor: grabbing;
+}
+
+.overflow-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.overflow-item .weapon-icon-text,
+.overflow-item .spell-icon-text {
+  font-size: 20px;
+  opacity: 0.7;
+}
+
+.inventory-section .weapon-selector,
+.inventory-section .spell-selector,
+.inventory-section .item-bar {
+  margin: 0;
+}
+
+/* Quests Container - Right */
+.quests-container {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+.quest-card {
+  background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%);
+  border: 2px solid #4a9eff;
+  border-radius: 8px;
+  padding: 6px;
+  animation: fadeIn 0.3s ease-out;
+  min-height: 0;
+  flex-shrink: 0;
+  font-size: 255px;
+  margin-bottom: 1rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.quest-card:hover {
+  border-color: #6ab5ff;
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.3);
+}
+
+.quest-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.reroll-quest-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: linear-gradient(135deg, #4a9eff 0%, #357abd 100%);
+  border: 2px solid #6ab5ff;
+  border-radius: 6px;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reroll-quest-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6ab5ff 0%, #4a9eff 100%);
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.6);
+  transform: scale(1.05);
+}
+
+.reroll-quest-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.reroll-quest-button:disabled {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+  border-color: #555;
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.quest-title {
+  margin: 0;
+}
+
+.quest-title h3 {
+  margin: 0;
+  color: #4a9eff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.quest-paths {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.quest-path {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  display: flex;
+  flex-direction: row;
+  font-size: 50px;
+  overflow: hidden;
+  height: auto;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.quest-path:hover {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.quest-path.easy:hover {
+  border-color: #20d66b;
+  background: rgba(32, 214, 107, 0.1);
+  box-shadow: 0 0 8px rgba(32, 214, 107, 0.2);
+}
+
+.quest-path.fair:hover {
+  border-color: #ff9f43;
+  background: rgba(255, 159, 67, 0.12);
+  box-shadow: 0 0 8px rgba(255, 159, 67, 0.22);
+}
+
+.quest-path.hard:hover {
+  border-color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.2);
+}
+
+/* Path content - horizontal layout */
+.path-content {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.path-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.path-name {
+  color: #fff;
+  font-weight: bold;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.path-description {
+  margin: 0;
+  color: #bbb;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* Icons aligned on the right */
+.path-icons {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.path-trait-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.08);
+}
+
+.path-trait-icon.easy {
+  background: rgba(32, 214, 107, 0.22);
+  color: #77ff9f;
+  border-color: rgba(32, 214, 107, 0.45);
+}
+
+.path-trait-icon.fair {
+  background: rgba(255, 159, 67, 0.22);
+  color: #ffc27a;
+  border-color: rgba(255, 159, 67, 0.45);
+}
+
+.path-trait-icon.hard {
+  background: rgba(255, 68, 68, 0.22);
+  color: #ff8c8c;
+  border-color: rgba(255, 68, 68, 0.45);
+}
+
+.loot-preview-btn {
+  background: rgba(74, 158, 255, 0.2);
+  border: 2px solid #4a9eff;
+  color: #4a9eff;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.loot-preview-btn:hover {
+  background: rgba(74, 158, 255, 0.4);
+  transform: scale(1.1);
+  box-shadow: 0 0 12px rgba(74, 158, 255, 0.6);
+}
+
+.boss-icon {
+  font-size: 25px;
+  opacity: 0.9;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+/* Old styles to remove */
+.path-header {
+  display: none;
+}
+
+.header-left {
+  display: none;
+}
+
+.path-main {
+  display: none;
+}
+
+.path-footer {
+  display: none;
+}
+
+.footer-left {
+  display: none;
+}
+
+.footer-center {
+  display: none;
+}
+
+.footer-right {
+  display: none;
+}
+
+.boss-preview-small {
+  display: none;
+}
+
+.boss-image-small {
+  display: none;
+}
+
+/* Boss preview section */
+.boss-preview {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.boss-image-placeholder {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, rgba(74, 158, 255, 0.1) 0%, rgba(74, 158, 255, 0.05) 100%);
+  border: 2px dashed #4a9eff;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #4a9eff;
+  font-weight: bold;
+  text-align: center;
+}
+
+.loot-badge {
+  background: rgba(74, 158, 255, 0.2);
+  color: #4a9eff;
+  padding: 3px 6px;
+  border-radius: 3px;
+  border: 1px solid #4a9eff;
+  font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .quest-select {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .quest-paths {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .quest-select {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .character-panel {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .inventory-panel {
+    grid-column: 1;
+    grid-row: 2;
+    max-height: 200px;
+  }
+
+  .quests-container {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}

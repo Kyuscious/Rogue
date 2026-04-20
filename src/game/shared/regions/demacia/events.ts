@@ -1,0 +1,105 @@
+import { GameEvent } from '@screens/PostRegionChoice/events/eventTypes';
+
+export const DEMACIA_EVENTS: GameEvent[] = [
+  {
+    id: 'demacia_orphans_danger',
+    title: 'Orphans in Danger',
+    description: 'Frightened orphans are trapped and need immediate help',
+    type: 'visual_novel',
+    icon: '👶',
+    rarity: 'common',
+    originRegions: ['demacia'],
+    data: {
+      narrative: 'You stumble upon orphaned children trapped in a collapsing building. They look to you for help. Time is running out.',
+      choices: [
+        {
+          id: 'rescue_orphans',
+          text: 'Risk yourself to save them',
+          outcome: 'buff',
+          value: 'demacian_hero',
+          successRate: 80,
+        },
+        {
+          id: 'get_help',
+          text: 'Quickly find the Demacian Guard to assist',
+          outcome: 'gold',
+          value: 150,
+          successRate: 95,
+        },
+      ],
+    },
+  },
+  {
+    id: 'demacia_knights',
+    title: 'Knights of Demacia',
+    description: 'Righteous Demacian Knights patrol the roads',
+    type: 'encounter',
+    icon: '🗡️',
+    rarity: 'rare',
+    originRegions: ['demacia'],
+    data: {
+      enemyName: 'Demacian Knight Commander',
+      enemyLevel: 8,
+      goldReward: 300,
+      experienceReward: 150,
+    },
+  },
+  {
+    id: 'demacia_royal_treasury',
+    title: 'Royal Treasury Vault',
+    description: 'A secret royal treasury filled with the kingdom\'s greatest treasures',
+    type: 'treasure',
+    icon: '💎',
+    rarity: 'epic',
+    originRegions: ['demacia'],
+    data: {
+      treasureType: 'vault',
+      items: ['royal_crest', 'demacian_signet'],
+      gold: 700,
+      risk: 'guarded',
+    },
+  },
+  {
+    id: 'demacia_persecuted_mage',
+    title: 'Persecuted Mage',
+    description: 'A mage fleeing Demacian persecution seeks your aid',
+    type: 'visual_novel',
+    icon: '🔮',
+    rarity: 'rare',
+    originRegions: ['demacia'],
+    data: {
+      narrative: 'A desperate mage crosses your path, hunted by Demacian authorities. They offer valuable rewards for safe passage to safety.',
+      choices: [
+        {
+          id: 'help_mage',
+          text: 'Help the mage escape',
+          outcome: 'item',
+          value: 'mage_pendant',
+          successRate: 70,
+        },
+        {
+          id: 'report_mage',
+          text: 'Report them to the authorities',
+          outcome: 'relation',
+          value: 'demacian_guard_favor',
+          successRate: 90,
+        },
+      ],
+    },
+  },
+  {
+    id: 'demacia_corruption_light',
+    title: 'Corruption in the Light',
+    description: 'Even in Demacia, darkness and corruption take root',
+    type: 'encounter',
+    icon: '🌑',
+    rarity: 'epic',
+    originRegions: ['demacia'],
+    data: {
+      enemyName: 'Corrupted Knight',
+      enemyLevel: 10,
+      goldReward: 450,
+      experienceReward: 225,
+    },
+  },
+];

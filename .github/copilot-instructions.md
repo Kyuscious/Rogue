@@ -25,9 +25,9 @@
 - UI tutorial convention: every major screen should support a reopenable contextual tutorial explaining that page, and the ❔ help button should live in the top banner/header whenever that screen has one.
 
 ## Critical Gotchas
-- Timing model is easy to break: duration effects use the documented +1 turn handling and integer-turn boundary reduction rules. Read `docs/TIMING_SYSTEM.md` before changing combat timing/buffs/cooldowns.
-- Passive refactor is in progress; hardcoded behavior still exists in battle flow. Check `docs/PASSIVE_SYSTEM_REFACTOR.md` and `docs/PASSIVE_INTEGRATION_GUIDE.md` before editing passives.
-- Revisit penalty system is documented but not fully implemented; check TODOs in `src/game/store.ts` and `docs/DIFFICULTY_SCALING.md`.
+- Timing model is easy to break: duration effects use the documented +1 turn handling and integer-turn boundary reduction rules. Read `docs/systems/combat/timing-system.md` before changing combat timing/buffs/cooldowns.
+- Passive refactor is in progress; hardcoded behavior still exists in battle flow. Check `docs/systems/passive/architecture.md` and `docs/systems/passive/integration-guide.md` before editing passives.
+- Revisit penalty system is documented but not fully implemented; check TODOs in `src/game/store.ts` and `docs/systems/combat/difficulty-scaling.md`.
 
 ## Environment
 - Frontend expects `VITE_API_URL`.
@@ -36,6 +36,6 @@
 
 ## Link-First References
 - Setup and API integration: `BACKEND_QUICKSTART.md`, `FRONTEND_INTEGRATION.md`, `BACKEND_ARCHITECTURE.md`.
-- Combat and balance: `docs/combat-formulas.md`, `docs/TIMING_SYSTEM.md`, `docs/DIFFICULTY_SCALING.md`.
-- Content and systems: `docs/CONTENT_INTEGRATION_GUIDE.md`, `docs/POST_ENCOUNTER_SYSTEM.md`, `docs/EVENT_WEIGHT_SYSTEM.md`, `docs/ASSET_LOADING.md`.
+- Combat and balance: `docs/systems/combat/formulas.md`, `docs/systems/combat/timing-system.md`, `docs/systems/combat/difficulty-scaling.md`.
+- Content and systems: `docs/guides/content-integration.md`, `docs/features/post-encounter.md`, `docs/systems/events/event-weight-system.md`, `docs/features/asset-loading.md`.
 - Full docs map and status: `docs/DOCS_INDEX.md`.

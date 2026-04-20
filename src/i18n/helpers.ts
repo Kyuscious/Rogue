@@ -3,10 +3,10 @@
  * Provides convenient access to translations throughout the codebase
  */
 
-import { useGameStore } from '../game/store';
+import { useGameStore } from '@game/store';
 import { en } from './translations/en/index';
 import { fr } from './translations/fr/index';
-import { Translations } from './types';
+import { Translations } from '@game/types';
 
 /**
  * Get the current translations object based on selected language

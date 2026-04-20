@@ -1,105 +1,84 @@
 # Documentation Index
 
-**Last Updated:** February 10, 2026
+**Last Updated:** April 19, 2026
+
+This index reflects the new category-first documentation structure. The docs root now stays intentionally minimal: the index, the reorganization proposal, and the main subfolders.
 
 ## Status Legend
 - ✅ **DONE** - Feature fully implemented and documented
 - 🚧 **WIP** - Work in progress, actively being developed
 - 📋 **PH** - Placeholder, planned for future implementation
-- 🗃️ **ARCH** - Archived, replaced or obsolete
+- 🗃️ **ARCH** - Archived, replaced, or superseded
 
 ---
 
-## Core Game Systems
+## Core Documentation
 
-### Combat & Mechanics
+### Systems - Combat & Mechanics
 | Document | Status | Description |
 |----------|--------|-------------|
-| [combat-formulas.md](combat-formulas.md) | ✅ DONE | Damage calculation, armor reduction, lifesteal, crit formulas |
-| [TIMING_SYSTEM.md](TIMING_SYSTEM.md) | ✅ DONE | Hybrid timing model - instant effects vs duration effects |
-| [BATTLE_FLEE_IMPLEMENTATION.md](BATTLE_FLEE_IMPLEMENTATION.md) | ✅ DONE | Battlefield bounds, flee termination, and no-reward battle fled flow |
-| [DIFFICULTY_SCALING.md](DIFFICULTY_SCALING.md) | 🚧 WIP | Enemy scaling, region tiers, revisit penalty (planned) |
-| [STUN_IMPLEMENTATION_GUIDE.md](STUN_IMPLEMENTATION_GUIDE.md) | 📋 PH | Stun mechanics, Shield of Daybreak, Dazzle spell (next priority) |
+| [systems/combat/formulas.md](systems/combat/formulas.md) | ✅ DONE | Damage calculation, armor reduction, lifesteal, and crit formulas |
+| [systems/combat/timing-system.md](systems/combat/timing-system.md) | ✅ DONE | Hybrid timing model for instant vs duration effects |
+| [systems/combat/difficulty-scaling.md](systems/combat/difficulty-scaling.md) | 🚧 WIP | Enemy scaling, region tiers, and revisit penalty notes |
+| [systems/combat/stun-mechanics.md](systems/combat/stun-mechanics.md) | 📋 PH | Stun behavior, Shield of Daybreak, and Dazzle notes |
+| [systems/combat/TARGETING_SYSTEM.md](systems/combat/TARGETING_SYSTEM.md) | ✅ DONE | Target selection rules for multi-enemy fights, familiars, and summons |
+| [systems/combat/enemy-ai-system.md](systems/combat/enemy-ai-system.md) | ✅ DONE | Behavior profiles, action legality, and enemy decision logic |
 
-### Passive System (Currently Being Refactored)
+### Systems - Passive, Loot, Events & Unlocks
 | Document | Status | Description |
 |----------|--------|-------------|
-| [PASSIVE_SYSTEM_REFACTOR.md](PASSIVE_SYSTEM_REFACTOR.md) | 🚧 WIP | Architecture plan for event-driven passive system |
-| [PASSIVE_INTEGRATION_GUIDE.md](PASSIVE_INTEGRATION_GUIDE.md) | 🚧 WIP | Step-by-step integration guide for Battle.tsx |
-| [PASSIVE_REFACTOR_SUMMARY.md](PASSIVE_REFACTOR_SUMMARY.md) | 🚧 WIP | Quick reference for new passive system |
-| **Note:** Hardcoded passives still in Battle.tsx (lines 802, 1149, 1540+). Refactor in progress. |
+| [systems/passive/architecture.md](systems/passive/architecture.md) | 🚧 WIP | Event-driven passive-system architecture plan |
+| [systems/passive/integration-guide.md](systems/passive/integration-guide.md) | 🚧 WIP | Step-by-step migration guide for battle integration |
+| [systems/events/event-weight-system.md](systems/events/event-weight-system.md) | ✅ DONE | Weighted random event selection and universal event rules |
+| [systems/unlocks/profile-unlocks.md](systems/unlocks/profile-unlocks.md) | ✅ DONE | Profile unlock system for starters and progression items |
+| [systems/loot/loadout-and-drops-system.md](systems/loot/loadout-and-drops-system.md) | ✅ DONE | Equipment loadouts, drop flow, and run reward handling |
+| [systems/loot/loot-system-reference.md](systems/loot/loot-system-reference.md) | ✅ DONE | Rarity pools, path filtering, and loot rules |
+| [systems/loot/loot-fixes-summary.md](systems/loot/loot-fixes-summary.md) | ✅ DONE | Known fixes and follow-up notes for the loot pipeline |
+| [systems/familiars/FAMILIAR_SYSTEM.md](systems/familiars/FAMILIAR_SYSTEM.md) | ✅ DONE | Companion roster, active slots, battle cadence, and acquisition |
 
 ### Items & Equipment
 | Document | Status | Description |
 |----------|--------|-------------|
-| [DARK_SEAL_IMPLEMENTATION.md](DARK_SEAL_IMPLEMENTATION.md) | ✅ DONE | Dark Seal + Mejai's upgrade system, Glory passive |
-| [IMMOLATE_PASSIVE_GUIDE.md](IMMOLATE_PASSIVE_GUIDE.md) | ✅ DONE | Bami's Cinder burn mechanics |
-| [IMMOLATE_IMPLEMENTATION_SUMMARY.md](IMMOLATE_IMPLEMENTATION_SUMMARY.md) | ✅ DONE | Immolate integration summary |
-| [DELVERHOLD_GREATEAXE.md](DELVERHOLD_GREATEAXE.md) | ✅ DONE | Example: Hemorrhage stacking DoT weapon |
-| [UNLOCKABLES.md](UNLOCKABLES.md) | ✅ DONE | Profile unlock system for starter items |
+| [items/dark-seal.md](items/dark-seal.md) | ✅ DONE | Unified Dark Seal and Mejai's upgrade-path reference |
+| [items/bamis-cinder.md](items/bamis-cinder.md) | ✅ DONE | Unified Immolate / burn stacking reference |
+| [items/delverhold-greateaxe.md](items/delverhold-greateaxe.md) | ✅ DONE | Example bleed/stacking weapon reference |
 
-### Post-Encounter System
+### Player-Facing Features
 | Document | Status | Description |
 |----------|--------|-------------|
-| [POST_ENCOUNTER_SYSTEM.md](POST_ENCOUNTER_SYSTEM.md) | ✅ DONE | Comprehensive system documentation (unified) |
+| [features/post-encounter.md](features/post-encounter.md) | ✅ DONE | Unified post-encounter reward and choice flow reference |
+| [features/asset-loading.md](features/asset-loading.md) | ✅ DONE | Region-based asset loading and loading-screen flow |
+| [features/loot-preview.md](features/loot-preview.md) | ✅ DONE | Loot preview and smart reroll feature overview |
+| [features/battle-flee.md](features/battle-flee.md) | ✅ DONE | Battlefield bounds, flee flow, and no-reward handling |
+| [features/battle-log.md](features/battle-log.md) | ✅ DONE | Battle log behavior, display guidance, and event messaging |
+| [features/viewport-scrolling.md](features/viewport-scrolling.md) | ✅ DONE | Viewport and CSS scrolling fixes |
 
-**Note:** Previously had 3 separate docs (SYSTEM, IMPLEMENTATION, QUICK_REF). Consider unifying into single doc.
-
-### Events & Rewards
+### Guides & Visual References
 | Document | Status | Description |
 |----------|--------|-------------|
-| [EVENT_WEIGHT_SYSTEM.md](EVENT_WEIGHT_SYSTEM.md) | ✅ DONE | Weighted random event selection, Runeterra universal events |
-
-### Asset Management
-| Document | Status | Description |
-|----------|--------|-------------|
-| [ASSET_LOADING.md](ASSET_LOADING.md) | ✅ DONE | Region-based asset loading system |
-| [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) | ✅ DONE | Asset loading implementation details |
-
-### UI/UX
-| Document | Status | Description |
-|----------|--------|-------------|
-| [VIEWPORT_SCROLLING_FIX.md](VIEWPORT_SCROLLING_FIX.md) | ✅ DONE | Global CSS reset, viewport height fixes |
-| [INDEX_GUIDE.md](INDEX_GUIDE.md) | ✅ DONE | Game Index tabs, discovery rules, and codex visibility behavior |
-| [RARITY_VISUAL_GUIDE.md](RARITY_VISUAL_GUIDE.md) | ✅ DONE | Rarity palette, icon borders, and origin metadata conventions |
-
-### Content Creation
-| Document | Status | Description |
-|----------|--------|-------------|
-| [CONTENT_INTEGRATION_GUIDE.md](CONTENT_INTEGRATION_GUIDE.md) | ✅ DONE | Step-by-step guide for adding items, characters, regions |
+| [guides/content-integration.md](guides/content-integration.md) | ✅ DONE | Step-by-step guide for adding items, characters, and regions |
+| [guides/index-guide.md](guides/index-guide.md) | ✅ DONE | Index tabs, discovery rules, and codex visibility behavior |
+| [guides/rarity-visual-guide.md](guides/rarity-visual-guide.md) | ✅ DONE | Rarity palette, borders, and origin metadata conventions |
+| [guides/project-structure.md](guides/project-structure.md) | ✅ DONE | Feature-first folder ownership and refactor conventions |
 
 ---
 
-## Proposed Reorganization
+## Documentation Layout
 
-Consider creating subfolders for better organization as documentation grows:
-
-```
+```text
 docs/
-├── DOCS_INDEX.md (this file)
-├── systems/
-│   ├── combat/
-│   │   ├── combat-formulas.md
-│   │   ├── TIMING_SYSTEM.md
-│   │   ├── DIFFICULTY_SCALING.md
-│   │   └── STUN_IMPLEMENTATION_GUIDE.md
-│   ├── passive/
-│   │   ├── PASSIVE_SYSTEM_REFACTOR.md
-│   │   ├── PASSIVE_INTEGRATION_GUIDE.md
-│   │   └── PASSIVE_REFACTOR_SUMMARY.md
-│   └── events/
-│       └── EVENT_WEIGHT_SYSTEM.md
-├── items/
-│   ├── DARK_SEAL_IMPLEMENTATION.md
-│   ├── IMMOLATE_PASSIVE_GUIDE.md
-│   ├── DELVERHOLD_GREATEAXE.md
-│   └── UNLOCKABLES.md
+├── DOCS_INDEX.md
+├── DOCS_REORGANIZATION_PROPOSAL.md
 ├── features/
-│   ├── POST_ENCOUNTER_SYSTEM.md
-│   ├── ASSET_LOADING.md
-│   └── VIEWPORT_SCROLLING_FIX.md
-└── guides/
-    └── CONTENT_INTEGRATION_GUIDE.md
+├── guides/
+├── items/
+└── systems/
+    ├── combat/
+    ├── events/
+    ├── familiars/
+    ├── loot/
+    ├── passive/
+    └── unlocks/
 ```
 
 ---
@@ -107,30 +86,33 @@ docs/
 ## Quick Access by Task
 
 ### I want to add...
-- **New item** → [CONTENT_INTEGRATION_GUIDE.md](CONTENT_INTEGRATION_GUIDE.md) (Section 1)
-- **New character** → [CONTENT_INTEGRATION_GUIDE.md](CONTENT_INTEGRATION_GUIDE.md) (Section 2)
-- **New passive** → [PASSIVE_INTEGRATION_GUIDE.md](PASSIVE_INTEGRATION_GUIDE.md) (WIP - check after refactor)
-- **New region** → [CONTENT_INTEGRATION_GUIDE.md](CONTENT_INTEGRATION_GUIDE.md) (Section 4)
+- **New item** → [guides/content-integration.md](guides/content-integration.md)
+- **New familiar** → [systems/familiars/FAMILIAR_SYSTEM.md](systems/familiars/FAMILIAR_SYSTEM.md)
+- **New character** → [guides/content-integration.md](guides/content-integration.md)
+- **New passive** → [systems/passive/integration-guide.md](systems/passive/integration-guide.md)
+- **New region** → [guides/content-integration.md](guides/content-integration.md)
 
 ### I need to understand...
-- **Combat damage** → [combat-formulas.md](combat-formulas.md)
-- **Turn timing** → [TIMING_SYSTEM.md](TIMING_SYSTEM.md)
-- **How buffs work** → [TIMING_SYSTEM.md](TIMING_SYSTEM.md) + [PASSIVE_SYSTEM_REFACTOR.md](PASSIVE_SYSTEM_REFACTOR.md)
-- **Item unlocks** → [UNLOCKABLES.md](UNLOCKABLES.md)
-- **Index / codex rules** → [INDEX_GUIDE.md](INDEX_GUIDE.md)
+- **Combat damage** → [systems/combat/formulas.md](systems/combat/formulas.md)
+- **Turn timing** → [systems/combat/timing-system.md](systems/combat/timing-system.md)
+- **How targeting works** → [systems/combat/TARGETING_SYSTEM.md](systems/combat/TARGETING_SYSTEM.md)
+- **How buffs work** → [systems/combat/timing-system.md](systems/combat/timing-system.md) + [systems/passive/architecture.md](systems/passive/architecture.md)
+- **How loot works** → [systems/loot/loot-system-reference.md](systems/loot/loot-system-reference.md)
+- **Item unlocks** → [systems/unlocks/profile-unlocks.md](systems/unlocks/profile-unlocks.md)
+- **Index / codex rules** → [guides/index-guide.md](guides/index-guide.md)
 
 ### I'm fixing a bug in...
-- **Battle system** → Check [combat-formulas.md](combat-formulas.md) + [TIMING_SYSTEM.md](TIMING_SYSTEM.md)
-- **Passive effects** → [PASSIVE_INTEGRATION_GUIDE.md](PASSIVE_INTEGRATION_GUIDE.md) (note: refactor in progress)
-- **Post-battle rewards** → [POST_ENCOUNTER_SYSTEM.md](POST_ENCOUNTER_SYSTEM.md)
+- **Battle system** → [systems/combat/formulas.md](systems/combat/formulas.md) + [systems/combat/timing-system.md](systems/combat/timing-system.md)
+- **Passive effects** → [systems/passive/integration-guide.md](systems/passive/integration-guide.md)
+- **Post-battle rewards** → [features/post-encounter.md](features/post-encounter.md)
+- **Reward previews** → [features/loot-preview.md](features/loot-preview.md)
 
 ---
 
 ## Active Development
 
-**Current Focus:** Passive system refactor
-- New event-driven system designed ✅
-- Integration into Battle.tsx pending 🚧
-- Hardcoded passives still present (to be removed)
-
-**Next Priority:** Stun mechanics implementation
+**Current Focus:** Multi-enemy combat polish, familiars, and passive cleanup
+- Familiar roster, team slots, event rewards, and battle cadence implemented ✅
+- Multi-enemy targeting foundation is in place ✅
+- Hardcoded passive cleanup is still ongoing 🚧
+- Documentation has now been reorganized and deduplicated ✅

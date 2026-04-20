@@ -1,16 +1,16 @@
 # Documentation Reorganization Proposal
 
-**STATUS:** 📋 PH - Proposed structure for future reorganization  
-**LAST UPDATED:** February 10, 2026
+**STATUS:** ✅ DONE - Proposed structure has now been implemented  
+**LAST UPDATED:** April 19, 2026
 
 ## Current Status Summary
 
 ✅ **DONE:**
 - All docs now have status headers (✅ DONE, 🚧 WIP, 📋 PH)
 - Created master DOCS_INDEX.md with quick navigation
-- Clarified fractional duration behavior in TIMING_SYSTEM.md
-- Identified hardcoded passives still in Battle.tsx (lines 802, 1149, 1540+)
-- Marked STUN_IMPLEMENTATION_GUIDE.md as 📋 PLANNED (next priority)
+- Consolidated overlapping docs into unified item/feature references
+- Moved system, item, feature, and guide docs into their category folders
+- Reduced the docs root to the intended high-level entry points
 
 ## Issues Found
 
@@ -148,17 +148,17 @@ Before implementing, decide:
 3. **Naming?** Keep UPPERCASE or switch to lowercase-with-hyphens?
 4. **Consolidation?** Which files to merge first?
 
-## Recommendation
+## Outcome
 
-**Start small:**
-1. ✅ DONE - Add status headers (completed)
-2. ✅ DONE - Create DOCS_INDEX.md (completed)
-3. 🚧 NEXT - Consolidate post-encounter docs (easiest merge)
-4. 🚧 NEXT - Create `systems/passive/` folder (you're working on this now)
-5. 📋 LATER - Full reorganization after passive system complete
+The category-first structure has now been applied:
+1. ✅ Root docs were reduced to the index and proposal
+2. ✅ System docs were grouped under `systems/`
+3. ✅ Item-specific docs were grouped under `items/`
+4. ✅ Feature docs were grouped under `features/`
+5. ✅ Key duplicates were consolidated into unified references
 
-This keeps momentum while improving organization incrementally.
+This keeps the documentation scalable and much easier to navigate.
 
 ---
 
-**What do you think?** Want to consolidate post-encounter docs first as a test case?
+Use `DOCS_INDEX.md` as the main entry point for future doc discovery.

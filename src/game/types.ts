@@ -1,4 +1,4 @@
-import { CharacterStats } from './statsSystem';
+import { CharacterStats } from '@utils/statsSystem';
 
 export type Region = 
   | 'demacia' 
@@ -78,6 +78,17 @@ export interface Character {
   };
   enemyWeaponCooldowns?: Record<string, number>; // Weapon ID -> turns remaining
   enemySpellCooldowns?: Record<string, number>; // Spell ID -> turns remaining
+  battleInstanceId?: string; // Unique per-battle instance ID for targeting multiple copies of the same unit
+  ownerId?: string; // Summoner/owner identifier for summons or pets
+  isSummon?: boolean; // Whether this unit is a summoned combatant
+  targetPriority?: number; // Higher values make this unit more likely to be targeted
+  canBeTargeted?: boolean; // Supports hidden/untargetable states in future systems
+  lootDrops?: {
+    weapons?: Array<{ weaponId: string; chance: number }>;
+    spells?: Array<{ spellId: string; chance: number }>;
+    items?: Array<{ itemId: string; chance: number; quantity?: number }>;
+    familiars?: Array<{ familiarId: string; chance: number }>;
+  };
 }
 
 export interface Ability {
@@ -122,9 +133,11 @@ export interface GameState {
   selectedQuestId: string | null;
   selectedQuestPathId: string | null;
   startingItemSelected: boolean;
-  // Weapons & Spells System
+  // Weapons, Spells & Familiar System
   weapons: string[]; // Up to 3 weapon IDs
   spells: string[]; // Up to 5 spell IDs
+  familiars: string[]; // First 2 entries are the active familiar team
+  familiarStates: Record<string, { currentHp: number }>;
   equippedWeaponIndex: number; // Index of currently equipped weapon (0-2)
   equippedSpellIndex: number; // Index of currently equipped spell (0-4)
   spellCooldowns: Record<string, number>; // Spell ID -> turns remaining until usable

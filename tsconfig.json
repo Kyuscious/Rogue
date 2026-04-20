@@ -17,7 +17,19 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@game/*": ["src/game/*"],
+      "@data/*": ["src/game/data/*"],
+      "@utils/*": ["src/game/utils/*"],
+      "@entities/*": ["src/game/entity/*"],
+      "@shared/*": ["src/game/shared/*"],
+      "@battle/*": ["src/game/screens/Battle/*"],
+      "@screens/*": ["src/game/screens/*"],
+      "@i18n/*": ["src/i18n/*"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

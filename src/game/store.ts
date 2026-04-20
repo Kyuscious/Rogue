@@ -1,17 +1,18 @@
 import { create } from 'zustand';
-import { Character, InventoryItem, Region, CharacterClass } from './types';
-import { DEFAULT_STATS } from './statsSystem';
-import { STARTING_ITEMS, ITEM_DATABASE, getRandomShopItemByAct } from './items';
-import { checkLevelUp, getLevelUpStatBoosts } from './experienceSystem';
-import { incrementBattlesWon, incrementRunsFailed, discoverItem, discoverConnection, getActiveProfileId, visitRegion, unlockItem } from './profileSystem';
-import { REGION_SHOP_POOLS } from './rewardPool';
-import { CombatBuff } from './itemSystem';
-import { spawnEnemies, deepCopyEnemies } from './battle/enemySpawning';
-import { calculatePlayerMaxHp, applyItemToPlayer, removeItemFromPlayer, applyLevelUp } from './battle/playerStats';
-import { PostRegionChoice } from './postRegionChoice';
-import { getStarterEquipment, hasStarterEquipment } from './starterEquipment';
+import { Character, InventoryItem, Region, CharacterClass } from '@game/types';
+import { DEFAULT_STATS } from '@utils/statsSystem';
+import { STARTING_ITEMS, ITEM_DATABASE, getRandomShopItemByAct } from '@data/items';
+import { checkLevelUp, getLevelUpStatBoosts } from '../game/entity/Player/experienceSystem';
+import { incrementBattlesWon, incrementRunsFailed, discoverItem, discoverConnection, getActiveProfileId, visitRegion, unlockItem } from '../game/screens/MainMenu/Profiles/profileSystem';
+import { REGION_SHOP_POOLS } from '@data/rewardPool';
+import { CombatBuff } from '@utils/itemSystem';
+import { spawnEnemies, deepCopyEnemyQueue } from '@battle/Field/enemySpawning';
+import { calculatePlayerMaxHp, applyItemToPlayer, removeItemFromPlayer, applyLevelUp } from '../game/entity/Player/playerStats';
+import { PostRegionChoice } from '../game/screens/PostRegionChoice/postRegionChoice';
+import { getStarterEquipment, hasStarterEquipment } from '../game/screens/PreGameSetup/starterEquipment';
 import { Language } from '../i18n';
-import { AudioSettings, audioManager } from './audioManager';
+import { AudioSettings, audioManager } from '../game/screens/Settings/audioManager';
+import { getFamiliarById, getFamiliarMaxHp, initializeFamiliarState } from '../game/entity/Player/familiars';
 
 /**
  * Detect browser language and return supported language code
@@ -118,11 +119,66 @@ export interface ShopSlot {
   soldOut: boolean;
 }
 
+function clampListIndex(index: number, maxIndex: number): number {
+  return Math.max(0, Math.min(index, maxIndex));
+}
+
+function moveArrayEntry<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  if (items.length === 0 || fromIndex === toIndex) return [...items];
+
+  const nextItems = [...items];
+  const [movedItem] = nextItems.splice(fromIndex, 1);
+  nextItems.splice(toIndex, 0, movedItem);
+  return nextItems;
+}
+
+function remapSelectedIndex(selectedIndex: number, fromIndex: number, toIndex: number): number {
+  if (selectedIndex === fromIndex) return toIndex;
+  if (fromIndex < selectedIndex && selectedIndex <= toIndex) return selectedIndex - 1;
+  if (toIndex <= selectedIndex && selectedIndex < fromIndex) return selectedIndex + 1;
+  return selectedIndex;
+}
+
+function isConsumableInventoryItem(item: InventoryItem): boolean {
+  return ITEM_DATABASE[item.itemId]?.consumable === true;
+}
+
+function reorderConsumableInventory(
+  inventory: InventoryItem[],
+  fromIndex: number,
+  toIndex: number
+): InventoryItem[] {
+  const consumables = inventory.filter(isConsumableInventoryItem);
+
+  if (
+    consumables.length === 0 ||
+    fromIndex < 0 ||
+    fromIndex >= consumables.length ||
+    toIndex < 0 ||
+    toIndex >= consumables.length
+  ) {
+    return inventory;
+  }
+
+  const reorderedConsumables = moveArrayEntry(consumables, fromIndex, toIndex);
+  let consumableCursor = 0;
+
+  return inventory.map((entry) => {
+    if (!isConsumableInventoryItem(entry)) {
+      return entry;
+    }
+
+    const nextEntry = reorderedConsumables[consumableCursor];
+    consumableCursor += 1;
+    return nextEntry;
+  });
+}
+
 export interface GameStoreState {
   state: {
     playerCharacter: Character;
     enemyCharacters: Character[];
-    originalEnemyQueue: Character[]; // Unprocessed original enemies for future encounters
+    originalEnemyQueue: Character[][]; // Unprocessed future encounters, each entry can contain one or more enemies
     inventory: InventoryItem[];
     gold: number;
     rerolls: number; // Global reroll currency for the entire run
@@ -143,9 +199,11 @@ export interface GameStoreState {
     // Persistent buff system
     persistentBuffs: CombatBuff[]; // Buffs that persist across encounters (e.g., elixirs)
     encountersCompleted: number; // Total encounters completed in current run
-    // Weapons & Spells System
+    // Weapons, Spells & Familiar System
     weapons: string[]; // Up to 3 weapon IDs
     spells: string[]; // Up to 5 spell IDs
+    familiars: string[]; // First 2 entries are the active familiar team
+    familiarStates: Record<string, { currentHp: number }>;
     equippedWeaponIndex: number; // Index of currently equipped weapon (0-2)
     equippedSpellIndex: number; // Index of currently equipped spell (0-4)
     spellCooldowns: Record<string, number>; // Spell ID -> turns remaining until usable
@@ -153,10 +211,8 @@ export interface GameStoreState {
     revealedEnemies: Record<string, number>; // Enemy ID -> encounters remaining where they stay revealed (0 = not revealed, 1 = stealth_ward effect, 5+ = control_ward effect)
     // Quest Path Completion Tracking
     completedQuestPaths: string[]; // Track completed paths this run (format: "questId:pathId")
-    // Post-Region Choice System
-    showPostRegionChoice: boolean; // Show post-region choice UI after completing region
-    completedRegion: Region | null; // Region just completed (for random events)
-    postRegionChoiceComplete: boolean; // Flag set to true when user makes a choice, App.tsx watches this
+    // Post-Region travel flow
+    completedRegion: Region | null; // Region just completed (for travel actions)
     pendingPostRegionAction: PostRegionChoice | null; // Action selected to perform before traveling to next region
     // Event weight modifiers (for items that modify event probabilities)
     eventWeightModifiers: Record<string, number>; // Event ID -> weight multiplier (e.g., "treasure_events": 2.0)
@@ -178,7 +234,7 @@ export interface GameStoreState {
   markQuestPathCompleted: (questId: string, pathId: string) => void; // Mark a quest path as completed in this run
   resetFloor: () => void; // Reset floor counter when starting a new quest
   setCurrentFloor: (floor: number) => void;
-  startBattle: (enemies: Character[]) => void;
+  startBattle: (enemies: Character[] | Character[][]) => void;
   endBattle: () => void;
   addGold: (amount: number) => void;
   addRerolls: (amount: number) => void;
@@ -210,23 +266,27 @@ export interface GameStoreState {
   // Weapons & Spells management
   equipWeapon: (index: number) => void; // Switch to weapon at index (0-2)
   equipSpell: (index: number) => void; // Switch to spell at index (0-4)
-  addWeapon: (weaponId: string) => void; // Add weapon to collection (max 3)
-  addSpell: (spellId: string) => void; // Add spell to collection (max 5)
+  addWeapon: (weaponId: string) => void; // Add weapon to collection
+  addSpell: (spellId: string) => void; // Add spell to collection
+  addFamiliar: (familiarId: string) => void; // Add familiar to collection
   removeWeapon: (index: number) => void; // Remove weapon from collection
   removeSpell: (index: number) => void; // Remove spell from collection
+  removeFamiliar: (index: number) => void; // Remove familiar from collection
+  reorderWeapons: (fromIndex: number, toIndex: number) => void; // Reorder weapons between equipped slots and reserve inventory
+  reorderSpells: (fromIndex: number, toIndex: number) => void; // Reorder spells between equipped slots and reserve inventory
+  reorderFamiliars: (fromIndex: number, toIndex: number) => void; // Reorder familiars between active slots and reserve inventory
+  reorderConsumableItems: (fromIndex: number, toIndex: number) => void; // Reorder use items between equipped slots and reserve inventory
+  updateFamiliarHp: (familiarId: string, newHp: number) => void; // Update familiar HP for the current run
   setPlayerClass: (newClass: CharacterClass) => void; // Change player class
   // Revealed enemies management (stealth/control ward mechanic)
   revealEnemy: (enemyId: string, duration: number) => void; // Reveal an enemy for N encounters (1 for stealth, 5 for control)
   isEnemyRevealed: (enemyId: string) => boolean; // Check if enemy is currently revealed
   decayRevealedEnemies: () => void; // Decrement all revealed enemy counters (call after each battle)
-  // Post-Region Choice methods
+  // Post-Region travel methods
   setCompletedRegion: (region: Region | null) => void; // Set completed region for travel actions
-  showPostRegionChoiceScreen: (region: Region) => void; // Show post-region choice UI
-  hidePostRegionChoiceScreen: () => void; // Hide post-region choice UI
-  applyRestChoice: () => void; // Rest and heal to full HP
   applyRestAction: (action: 'meditate' | 'train' | 'scout') => void; // Apply selected rest action with effects
   setPostRegionAction: (action: PostRegionChoice | null) => void; // Store action selected during region selection
-  clearPostRegionCompletion: () => void; // Clear completion flag after navigation
+  clearPostRegionCompletion: () => void; // Clear post-region navigation state
   // Event weight modifiers (RNG system for event selection)
   modifyEventWeight: (eventId: string, multiplier: number) => void; // Modify weight of specific event (e.g., 2.0 = double chance)
   modifyEventTypeWeight: (eventType: string, multiplier: number) => void; // Modify all events of a type (e.g., "treasure" -> 1.5x)
@@ -278,9 +338,11 @@ export const useGameStore = create<GameStoreState>((set) => ({
     // Persistent buffs
     persistentBuffs: [],
     encountersCompleted: 0,
-    // Weapons & Spells System
+    // Weapons, Spells & Familiar System
     weapons: [], // Start with no weapons
     spells: [], // Start with no spells
+    familiars: [],
+    familiarStates: {},
     equippedWeaponIndex: 0, // First weapon equipped
     equippedSpellIndex: 0, // First spell equipped
     spellCooldowns: {}, // Track spell cooldowns
@@ -293,10 +355,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
     audioSettings: getInitialAudioSettings(),
     // Theme customization (prevents extension interference)
     themeSettings: getInitialThemeSettings(),
-    // Post-Region Choice System
-    showPostRegionChoice: false,
+    // Post-Region travel flow
     completedRegion: null,
-    postRegionChoiceComplete: false,
     pendingPostRegionAction: null,
     // Event weight modifiers (RNG system)
     eventWeightModifiers: {}, // Event ID -> multiplier
@@ -455,9 +515,11 @@ export const useGameStore = create<GameStoreState>((set) => ({
       },
     })),
 
-  startBattle: (enemies: Character[]) =>
+  startBattle: (enemies: Character[] | Character[][]) =>
     set((store) => {
       const newFloor = store.state.currentFloor + 1;
+      const encounterQueue = (Array.isArray(enemies[0]) ? enemies : [enemies]) as Character[][];
+      const [currentEncounter = [], ...remainingEncounterQueue] = encounterQueue;
       
       // Track battle won for profile
       if (newFloor > 1) {
@@ -485,12 +547,14 @@ export const useGameStore = create<GameStoreState>((set) => ({
       
       // Use battle system to spawn and scale enemies
       const currentRegion = store.state.selectedRegion || 'demacia';
-      const spawnedEnemies = spawnEnemies(
-        enemies,
-        newFloor,
-        store.state.encountersCompleted,
-        currentRegion
-      );
+      const spawnedEnemies = currentEncounter.length > 0
+        ? spawnEnemies(
+            currentEncounter,
+            newFloor,
+            store.state.encountersCompleted,
+            currentRegion
+          )
+        : [];
       
       return {
         state: {
@@ -498,7 +562,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           currentFloor: newFloor,
           spellCooldowns: updatedCooldowns,
           playerCharacter: updatedPlayer,
-          originalEnemyQueue: deepCopyEnemies(enemies),
+          originalEnemyQueue: deepCopyEnemyQueue(remainingEncounterQueue),
           enemyCharacters: spawnedEnemies,
         },
       };
@@ -743,13 +807,13 @@ export const useGameStore = create<GameStoreState>((set) => ({
           encountersCompleted: 0,
           weapons: [], // Start with no weapons
           spells: [], // Start with no spells
+          familiars: [],
+          familiarStates: {},
           equippedWeaponIndex: 0,
           equippedSpellIndex: 0,
           spellCooldowns: {},
           revealedEnemies: {},
           completedQuestPaths: [], // Reset completed paths for new run
-          showPostRegionChoice: false,
-          postRegionChoiceComplete: false,
           completedRegion: null,
           pendingPostRegionAction: null,
           eventWeightModifiers: {}, // Reset event RNG modifiers
@@ -1013,7 +1077,21 @@ export const useGameStore = create<GameStoreState>((set) => ({
           );
         }
         
-        set({ state: loadedState });
+        set((store) => ({
+          state: {
+            ...store.state,
+            ...loadedState,
+            weapons: loadedState.weapons || [],
+            spells: loadedState.spells || [],
+            familiars: loadedState.familiars || [],
+            familiarStates: loadedState.familiarStates || {},
+            spellCooldowns: loadedState.spellCooldowns || {},
+            revealedEnemies: loadedState.revealedEnemies || {},
+            completedQuestPaths: loadedState.completedQuestPaths || [],
+            eventWeightModifiers: loadedState.eventWeightModifiers || {},
+            globalEventWeightModifier: loadedState.globalEventWeightModifier || 1.0,
+          },
+        }));
         console.log('Run loaded successfully');
         return true;
       }
@@ -1288,10 +1366,10 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   addWeapon: (weaponId: string) =>
     set((store) => {
-      if (store.state.weapons.length >= 3) {
-        console.warn('Cannot carry more than 3 weapons');
+      if (store.state.weapons.includes(weaponId)) {
         return store;
       }
+
       return {
         state: {
           ...store.state,
@@ -1302,14 +1380,37 @@ export const useGameStore = create<GameStoreState>((set) => ({
 
   addSpell: (spellId: string) =>
     set((store) => {
-      if (store.state.spells.length >= 5) {
-        console.warn('Cannot carry more than 5 spells');
+      if (store.state.spells.includes(spellId)) {
         return store;
       }
+
       return {
         state: {
           ...store.state,
           spells: [...store.state.spells, spellId],
+        },
+      };
+    }),
+
+  addFamiliar: (familiarId: string) =>
+    set((store) => {
+      if (!getFamiliarById(familiarId)) {
+        console.warn(`Invalid familiar id: ${familiarId}`);
+        return store;
+      }
+
+      if (store.state.familiars.includes(familiarId)) {
+        return store;
+      }
+
+      return {
+        state: {
+          ...store.state,
+          familiars: [...store.state.familiars, familiarId],
+          familiarStates: {
+            ...store.state.familiarStates,
+            [familiarId]: store.state.familiarStates[familiarId] || initializeFamiliarState(familiarId),
+          },
         },
       };
     }),
@@ -1354,6 +1455,119 @@ export const useGameStore = create<GameStoreState>((set) => ({
       };
     }),
 
+  removeFamiliar: (index: number) =>
+    set((store) => {
+      if (index < 0 || index >= store.state.familiars.length) {
+        console.warn(`Invalid familiar index: ${index}`);
+        return store;
+      }
+
+      const familiarId = store.state.familiars[index];
+      const newFamiliars = store.state.familiars.filter((_, i) => i !== index);
+      const nextStates = { ...store.state.familiarStates };
+      delete nextStates[familiarId];
+
+      return {
+        state: {
+          ...store.state,
+          familiars: newFamiliars,
+          familiarStates: nextStates,
+        },
+      };
+    }),
+
+  reorderWeapons: (fromIndex: number, toIndex: number) =>
+    set((store) => {
+      const weaponCount = store.state.weapons.length;
+      if (weaponCount <= 1 || fromIndex < 0 || fromIndex >= weaponCount) {
+        return store;
+      }
+
+      const boundedToIndex = clampListIndex(toIndex, weaponCount - 1);
+      const newWeapons = moveArrayEntry(store.state.weapons, fromIndex, boundedToIndex);
+      const newEquippedIndex = remapSelectedIndex(store.state.equippedWeaponIndex, fromIndex, boundedToIndex);
+
+      return {
+        state: {
+          ...store.state,
+          weapons: newWeapons,
+          equippedWeaponIndex: newEquippedIndex,
+        },
+      };
+    }),
+
+  reorderSpells: (fromIndex: number, toIndex: number) =>
+    set((store) => {
+      const spellCount = store.state.spells.length;
+      if (spellCount <= 1 || fromIndex < 0 || fromIndex >= spellCount) {
+        return store;
+      }
+
+      const boundedToIndex = clampListIndex(toIndex, spellCount - 1);
+      const newSpells = moveArrayEntry(store.state.spells, fromIndex, boundedToIndex);
+      const newEquippedIndex = remapSelectedIndex(store.state.equippedSpellIndex, fromIndex, boundedToIndex);
+
+      return {
+        state: {
+          ...store.state,
+          spells: newSpells,
+          equippedSpellIndex: newEquippedIndex,
+        },
+      };
+    }),
+
+  reorderFamiliars: (fromIndex: number, toIndex: number) =>
+    set((store) => {
+      const familiarCount = store.state.familiars.length;
+      if (familiarCount <= 1 || fromIndex < 0 || fromIndex >= familiarCount) {
+        return store;
+      }
+
+      const boundedToIndex = clampListIndex(toIndex, familiarCount - 1);
+      const newFamiliars = moveArrayEntry(store.state.familiars, fromIndex, boundedToIndex);
+
+      return {
+        state: {
+          ...store.state,
+          familiars: newFamiliars,
+        },
+      };
+    }),
+
+  reorderConsumableItems: (fromIndex: number, toIndex: number) =>
+    set((store) => {
+      const consumableCount = store.state.inventory.filter(isConsumableInventoryItem).length;
+      if (consumableCount <= 1 || fromIndex < 0 || fromIndex >= consumableCount) {
+        return store;
+      }
+
+      const boundedToIndex = clampListIndex(toIndex, consumableCount - 1);
+      const newInventory = reorderConsumableInventory(store.state.inventory, fromIndex, boundedToIndex);
+
+      return {
+        state: {
+          ...store.state,
+          inventory: newInventory,
+        },
+      };
+    }),
+
+  updateFamiliarHp: (familiarId: string, newHp: number) =>
+    set((store) => {
+      const maxHp = getFamiliarMaxHp(familiarId);
+      return {
+        state: {
+          ...store.state,
+          familiarStates: {
+            ...store.state.familiarStates,
+            [familiarId]: {
+              currentHp: Math.max(0, Math.min(Math.round(newHp), maxHp)),
+            },
+          },
+        },
+      };
+    }),
+
   // Post-Region Choice Methods
   setCompletedRegion: (region: Region | null) =>
     set((store) => ({
@@ -1362,42 +1576,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
         completedRegion: region,
       },
     })),
-
-  showPostRegionChoiceScreen: (region: Region) =>
-    set((store) => ({
-      state: {
-        ...store.state,
-        showPostRegionChoice: true,
-        completedRegion: region,
-      },
-    })),
-
-  hidePostRegionChoiceScreen: () =>
-    set((store) => ({
-      state: {
-        ...store.state,
-        showPostRegionChoice: false,
-        postRegionChoiceComplete: true, // Signal that user made a choice
-        completedRegion: null,
-      },
-    })),
-
-  applyRestChoice: () =>
-    set((store) => {
-      const maxHp = calculatePlayerMaxHp(store.state.playerCharacter);
-      return {
-        state: {
-          ...store.state,
-          playerCharacter: {
-            ...store.state.playerCharacter,
-            hp: maxHp,
-          },
-          postRegionChoiceComplete: true, // Signal that user made a choice
-          showPostRegionChoice: false,
-          // Don't clear completedRegion - let it persist until region selection is complete
-        },
-      };
-    }),
 
   applyRestAction: (action: 'meditate' | 'train' | 'scout') =>
     set((store) => {
@@ -1451,8 +1629,6 @@ export const useGameStore = create<GameStoreState>((set) => ({
           ...store.state,
           playerCharacter: updatedPlayer,
           rerolls: updatedRerolls,
-          postRegionChoiceComplete: true,
-          showPostRegionChoice: false,
         },
       };
     }),
@@ -1469,8 +1645,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
     set((store) => ({
       state: {
         ...store.state,
-        postRegionChoiceComplete: false,
         pendingPostRegionAction: null,
+        completedRegion: null,
       },
     })),
 

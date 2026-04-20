@@ -1,6 +1,8 @@
-import { Language, Translations } from './types';
+import { Language, Translations } from '@game/types';
 import { en } from './translations/en/index';
 import { fr } from './translations/fr/index';
+export { LANGUAGES } from './types';
+export type { Language, LanguageOption } from './types';
 
 // Translation registry
 const translations: Record<Language, Translations> = {
@@ -80,4 +82,4 @@ export function translateRegion(language: Language, regionId: string): string {
   return t.regions[normalized] || regionId;
 }
 
-export * from './types';
+export * from '@game/types';

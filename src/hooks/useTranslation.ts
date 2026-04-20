@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useGameStore } from '../game/store';
+import { useGameStore } from '@game/store';
 import { getTranslations, Translations } from '../i18n';
 
 /**

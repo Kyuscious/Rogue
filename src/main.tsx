@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { App } from './components/App'
+import { App } from './game/App'
 import './styles/global.css'
 
 // Style guard disabled - causing DOM mutation issues
