@@ -271,7 +271,7 @@ export const CharacterStatus: React.FC<{
     spellBadge,
   };
 
-  const inventoryForDisplay = characterId ? character.inventory : state.inventory;
+  const inventoryForDisplay = characterId ? (character.inventory ?? []) : state.inventory;
   const itemCount = inventoryForDisplay.reduce((total, item) => total + (item.quantity || 0), 0);
 
   // Convert CombatBuffs to TemporaryStatModifiers for BuffsDisplay (NEW STACKING SYSTEM)

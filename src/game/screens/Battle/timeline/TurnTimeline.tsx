@@ -3,6 +3,7 @@ import './TurnTimeline.css';
 
 interface TurnAction {
   entityId: string;
+  entityName?: string;
   actionType: 'attack' | 'spell' | 'move';
   time: number;
   turnNumber: number;
@@ -248,7 +249,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
                 key={timeKey}
                 className={`action-indicator simultaneous ${isActive ? 'active' : ''}`}
                 style={{ left: `${position}%` }}
-                title={`SIMULTANEOUS at ${firstAction.time.toFixed(2)}\n${playerName}: ${playerAction.actionType}\n${enemyAction.entityName}: ${enemyAction.actionType}`}
+                title={`SIMULTANEOUS at ${firstAction.time.toFixed(2)}\n${playerName}: ${playerAction.actionType}\n${enemyAction.entityName || enemyName}: ${enemyAction.actionType}`}
               >
                 <div className="action-icon-merged">
                   <span className="player-icon">{playerIcon}</span>
@@ -266,7 +267,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
           const enemyShortLabel = action.entityName
             ? action.entityName.slice(0, 2).toUpperCase()
             : 'E';
-          const name = isPlayer ? playerName : action.entityName;
+          const name = isPlayer ? playerName : (action.entityName || enemyName);
           
           return (
             <div

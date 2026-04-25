@@ -52,9 +52,6 @@ interface BattlefieldDisplayProps {
 export const BattlefieldDisplay: React.FC<BattlefieldDisplayProps> = ({
   playerPosition,
   enemyPosition,
-  playerAttackRange,
-  enemyAttackRange,
-  distance,
   vertical = false,
   aoeIndicators = [],
   markers = [],
@@ -77,9 +74,6 @@ export const BattlefieldDisplay: React.FC<BattlefieldDisplayProps> = ({
     // Mirror horizontal battlefield so player-side space appears on the left lane and enemy-side on the right.
     return (1 - normalized) * HORIZONTAL_VIEWBOX_WIDTH;
   };
-  
-  const playerCoord = posToCanvasCoord(playerPosition);
-  const enemyCoord = posToCanvasCoord(enemyPosition);
   
   // Convert range (units) to canvas pixels
   const rangeToPixels = (range: number) => {
