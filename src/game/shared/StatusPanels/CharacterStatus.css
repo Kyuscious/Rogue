@@ -9,7 +9,14 @@
   border-radius: clamp(4px, 1vh, 6px);
   min-width: 0;
   flex: 1;
+  height: 100%;
   overflow: hidden;
+}
+
+.character-status.compact-card {
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(3, 8, 20, 0.5);
 }
 
 .character-status-layout {
@@ -19,12 +26,34 @@
   height: 100%;
 }
 
+.character-status.compact-card .character-status-layout {
+  flex-direction: column;
+  height: 100%;
+}
+
+.character-status.compact-card .character-main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .character-main-content {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: clamp(0.1875rem, 0.45vh, 0.25rem);
+}
+
+.character-main-content.has-character-art {
+  border-radius: clamp(4px, 1vh, 6px);
+  padding: clamp(0.1875rem, 0.45vh, 0.25rem);
+}
+
+.character-status.compact-card .character-main-content.has-character-art {
+  background-size: auto 100%;
+  background-position: center center;
 }
 
 .status-stats-container {
@@ -78,32 +107,40 @@
   min-width: 0;
 }
 
-.status-art-slot {
-  flex: 0 0 clamp(78px, 12vh, 120px);
-  min-height: clamp(78px, 12vh, 120px);
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed rgba(74, 158, 255, 0.45);
-  border-radius: clamp(4px, 1vh, 6px);
-  background: rgba(10, 14, 39, 0.45);
-  color: rgba(176, 190, 197, 0.85);
-  font-size: clamp(0.5rem, 1.1vw, 0.6875rem);
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-}
-
-.status-art-slot.enemy-art-slot {
-  border-color: rgba(255, 107, 107, 0.45);
-}
-
 .character-bottom-row {
   display: flex;
   flex-direction: column-reverse;
   gap: clamp(0.1875rem, 0.5vh, 0.25rem);
   min-width: 0;
   flex: 2;
+}
+
+.character-status.compact-card .character-bottom-row {
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.compact-inline-stats {
+  width: 100%;
+}
+
+.character-status.compact-card .compact-inline-stats .stats-panel {
+  width: 100%;
+}
+
+.character-status.compact-card .compact-inline-stats {
+  width: min(100%, clamp(180px, 58%, 300px));
+  max-width: 100%;
+}
+
+.character-status.compact-card.player-status .compact-inline-stats {
+  align-self: flex-start;
+}
+
+.character-status.compact-card.enemy-status .compact-inline-stats {
+  align-self: flex-end;
 }
 
 .player-status .character-bottom-row {
@@ -181,8 +218,27 @@
   text-overflow: ellipsis;
 }
 
+.character-status.compact-card .character-header {
+  margin-bottom: 2px;
+}
+
+.character-status.compact-card .character-header-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.character-status.compact-card .character-header h2 {
+  font-size: clamp(0.72rem, 1.2vw, 0.9rem);
+}
+
 .character-name {
   color: #f5f7fa;
+}
+
+.character-header .player-name {
+  margin-right: auto;
+  text-align: left;
 }
 
 .enemy-tier-minion {
@@ -247,6 +303,47 @@
   background: rgba(74, 158, 255, 0.18);
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.character-status.compact-card .status-icon-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+}
+
+.character-status.compact-card .status-icon {
+  font-size: 12px;
+}
+
+.compact-item-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  background: rgba(15, 23, 42, 0.82);
+  color: #fde68a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.16);
+}
+
+.compact-header-meta {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.compact-item-count-icon {
+  font-size: 10px;
+  line-height: 1;
+  color: #facc15;
+}
+
+.compact-item-count-value {
+  line-height: 1;
 }
 
 .status-icon-badge:hover {
@@ -428,6 +525,12 @@
   border: 1px solid rgba(74, 158, 255, 0.3);
 }
 
+.character-status.compact-card .hp-section {
+  margin-bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border-color: rgba(74, 158, 255, 0.45);
+}
+
 .hp-bar-container {
   display: flex;
   align-items: center;
@@ -440,13 +543,20 @@
 
 .hp-bar {
   flex: 1;
-  height: clamp(14px, 2vh, 20px);
+  height: clamp(16px, 2.2vh, 22px);
+  min-height: 12px;
   background: #1a1a1a;
   border: 2px solid #4a4a4a;
   border-radius: clamp(3px, 0.75vh, 4px);
   overflow: visible;
   box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
   position: relative;
+}
+
+.character-status.compact-card .hp-bar {
+  height: 12px;
+  min-height: 12px;
+  border-width: 1px;
 }
 
 .hp-fill {
@@ -486,6 +596,24 @@
   min-width: clamp(55px, 11vw, 70px);
   text-align: right;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Compact HP: number on its own line, bar below */
+.character-status.compact-card .hp-bar-container {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.character-status.compact-card .hp-text {
+  font-size: 10px;
+  min-width: unset;
+  text-align: left;
+  order: -1; /* number first, bar second */
+}
+
+.character-status.compact-card .enemy-health-display .hp-text {
+  text-align: right;
 }
 
 .enemy-status .hp-text {
@@ -803,6 +931,48 @@
   filter: brightness(1.2);
 }
 
+.character-status.compact-card .status-buffs-container {
+  width: 100%;
+  min-height: 24px;
+  height: auto;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.character-status.compact-card .status-buffs-container .buff-icon,
+.character-status.compact-card .status-buffs-container .bar-total-button {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px;
+}
+
+.character-status.compact-card .status-buffs-container .buff-emoji {
+  font-size: 11px;
+}
+
+.character-status.compact-card .status-buffs-container .duration-badge {
+  font-size: 8px;
+  min-width: 12px;
+  padding: 0 2px;
+}
+
+.character-status.compact-card .status-buffs-container .buffs-display {
+  width: 100%;
+  align-items: center;
+}
+
+.character-status.compact-card .status-buffs-container .buffs-grid {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 3px;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+}
+
 .buff-emoji {
   font-size: 14px;
 }
@@ -820,12 +990,6 @@
 
   .character-top-row {
     align-items: stretch;
-  }
-
-  .status-art-slot {
-    min-width: 100%;
-    width: 100%;
-    min-height: clamp(56px, 10vh, 84px);
   }
 
   .status-buffs-container {

@@ -288,6 +288,7 @@ export const SHURIMA_CHAMPIONS: Character[] = [
     hp: 210,
     abilities: [],
     behaviorProfile: 'tactical',
+    characterArt: '/assets/global/images/champions/azir.png',
     enemyLoadout: {
       weapons: ['staff_of_office'],
       spells: ['emperors_divide'],

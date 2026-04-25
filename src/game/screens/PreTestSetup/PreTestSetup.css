@@ -101,6 +101,67 @@
   border-color: #4a9eff;
 }
 
+.inline-config-section .inline-field-row {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-config-section .inline-field-row select {
+  flex: 1;
+}
+
+.queue-enemy-btn,
+.remove-enemy-btn {
+  padding: 8px 10px;
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  border-radius: 6px;
+  background: rgba(74, 158, 255, 0.2);
+  color: #dbeafe;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.queue-enemy-btn:hover,
+.remove-enemy-btn:hover {
+  background: rgba(74, 158, 255, 0.35);
+}
+
+.database-enemy-list-section {
+  max-height: 220px;
+}
+
+.database-enemy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 170px;
+  overflow-y: auto;
+}
+
+.database-enemy-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid rgba(74, 158, 255, 0.25);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+}
+
+.checkbox-config-section {
+  gap: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #d1e5ff;
+}
+
 .hp-slider-section {
   margin-bottom: 20px;
 }
@@ -454,9 +515,6 @@
   margin: 0;
 }
 
-.quantity-input[type=number] {
-  -moz-appearance: textfield;
-}
 
 .item-name {
   font-size: 11px;

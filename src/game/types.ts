@@ -83,6 +83,8 @@ export interface Character {
   isSummon?: boolean; // Whether this unit is a summoned combatant
   targetPriority?: number; // Higher values make this unit more likely to be targeted
   canBeTargeted?: boolean; // Supports hidden/untargetable states in future systems
+  characterArt?: string; // Path to character art image (e.g., '/assets/global/images/champions/azir.png')
+  spawnSfx?: string; // Path to SFX played when this character spawns in battle
   lootDrops?: {
     weapons?: Array<{ weaponId: string; chance: number }>;
     spells?: Array<{ spellId: string; chance: number }>;

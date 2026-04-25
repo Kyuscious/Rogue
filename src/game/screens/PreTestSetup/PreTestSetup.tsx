@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Character } from '@game/types';
 import { DEFAULT_STATS, getScaledStats, getClassStatBonuses, CharacterStats } from '@utils/statsSystem';
-import { ITEM_DATABASE, getPassiveIdsFromInventory, getItemById } from '@data/items';
+import { ITEM_DATABASE, getPassiveIdsFromInventory, getItemById, getRandomItemsForEnemy } from '@data/items';
 import { getAllWeapons } from '@data/weapons';
 import { getAllSpells } from '@data/spells';
+import * as regionData from '@shared/regions';
+import { getRegionTier } from '@screens/PostRegionChoice/regionGraph';
+import { calculateEnemyLevel } from '@entities/Player/experienceSystem';
+import { useGameStore } from '@game/store';
+import { FAMILIAR_DATABASE, MAX_ACTIVE_FAMILIARS } from '@entities/Player/familiars';
 import './PreTestSetup.css';
 
 interface ItemWithQuantity {
@@ -11,18 +16,28 @@ interface ItemWithQuantity {
   quantity: number;
 }
 
+interface DatabaseEnemyRosterEntry {
+  key: string;
+  sourceEnemyId: string;
+  sourceName: string;
+  sourceRegion: string;
+  sourceTier: string;
+  encounterCounter: number;
+  regionVisitCount: number;
+  levelScaled: boolean;
+  itemScaled: boolean;
+  enemy: Character;
+}
+
 interface PreTestSetupProps {
   onStartTestBattle: (
     player: Character,
-    enemy: Character,
+    enemies: Character[],
     playerItems: ItemWithQuantity[],
-    enemyItems: ItemWithQuantity[],
     playerUseItems: ItemWithQuantity[],
-    enemyUseItems: ItemWithQuantity[],
     playerWeapons: string[],
-    enemyWeapons: string[],
     playerSpells: string[],
-    enemySpells: string[]
+    playerFamiliars: string[]
   ) => void;
   onBack: () => void;
 }
@@ -30,7 +45,38 @@ interface PreTestSetupProps {
 const CHARACTER_CLASSES = ['juggernaut', 'vanguard', 'warden', 'assassin', 'mage', 'marksman', 'skirmisher', 'enchanter'] as const;
 const BEHAVIOR_PROFILES = ['aggressive', 'defensive', 'balanced', 'ranged', 'melee', 'tactical'] as const;
 
+function isEnemyCharacter(value: unknown): value is Character {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Character;
+  return candidate.role === 'enemy' && typeof candidate.id === 'string' && !!candidate.stats;
+}
+
+const DATABASE_ENEMIES: Character[] = (() => {
+  const enemyById = new Map<string, Character>();
+
+  Object.values(regionData).forEach((exportValue) => {
+    if (!Array.isArray(exportValue)) return;
+    if (!exportValue.every(isEnemyCharacter)) return;
+
+    exportValue.forEach((enemy) => {
+      if (!enemyById.has(enemy.id)) {
+        enemyById.set(enemy.id, enemy);
+      }
+    });
+  });
+
+  return Array.from(enemyById.values()).sort((a, b) => {
+    const regionCompare = (a.region || '').localeCompare(b.region || '');
+    if (regionCompare !== 0) return regionCompare;
+    const tierCompare = (a.tier || '').localeCompare(b.tier || '');
+    if (tierCompare !== 0) return tierCompare;
+    return a.id.localeCompare(b.id);
+  });
+})();
+
 export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, onBack }) => {
+  const { state } = useGameStore();
+
   // Player character state
   const [playerName, setPlayerName] = useState('Test Player');
   const [playerClass, setPlayerClass] = useState<typeof CHARACTER_CLASSES[number]>('juggernaut');
@@ -64,10 +110,51 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
   const [playerSpells, setPlayerSpells] = useState<string[]>([]);
   const [enemySpells, setEnemySpells] = useState<string[]>([]);
 
+  // Familiars for player (up to MAX_ACTIVE_FAMILIARS)
+  const [playerFamiliars, setPlayerFamiliars] = useState<string[]>([]);
+
   // Tooltip states
   const [showPlayerLevelTooltip, setShowPlayerLevelTooltip] = useState(false);
   const [showEnemyLevelTooltip, setShowEnemyLevelTooltip] = useState(false);
   const [levelTooltipPosition, setLevelTooltipPosition] = useState({ x: 0, y: 0 });
+
+  // Enemy database test mode
+  const [useDatabaseEnemies, setUseDatabaseEnemies] = useState(true);
+  const [enemySearchQuery, setEnemySearchQuery] = useState('');
+  const [applyEnemyLevelScaling, setApplyEnemyLevelScaling] = useState(true);
+  const [applyEnemyItemScaling, setApplyEnemyItemScaling] = useState(true);
+  const [encounterCounter, setEncounterCounter] = useState(Math.max(1, state.currentFloor || state.encountersCompleted + 1 || 1));
+  const [regionVisitCount, setRegionVisitCount] = useState(
+    Math.max(1, state.selectedRegion ? state.visitedRegionsThisRun.filter((region) => region === state.selectedRegion).length : 1)
+  );
+  const [databaseEnemySelection, setDatabaseEnemySelection] = useState(DATABASE_ENEMIES[0]?.id || '');
+  const [databaseEnemyRoster, setDatabaseEnemyRoster] = useState<DatabaseEnemyRosterEntry[]>([]);
+
+  const databaseEnemyById = useMemo(
+    () => new Map(DATABASE_ENEMIES.map((enemy) => [enemy.id, enemy])),
+    []
+  );
+
+  const filteredDatabaseEnemies = useMemo(() => {
+    const query = enemySearchQuery.trim().toLowerCase();
+    if (!query) return DATABASE_ENEMIES;
+
+    return DATABASE_ENEMIES.filter((enemy) => {
+      const name = enemy.name?.toLowerCase() || '';
+      const id = enemy.id.toLowerCase();
+      const region = (enemy.region || '').toLowerCase();
+      const tier = (enemy.tier || '').toLowerCase();
+      return name.includes(query) || id.includes(query) || region.includes(query) || tier.includes(query);
+    });
+  }, [enemySearchQuery]);
+
+  useEffect(() => {
+    if (filteredDatabaseEnemies.length === 0) return;
+    const currentExists = filteredDatabaseEnemies.some((enemy) => enemy.id === databaseEnemySelection);
+    if (!currentExists) {
+      setDatabaseEnemySelection(filteredDatabaseEnemies[0].id);
+    }
+  }, [filteredDatabaseEnemies, databaseEnemySelection]);
 
   // Calculate player max HP when stats change
   useEffect(() => {
@@ -133,6 +220,128 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
     setEnemyMaxHp(scaledStats.health);
   }, [enemyLevel, enemyClass, enemyStats, enemyItems, enemyUseItems]);
 
+  const getRevisitScalingBonuses = (visitCount: number): { levelBonus: number; encounterBonusForItems: number } => {
+    if (visitCount <= 1) return { levelBonus: 0, encounterBonusForItems: 0 };
+    if (visitCount === 2) return { levelBonus: 2, encounterBonusForItems: 1 };
+    if (visitCount === 3) return { levelBonus: 4, encounterBonusForItems: 2 };
+    return { levelBonus: 6, encounterBonusForItems: 3 };
+  };
+
+  const buildDatabaseEnemyForBattle = (
+    enemy: Character,
+    index: number,
+    currentEncounterCounter: number,
+    currentRegionVisitCount: number,
+    shouldApplyLevelScaling: boolean,
+    shouldApplyItemScaling: boolean
+  ): Character => {
+    const safeEncounterCounter = Math.max(1, currentEncounterCounter);
+    const safeRegionVisitCount = Math.max(1, currentRegionVisitCount);
+    const revisitBonuses = getRevisitScalingBonuses(safeRegionVisitCount);
+
+    const baseLevelFromEncounter = calculateEnemyLevel(safeEncounterCounter, enemy.tier || 'minion');
+    const finalLevel = shouldApplyLevelScaling
+      ? baseLevelFromEncounter + revisitBonuses.levelBonus
+      : enemy.level || 1;
+
+    let scaledStats: CharacterStats = { ...enemy.stats };
+    let scaledInventory = enemy.inventory ? [...enemy.inventory] : [];
+
+    if (shouldApplyItemScaling) {
+      const region = enemy.region || 'demacia';
+      const regionTier = getRegionTier(region);
+      const effectiveEncounterForItems = safeEncounterCounter + revisitBonuses.encounterBonusForItems;
+      const generatedItems = getRandomItemsForEnemy(enemy.class, effectiveEncounterForItems, regionTier);
+
+      generatedItems.forEach((item) => {
+        (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach((stat) => {
+          const currentValue = (scaledStats[stat] as number) || 0;
+          const itemValue = (item.stats[stat] as number) || 0;
+          (scaledStats[stat] as number) = currentValue + itemValue;
+        });
+      });
+
+      scaledInventory = generatedItems.map((item) => ({ itemId: item.id, quantity: 1 }));
+    }
+
+    if (shouldApplyLevelScaling) {
+      const classBonuses = getClassStatBonuses(enemy.class, finalLevel);
+      (Object.keys(classBonuses) as Array<keyof CharacterStats>).forEach((stat) => {
+        const bonus = classBonuses[stat] || 0;
+        const currentValue = (scaledStats[stat] as number) || 0;
+        (scaledStats[stat] as number) = currentValue + bonus;
+      });
+    }
+
+    const maxHp = Math.max(1, Math.ceil(scaledStats.health));
+    const currentHp = Math.ceil((enemyHpPercent / 100) * maxHp);
+
+    return {
+      ...enemy,
+      abilities: [...enemy.abilities],
+      stats: scaledStats,
+      level: finalLevel,
+      hp: currentHp,
+      inventory: scaledInventory,
+      battleInstanceId: `pretest_${enemy.id}_${index}_${Date.now()}`,
+      enemyLoadout: enemy.enemyLoadout
+        ? {
+            ...enemy.enemyLoadout,
+            weapons: [...enemy.enemyLoadout.weapons],
+            spells: [...enemy.enemyLoadout.spells],
+            items: [...enemy.enemyLoadout.items],
+          }
+        : undefined,
+      lootDrops: enemy.lootDrops
+        ? {
+            weapons: enemy.lootDrops.weapons ? [...enemy.lootDrops.weapons] : undefined,
+            spells: enemy.lootDrops.spells ? [...enemy.lootDrops.spells] : undefined,
+            items: enemy.lootDrops.items ? [...enemy.lootDrops.items] : undefined,
+            familiars: enemy.lootDrops.familiars ? [...enemy.lootDrops.familiars] : undefined,
+          }
+        : undefined,
+    };
+  };
+
+  const handleAddDatabaseEnemy = () => {
+    if (!databaseEnemySelection) return;
+    const enemy = databaseEnemyById.get(databaseEnemySelection);
+    if (!enemy) return;
+
+    const rosterIndex = databaseEnemyRoster.length;
+    const builtEnemy = buildDatabaseEnemyForBattle(
+      enemy,
+      rosterIndex,
+      encounterCounter,
+      regionVisitCount,
+      applyEnemyLevelScaling,
+      applyEnemyItemScaling
+    );
+
+    const newEntry: DatabaseEnemyRosterEntry = {
+      key: `${enemy.id}_${Date.now()}_${rosterIndex}`,
+      sourceEnemyId: enemy.id,
+      sourceName: enemy.name || enemy.id,
+      sourceRegion: enemy.region || 'unknown',
+      sourceTier: enemy.tier || 'unknown',
+      encounterCounter: Math.max(1, encounterCounter),
+      regionVisitCount: Math.max(1, regionVisitCount),
+      levelScaled: applyEnemyLevelScaling,
+      itemScaled: applyEnemyItemScaling,
+      enemy: builtEnemy,
+    };
+
+    setDatabaseEnemyRoster((prev) => [...prev, newEntry]);
+  };
+
+  const handleRemoveDatabaseEnemy = (indexToRemove: number) => {
+    setDatabaseEnemyRoster((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleClearDatabaseRoster = () => {
+    setDatabaseEnemyRoster([]);
+  };
+
   const handleStartBattle = () => {
     const playerCurrentHp = Math.ceil((playerHpPercent / 100) * playerMaxHp);
     const enemyCurrentHp = Math.ceil((enemyHpPercent / 100) * enemyMaxHp);
@@ -177,6 +386,31 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
       tier: 'minion',
     };
 
+    if (useDatabaseEnemies) {
+      const roster = databaseEnemyRoster.map((entry, index) => {
+        const maxHp = Math.max(1, Math.ceil(entry.enemy.stats.health));
+        return {
+          ...entry.enemy,
+          hp: Math.ceil((enemyHpPercent / 100) * maxHp),
+          battleInstanceId: `pretest_${entry.enemy.id}_${index}_${Date.now()}`,
+        };
+      });
+      if (roster.length === 0) {
+        return;
+      }
+
+      onStartTestBattle(
+        playerChar,
+        roster,
+        playerItems,
+        playerUseItems,
+        playerWeapons,
+        playerSpells,
+        playerFamiliars
+      );
+      return;
+    }
+
     const enemyChar: Character = {
       id: 'test-enemy',
       name: enemyName,
@@ -204,15 +438,12 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
 
     onStartTestBattle(
       playerChar,
-      enemyChar,
+      [enemyChar],
       playerItems,
-      enemyItems,
       playerUseItems,
-      enemyUseItems,
       playerWeapons,
-      enemyWeapons,
       playerSpells,
-      enemySpells
+      playerFamiliars
     );
   };
 
@@ -349,6 +580,16 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
       }
       if (prev.length >= 3) return prev; // Max 3 spells for enemies
       return [...prev, spellId];
+    });
+  };
+
+  const handlePlayerFamiliarToggle = (familiarId: string) => {
+    setPlayerFamiliars(prev => {
+      if (prev.includes(familiarId)) {
+        return prev.filter(id => id !== familiarId);
+      }
+      if (prev.length >= MAX_ACTIVE_FAMILIARS) return prev;
+      return [...prev, familiarId];
     });
   };
 
@@ -637,11 +878,155 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
               ))}
             </div>
           </div>
+
+          <div className="items-section">
+            <h3>Familiars ({playerFamiliars.length}/{MAX_ACTIVE_FAMILIARS} active)</h3>
+            <div className="items-grid">
+              {Object.values(FAMILIAR_DATABASE).map(familiar => (
+                <div
+                  key={familiar.id}
+                  className={`item-slot rarity-${familiar.rarity} ${playerFamiliars.includes(familiar.id) ? 'selected' : ''} ${playerFamiliars.length >= MAX_ACTIVE_FAMILIARS && !playerFamiliars.includes(familiar.id) ? 'disabled' : ''}`}
+                  onClick={() => handlePlayerFamiliarToggle(familiar.id)}
+                  title={`${familiar.name} — ${familiar.effect.description}`}
+                >
+                  <div className="item-name">{familiar.icon} {familiar.name}</div>
+                  <div className="item-rarity">{familiar.trigger === 'fight_start' ? 'Fight Start' : familiar.trigger === 'fight_end' ? 'Fight End' : `Every ${familiar.intervalTurns}t`}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Enemy Configuration */}
         <div className="character-config enemy-config">
           <h2>Enemy Character</h2>
+
+          <div className="config-section">
+            <label>Enemy Source:</label>
+            <select
+              value={useDatabaseEnemies ? 'database' : 'custom'}
+              onChange={(e) => setUseDatabaseEnemies(e.target.value === 'database')}
+            >
+              <option value="database">Database Enemies (Recommended)</option>
+              <option value="custom">Custom Enemy Builder</option>
+            </select>
+          </div>
+
+          {useDatabaseEnemies && (
+            <>
+              <div className="config-section">
+                <label>Search Enemies:</label>
+                <input
+                  type="text"
+                  value={enemySearchQuery}
+                  onChange={(e) => setEnemySearchQuery(e.target.value)}
+                  placeholder="Search by name, id, region, or tier"
+                />
+              </div>
+
+              <div className="config-section inline-config-section">
+                <label>Select Enemy:</label>
+                <div className="inline-field-row">
+                  <select
+                    value={databaseEnemySelection}
+                    onChange={(e) => setDatabaseEnemySelection(e.target.value)}
+                  >
+                    {filteredDatabaseEnemies.map((enemy) => (
+                      <option key={enemy.id} value={enemy.id}>
+                        {(enemy.name || enemy.id)} [{enemy.region || 'unknown'} | {enemy.tier || 'unknown'}]
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className="queue-enemy-btn" onClick={handleAddDatabaseEnemy}>
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <div className="config-section database-enemy-list-section">
+                <label>Battle Roster ({databaseEnemyRoster.length}):</label>
+                <div className="database-enemy-list">
+                  {databaseEnemyRoster.map((entry, index) => (
+                    <div key={entry.key} className="database-enemy-row">
+                      <span>
+                        {index + 1}. {entry.sourceName} ({entry.sourceRegion} / {entry.sourceTier}) L{entry.enemy.level}
+                        {' '}[E{entry.encounterCounter}, V{entry.regionVisitCount}, {entry.levelScaled ? 'Level ON' : 'Level OFF'}, {entry.itemScaled ? 'Items ON' : 'Items OFF'}]
+                      </span>
+                      <button
+                        type="button"
+                        className="remove-enemy-btn"
+                        onClick={() => handleRemoveDatabaseEnemy(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {databaseEnemyRoster.length > 0 && (
+                  <button type="button" className="queue-enemy-btn" onClick={handleClearDatabaseRoster}>
+                    Clear Roster
+                  </button>
+                )}
+              </div>
+
+              <div className="config-section">
+                <label>Encounter Counter (header value):</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={encounterCounter}
+                  onChange={(e) => setEncounterCounter(Math.max(1, parseInt(e.target.value) || 1))}
+                />
+              </div>
+
+              <div className="config-section">
+                <label>Region Visit Count:</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={regionVisitCount}
+                  onChange={(e) => setRegionVisitCount(Math.max(1, parseInt(e.target.value) || 1))}
+                />
+              </div>
+
+              <div className="config-section checkbox-config-section">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={applyEnemyLevelScaling}
+                    onChange={(e) => setApplyEnemyLevelScaling(e.target.checked)}
+                  />
+                  Apply Level Scaling
+                </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={applyEnemyItemScaling}
+                    onChange={(e) => setApplyEnemyItemScaling(e.target.checked)}
+                  />
+                  Apply Item Scaling
+                </label>
+              </div>
+
+              <div className="config-section hp-slider-section">
+                <label>Starting HP (all selected enemies):</label>
+                <div className="hp-slider-container">
+                  <input
+                    type="range"
+                    min="1"
+                    max="100"
+                    value={enemyHpPercent}
+                    onChange={(e) => setEnemyHpPercent(parseInt(e.target.value))}
+                    className="hp-slider"
+                  />
+                  <span className="hp-display">{enemyHpPercent}%</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {!useDatabaseEnemies && (
+            <>
           
           <div className="config-section">
             <label>Name:</label>
@@ -923,6 +1308,8 @@ export const PreTestSetup: React.FC<PreTestSetupProps> = ({ onStartTestBattle, o
               ))}
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
 

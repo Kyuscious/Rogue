@@ -105,6 +105,7 @@ const DEFAULT_PLAYER: Character = {
   role: 'player',
   region: 'demacia',
   class: 'juggernaut',
+  characterArt: '/assets/global/images/player/miko1.png',
   hp: DEFAULT_STATS.health,
   abilities: [],
   level: 1,

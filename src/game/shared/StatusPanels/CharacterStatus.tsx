@@ -113,7 +113,8 @@ export const CharacterStatus: React.FC<{
   combatDebuffs?: CombatBuff[];
   isRevealed?: boolean; // For stealth/control ward mechanic - enemy visibility
   turnCounter?: number; // Actual turn counter for accurate duration display
-}> = ({ characterId, combatBuffs, combatDebuffs, isRevealed = true, turnCounter = 0 }) => {
+  compact?: boolean;
+}> = ({ characterId, combatBuffs, combatDebuffs, isRevealed = true, turnCounter = 0, compact = false }) => {
   const { state } = useGameStore();
   const t = useTranslation();
   const [hoveredInfo, setHoveredInfo] = useState<HoverInfo | null>(null);
@@ -270,6 +271,9 @@ export const CharacterStatus: React.FC<{
     spellBadge,
   };
 
+  const inventoryForDisplay = characterId ? character.inventory : state.inventory;
+  const itemCount = inventoryForDisplay.reduce((total, item) => total + (item.quantity || 0), 0);
+
   // Convert CombatBuffs to TemporaryStatModifiers for BuffsDisplay (NEW STACKING SYSTEM)
   const temporaryStats = combatBuffs?.map(buff => {
     const { totalAmount, maxDuration } = computeBuffDisplayValues(buff, turnCounter);
@@ -335,24 +339,35 @@ export const CharacterStatus: React.FC<{
 
   // Combine all buffs and debuffs
   const allTemporaryStats = [...temporaryStats, ...temporaryDebuffs, ...statusEffectBuffs, ...statusEffectDebuffs];
+  const resolvedCharacterArt = character.characterArt || (character.role === 'player' ? '/assets/global/images/player/miko1.png' : undefined);
+  const artBackgroundStyle = resolvedCharacterArt
+    ? {
+        backgroundImage: `url(${resolvedCharacterArt})`,
+        backgroundSize: compact ? 'auto 100%' : 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: compact
+          ? 'center center'
+          : `${character.role === 'enemy' ? 'left center' : 'right center'}`,
+      }
+    : undefined;
 
   return (
-    <div className={`character-status ${character.role === 'enemy' ? 'enemy-status' : 'player-status'}`}>
+    <div className={`character-status ${character.role === 'enemy' ? 'enemy-status' : 'player-status'} ${compact ? 'compact-card' : ''}`}>
       <div className="character-status-layout">
-        <div className="character-main-content">
+        <div className={`character-main-content ${resolvedCharacterArt ? 'has-character-art' : ''}`} style={artBackgroundStyle}>
           <div className="character-top-row">
             <div className="character-header-wrap">
               <div className="character-header">
                 {isEnemy ? (
                   <div className="status-name-group enemy-name-group">
                     <h2 className={`character-name ${getEnemyTierClass(character.tier)}`}>{displayName}</h2>
-                    {factionBadge}
+                    {!compact && factionBadge}
                   </div>
                 ) : (
-                  <div className="status-name-group">
-                    {factionBadge}
-                    <h2 className="character-name">{displayName}</h2>
-                  </div>
+                  <>
+                    {!compact && factionBadge}
+                    <h2 className="character-name player-name">{displayName}</h2>
+                  </>
                 )}
 
                 {hoveredInfo && (isRevealed || hoveredInfo.tone === 'faction') && (
@@ -374,34 +389,61 @@ export const CharacterStatus: React.FC<{
                   </div>
                 )}
               </div>
+
+              {compact && (
+                <div className="compact-header-meta">
+                  <div className="compact-item-count-badge" aria-label={`Items: ${itemCount}`}>
+                    <span className="compact-item-count-icon">I</span>
+                    <span className="compact-item-count-value">{itemCount}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className={`status-art-slot ${character.role === 'enemy' ? 'enemy-art-slot' : 'player-art-slot'}`}>
-            {character.role === 'enemy' ? 'Enemy Art Slot' : 'Player Art Slot'}
-          </div>
+          {compact && (
+            <div className="status-buffs-container compact-buffs-container">
+              <BuffsDisplay temporaryStats={allTemporaryStats} />
+            </div>
+          )}
 
           <div className="character-bottom-row">
-            <ItemsBar inventory={characterId ? character.inventory : state.inventory} isRevealed={isRevealed} />
-            <LevelDisplay character={character} />
+            {!compact && <ItemsBar inventory={inventoryForDisplay} isRevealed={isRevealed} />}
+            {!compact && <LevelDisplay character={character} />}
+            {compact && (
+              <div className="compact-inline-stats">
+                <StatsPanel
+                  character={character}
+                  combatBuffs={combatBuffs}
+                  combatDebuffs={combatDebuffs}
+                  isRevealed={isRevealed}
+                  turnCounter={turnCounter}
+                  compact
+                />
+              </div>
+            )}
             <HealthDisplay character={character} />
           </div>
         </div>
 
-        <div className="status-stats-container">
-          <StatsPanel
-            character={character}
-            combatBuffs={combatBuffs}
-            combatDebuffs={combatDebuffs}
-            isRevealed={isRevealed}
-            turnCounter={turnCounter}
-            {...statsPanelProps}
-          />
-        </div>
+        {!compact && (
+          <div className="status-stats-container">
+            <StatsPanel
+              character={character}
+              combatBuffs={combatBuffs}
+              combatDebuffs={combatDebuffs}
+              isRevealed={isRevealed}
+              turnCounter={turnCounter}
+              {...statsPanelProps}
+            />
+          </div>
+        )}
 
-        <div className="status-buffs-container">
-          <BuffsDisplay temporaryStats={allTemporaryStats} />
-        </div>
+        {!compact && (
+          <div className="status-buffs-container">
+            <BuffsDisplay temporaryStats={allTemporaryStats} />
+          </div>
+        )}
       </div>
     </div>
   );

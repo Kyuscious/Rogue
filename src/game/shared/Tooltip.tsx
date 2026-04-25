@@ -292,9 +292,15 @@ export const Tooltip: React.FC<TooltipProps> = ({ content }) => {
           <div className="tooltip-stat">✨ AP: +{Math.round(familiar.stats.abilityPower)}</div>
           <div className="tooltip-stat">🛡️ Armor: +{Math.round(familiar.stats.armor)}</div>
           <div className="tooltip-stat">🔮 MR: +{Math.round(familiar.stats.magicResist)}</div>
-          <div className="tooltip-stat">⚡ Speed: {familiar.stats.speed}</div>
-          <div className="tooltip-stat">⏱️ Haste: {Math.round(familiar.stats.haste)}</div>
-          <div className="tooltip-stat">🔁 Acts every {familiar.intervalTurns} turn{familiar.intervalTurns === 1 ? '' : 's'}</div>
+          {familiar.trigger === 'turn' && (
+            <div className="tooltip-stat">🔁 Acts every {familiar.intervalTurns} turn{familiar.intervalTurns === 1 ? '' : 's'}</div>
+          )}
+          {familiar.trigger === 'fight_start' && (
+            <div className="tooltip-stat">⚡ Activates at fight start</div>
+          )}
+          {familiar.trigger === 'fight_end' && (
+            <div className="tooltip-stat">🏁 Activates at end of fight</div>
+          )}
         </div>
         <div className="tooltip-passive">
           <strong>Sources:</strong> {familiar.obtainableFrom.map(getFamiliarSourceLabel).join(', ')}

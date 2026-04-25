@@ -70,110 +70,81 @@ function getSpellCooldown(haste: number): number {
 }
 
 /**
- * Generate turn sequence for N turns
+ * Generate turn sequence for N entities over maxTurns turns.
+ * Each entity is independent: its own speed, haste, and ID.
+ * Player (id='player') gets priority 0; all others get priority 1.
  */
 export function generateTurnSequence(
   playerEntity: TurnEntity,
   enemyEntity: TurnEntity,
   maxTurns: number = 20
 ): TurnAction[] {
+  return generateMultiEntityTurnSequence([playerEntity, enemyEntity], maxTurns);
+}
+
+/**
+ * Multi-entity turn sequence: accepts any number of entities.
+ * Player entity must have id='player'. All other IDs are treated as enemies.
+ */
+export function generateMultiEntityTurnSequence(
+  entities: TurnEntity[],
+  maxTurns: number = 20
+): TurnAction[] {
   const actions: TurnAction[] = [];
-  
-  // Calculate attack parameters
-  const playerAttackIncrement = getAttackIncrement(playerEntity.speed);
-  const playerFirstAttack = getFirstAttackTime(playerEntity.speed);
-  const enemyAttackIncrement = getAttackIncrement(enemyEntity.speed);
-  const enemyFirstAttack = getFirstAttackTime(enemyEntity.speed);
-  
-  // Calculate spell parameters
-  const playerSpellCooldown = getSpellCooldown(playerEntity.haste);
-  const enemySpellCooldown = getSpellCooldown(enemyEntity.haste);
-  
-  // Generate actions for each turn
-  for (let turn = 1; turn <= maxTurns; turn++) {
-    // Generate player attacks for this turn
-    let playerAttackTime = playerFirstAttack;
-    while (playerAttackTime < turn + 1) {
-      if (playerAttackTime >= turn) {
-        actions.push({
-          entityId: 'player',
-          entityName: playerEntity.name,
-          turnNumber: turn,
-          time: playerAttackTime,
-          accumulatedTime: playerAttackTime,
-          actionType: 'attack',
-          description: `${playerEntity.name} attacks`,
-          priority: 0,
-        });
+
+  for (const entity of entities) {
+    const isPlayer = entity.id === 'player';
+    const priority = isPlayer ? 0 : 1;
+
+    const attackIncrement = getAttackIncrement(entity.speed);
+    const firstAttack = getFirstAttackTime(entity.speed);
+    const spellCooldown = getSpellCooldown(entity.haste);
+
+    for (let turn = 1; turn <= maxTurns; turn++) {
+      // Attacks
+      let attackTime = firstAttack;
+      while (attackTime < turn + 1) {
+        if (attackTime >= turn) {
+          actions.push({
+            entityId: entity.id,
+            entityName: entity.name,
+            turnNumber: turn,
+            time: attackTime,
+            accumulatedTime: attackTime,
+            actionType: 'attack',
+            description: `${entity.name} attacks`,
+            priority,
+          });
+        }
+        attackTime += attackIncrement;
       }
-      playerAttackTime += playerAttackIncrement;
-    }
-    
-    // Generate enemy attacks for this turn
-    let enemyAttackTime = enemyFirstAttack;
-    while (enemyAttackTime < turn + 1) {
-      if (enemyAttackTime >= turn) {
-        actions.push({
-          entityId: 'enemy',
-          entityName: enemyEntity.name,
-          turnNumber: turn,
-          time: enemyAttackTime,
-          accumulatedTime: enemyAttackTime,
-          actionType: 'attack',
-          description: `${enemyEntity.name} attacks`,
-          priority: 1,
-        });
+
+      // Spells
+      let spellTime = spellCooldown;
+      let spellCount = 0;
+      while (spellTime < turn + 1 && spellCount < 100) {
+        if (spellTime >= turn) {
+          actions.push({
+            entityId: entity.id,
+            entityName: entity.name,
+            turnNumber: turn,
+            time: spellTime,
+            accumulatedTime: spellTime,
+            actionType: 'spell',
+            description: `${entity.name} casts spell`,
+            priority,
+          });
+        }
+        spellTime += spellCooldown;
+        spellCount++;
       }
-      enemyAttackTime += enemyAttackIncrement;
-    }
-    
-    // Generate player spells for this turn
-    let playerSpellTime = playerSpellCooldown;
-    let playerSpellCount = 0;
-    while (playerSpellTime < turn + 1 && playerSpellCount < 100) {
-      if (playerSpellTime >= turn) {
-        actions.push({
-          entityId: 'player',
-          entityName: playerEntity.name,
-          turnNumber: turn,
-          time: playerSpellTime,
-          accumulatedTime: playerSpellTime,
-          actionType: 'spell',
-          description: `${playerEntity.name} casts spell`,
-          priority: 0,
-        });
-      }
-      playerSpellTime += playerSpellCooldown;
-      playerSpellCount++;
-    }
-    
-    // Generate enemy spells for this turn
-    let enemySpellTime = enemySpellCooldown;
-    let enemySpellCount = 0;
-    while (enemySpellTime < turn + 1 && enemySpellCount < 100) {
-      if (enemySpellTime >= turn) {
-        actions.push({
-          entityId: 'enemy',
-          entityName: enemyEntity.name,
-          turnNumber: turn,
-          time: enemySpellTime,
-          accumulatedTime: enemySpellTime,
-          actionType: 'spell',
-          description: `${enemyEntity.name} casts spell`,
-          priority: 1,
-        });
-      }
-      enemySpellTime += enemySpellCooldown;
-      enemySpellCount++;
     }
   }
-  
-  // Sort by: time, then priority
+
+  // Sort chronologically, player first on ties
   return actions.sort((a, b) => {
-    if (Math.abs(a.time - b.time) > 0.0001) {
-      return a.time - b.time; // Chronological order
-    }
-    return a.priority - b.priority; // Player (0) before enemy (1) on ties
+    if (Math.abs(a.time - b.time) > 0.0001) return a.time - b.time;
+    return a.priority - b.priority;
   });
 }
 

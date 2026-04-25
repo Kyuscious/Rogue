@@ -1,23 +1,26 @@
-import React, { useState, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '@game/store';
 import { CharacterStatus } from '../../shared/StatusPanels/CharacterStatus';
 import { FamiliarStatus } from '../../shared/StatusPanels/FamiliarStatus';
 import { BattlefieldDisplay, AoEIndicator } from './Field';
 import { TurnTimeline } from './timeline';
+import { BattleLogPanel } from './log/BattleLogPanel';
+import { useBattleLog } from './log/useBattleLog';
+import { runTurnManager } from './Flow/TurnManager';
 import { formatSpellEffects, formatWeaponEffects } from './logic/abilityFormatters';
 import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, rollCriticalStrike, calculateCriticalDamage } from '@utils/statsSystem';
 import { getPassiveIdsFromInventory } from '@data/items';
 import { calculateOnHitEffects, applyOnHitEffects, formatOnHitEffects } from '@battle/logic/onHitEffects';
 import { calculateCCDuration } from '@battle/logic/crowdControlSystem';
-import { addShield, applyForDemaciaBuff, applyDamageWithShield, decayShieldDurations } from '@battle/Flow/passives/shieldSystem';
+import { applyForDemaciaBuff, applyDamageWithShield } from '@battle/Flow/passives/shieldSystem';
 import { 
   TurnEntity, 
   TurnAction, 
-  generateTurnSequence,
+  generateMultiEntityTurnSequence,
   applyStunDelay
 } from './Flow/turnSystemV2';
 import { StatusEffect, createStunEffect, createSlowEffect, getSlowModifier } from '@data/statusEffects';
-import { calculateAoEDirection } from '@utils/aoeUtils';
+import { calculateAoEDirection } from './logic/aoeUtils';
 import { getCharacterName } from '../../../i18n/helpers';
 import { 
   getItemById,
@@ -28,17 +31,10 @@ import {
   applyLifeDrainingBuff,
   applyDrainBuff,
   addOrMergeBuffStack,
-  decayBuffStacks,
   computeBuffDisplayValues,
 } from '@utils/itemSystem';
-import { 
-  handleEnemyDefeat,
-  getVictoryMessages,
-  applyVictoryRewards,
-} from '@battle/Flow/battleFlow';
 import { generateRewardOptions } from '@data/rewardPool';
 import { flattenEncounterEnemyIds, getQuestById } from '../QuestSelect/logic';
-import { checkLevelUp } from '../../entity/Player/experienceSystem';
 import { discoverEnemy, discoverFamiliar, discoverSpell, discoverWeapon, incrementEnemiesKilled } from '../MainMenu/Profiles/profileSystem';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { ItemBar, SpellSelector, WeaponSelector } from './selectors';
@@ -46,7 +42,7 @@ import { BattleSummary } from './summary';
 import { getWeaponById } from '@data/weapons';
 import { getSpellById } from '@data/spells';
 import { mergePlayerEquipmentStats } from '../../entity/Player/playerStats';
-import { InventoryItem } from '@game/types';
+import { Character, InventoryItem } from '@game/types';
 import { 
   decideEnemyAction, 
   getDefaultEnemyLoadout, 
@@ -60,9 +56,10 @@ import {
   isOutsideBattlefield,
   BattleFleeOutcome,
 } from '@battle/Field/battlefield';
-import { getActiveFamiliarIds, getFamiliarById, getFamiliarEffectAmount, getFamiliarTurnInterval } from '../../entity/Player/familiars';
+import { getActiveFamiliarIds, getFamiliarById } from '../../entity/Player/familiars';
 import { createShurimaSandSoldierSummon } from '../../shared/regions';
 import { buildEnemyTargets, buildPlayerTargets, chooseAutoTarget, getCharacterInstanceId, getEnemyIndexByTargetId, resolveSelectedTarget } from '@battle/logic/targetingSystem';
+import { resolveEnemyDefeat, resolvePlayerDefeat } from './Flow/Resolver';
 import './Battle.css';
 
 interface BattleProps {
@@ -97,6 +94,7 @@ export const Battle: React.FC<BattleProps> = ({
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
   const [battleEnded, setBattleEnded] = useState(false);
+  const [logExpanded, setLogExpanded] = useState(false);
   const [battleResult, setBattleResult] = useState<'victory' | 'defeat' | 'reward_selection' | 'battle_fled' | null>(null);
   const [fleeOutcome, setFleeOutcome] = useState<BattleFleeOutcome | null>(null);
   const [turnCounter, setTurnCounter] = useState(0);
@@ -106,6 +104,7 @@ export const Battle: React.FC<BattleProps> = ({
   // Turn entities for new system
   const [playerEntity, setPlayerEntity] = useState<TurnEntity | null>(null);
   const [enemyEntity, setEnemyEntity] = useState<TurnEntity | null>(null);
+  const [allTurnEntities, setAllTurnEntities] = useState<TurnEntity[]>([]);
   const [turnSequence, setTurnSequence] = useState<TurnAction[]>([]);
   const [sequenceIndex, setSequenceIndex] = useState(0);
   
@@ -130,7 +129,7 @@ export const Battle: React.FC<BattleProps> = ({
 
   // Movement and range system
   const [playerPosition, setPlayerPosition] = useState(PLAYER_START_POSITION);
-  const [enemyPosition, setEnemyPosition] = useState(ENEMY_START_POSITION);
+  const [enemyPositionsById, setEnemyPositionsById] = useState<Record<string, number>>({});
 
   const playerChar = state.playerCharacter;
   const enemyChar = state.enemyCharacters.find((enemy) => enemy.hp > 0) || state.enemyCharacters[0];
@@ -141,7 +140,9 @@ export const Battle: React.FC<BattleProps> = ({
 
   const activeFamiliarIds = useMemo(() => getActiveFamiliarIds(state.familiars), [state.familiars]);
   const activeFamiliars = useMemo(
-    () => activeFamiliarIds.map((id) => getFamiliarById(id)).filter(Boolean),
+    () => activeFamiliarIds
+      .map((id) => getFamiliarById(id))
+      .filter((familiar): familiar is NonNullable<typeof familiar> => familiar !== undefined),
     [activeFamiliarIds]
   );
   const activeFamiliarKey = activeFamiliarIds.join('|');
@@ -162,6 +163,85 @@ export const Battle: React.FC<BattleProps> = ({
   const defaultEnemyTargetId = enemyTargets.find((target) => target.canBeTargeted && target.currentHp > 0)?.instanceId ?? null;
   const activeEnemyInstanceId = getCharacterInstanceId(enemyChar, Math.max(0, enemyCharIndex));
   const selectedEnemyInstanceId = getCharacterInstanceId(selectedEnemyChar, Math.max(0, selectedEnemyIndex));
+  const POSITION_STEP = 10;
+  const COLLISION_DISTANCE = 9;
+
+  const getDefaultEnemySpawnPosition = (index: number): number => ENEMY_START_POSITION + index * POSITION_STEP;
+
+  const getEnemyPositionById = (instanceId: string, fallbackIndex: number): number => {
+    return enemyPositionsById[instanceId] ?? getDefaultEnemySpawnPosition(fallbackIndex);
+  };
+
+  const getNearestCollision = (position: number, occupiedPositions: number[]): number | null => {
+    let nearest: number | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    occupiedPositions.forEach((occupied) => {
+      const distance = Math.abs(position - occupied);
+      if (distance < COLLISION_DISTANCE && distance < nearestDistance) {
+        nearest = occupied;
+        nearestDistance = distance;
+      }
+    });
+
+    return nearest;
+  };
+
+  const resolveSpawnPosition = (desiredPosition: number, occupiedPositions: number[]): number => {
+    let resolved = desiredPosition;
+    let guard = 0;
+
+    while (getNearestCollision(resolved, occupiedPositions) !== null && guard < 64) {
+      resolved += POSITION_STEP;
+      guard += 1;
+    }
+
+    return resolved;
+  };
+
+  const resolveMovementPosition = (
+    attemptedPosition: number,
+    previousPosition: number,
+    occupiedPositions: number[]
+  ): number => {
+    let resolved = attemptedPosition;
+    let guard = 0;
+
+    while (guard < 64) {
+      const collisionWith = getNearestCollision(resolved, occupiedPositions);
+      if (collisionWith === null) {
+        break;
+      }
+
+      if (resolved === collisionWith) {
+        const approachDirection = Math.sign(attemptedPosition - previousPosition) || 1;
+        resolved = collisionWith - approachDirection * POSITION_STEP;
+      } else if (resolved < collisionWith) {
+        resolved = collisionWith - POSITION_STEP;
+      } else {
+        resolved = collisionWith + POSITION_STEP;
+      }
+
+      guard += 1;
+    }
+
+    return resolved;
+  };
+
+  const getAliveEnemyPositionsExcluding = (excludedInstanceId?: string): number[] => {
+    return state.enemyCharacters
+      .map((enemy, index) => ({
+        enemy,
+        instanceId: getCharacterInstanceId(enemy, index),
+        position: getEnemyPositionById(getCharacterInstanceId(enemy, index), index),
+      }))
+      .filter(({ enemy, instanceId }) => enemy.hp > 0 && instanceId !== excludedInstanceId)
+      .map(({ position }) => position);
+  };
+
+  const selectedEnemyPosition = getEnemyPositionById(selectedEnemyInstanceId, Math.max(0, selectedEnemyIndex));
+  const enemyPosition = selectedEnemyPosition;
+
   const playerTeamTargets = useMemo(
     () => buildPlayerTargets(playerChar, activeFamiliarIds, state.familiarStates),
     [playerChar, activeFamiliarIds, state.familiarStates]
@@ -194,9 +274,6 @@ export const Battle: React.FC<BattleProps> = ({
     playerBaseScaledAD: playerBaseStats.attackDamage, // Base stats before buffs
   });
 
-  // Ref for auto-scrolling battle log
-  const logEntriesRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const initialTimers = activeFamiliarIds.reduce((acc, familiarId) => {
       acc[familiarId] = 1;
@@ -213,7 +290,6 @@ export const Battle: React.FC<BattleProps> = ({
       setSelectedEnemyTargetId(nextTargetId);
     }
   }, [enemyTargets, selectedEnemyTargetId]);
-  const shouldAutoScrollRef = useRef(true);
   const processedTurnEffectsRef = useRef(0);
 
   // Initialize/reset turn entities when enemy changes (new encounter)
@@ -227,8 +303,7 @@ export const Battle: React.FC<BattleProps> = ({
     // Recalculate scaled stats inside effect to ensure fresh values
     const freshPlayerStats = getScaledStats(playerStatsWithWeapon, playerChar.level, playerChar.class, playerPassiveIds);
     // Enemy stats are already scaled at spawn in store.ts, don't recalculate
-    const freshEnemyStats = enemyChar.stats;
-    
+
     const pEntity: TurnEntity = {
       id: 'player',
       name: getCharacterName(playerChar),
@@ -236,16 +311,31 @@ export const Battle: React.FC<BattleProps> = ({
       haste: freshPlayerStats.haste,
     };
 
-    const eEntity: TurnEntity = {
+    // Build entity for every enemy in the encounter (use instance ID so each is unique)
+    const enemyEntities: TurnEntity[] = state.enemyCharacters.map((enemy, index) => {
+      const instanceId = getCharacterInstanceId(enemy, index);
+      return {
+        id: instanceId,
+        name: getCharacterName(enemy),
+        speed: enemy.stats.speed,
+        haste: enemy.stats.haste,
+      };
+    });
+
+    // Keep first enemy as the legacy `enemyEntity` reference (used by handlers that haven't been updated yet)
+    const eEntity: TurnEntity = enemyEntities[0] ?? {
       id: 'enemy',
       name: getCharacterName(enemyChar),
-      speed: freshEnemyStats.speed,
-      haste: freshEnemyStats.haste,
+      speed: enemyChar.stats.speed,
+      haste: enemyChar.stats.haste,
     };
+
+    const allEntities = [pEntity, ...enemyEntities];
 
     setPlayerEntity(pEntity);
     setEnemyEntity(eEntity);
-    setTurnSequence(generateTurnSequence(pEntity, eEntity, 20));
+    setAllTurnEntities(allEntities);
+    setTurnSequence(generateMultiEntityTurnSequence(allEntities, 20));
     
     // Reset battle state for new encounter
     // =====================================================================
@@ -272,8 +362,7 @@ export const Battle: React.FC<BattleProps> = ({
     setBattleEnded(false);     // Critical: Must reset to false for buttons to appear
     // Don't reset battleResult here - it needs to persist for handleSummaryContinue
     // handleSummaryContinue will reset it after processing victory/defeat
-    setBattleLog([{ message: getEncounterStartMessage() }]);
-    shouldAutoScrollRef.current = true;
+    resetLog(getEncounterStartMessage());
     processedTurnEffectsRef.current = 0;
     setLastLoggedTurn(0);
     setSelectedEnemyTargetId(defaultEnemyTargetId);
@@ -327,51 +416,26 @@ export const Battle: React.FC<BattleProps> = ({
     // for the summary display. They'll be reset after the user dismisses the summary.
     
     // Reset positions for new encounter
+    const nextEnemyPositions: Record<string, number> = {};
+    const occupiedSpawnPositions: number[] = [];
+
+    state.enemyCharacters.forEach((enemy, index) => {
+      const instanceId = getCharacterInstanceId(enemy, index);
+      const desiredSpawn = getDefaultEnemySpawnPosition(index);
+      const resolvedSpawn = resolveSpawnPosition(desiredSpawn, occupiedSpawnPositions);
+      nextEnemyPositions[instanceId] = resolvedSpawn;
+      occupiedSpawnPositions.push(resolvedSpawn);
+    });
+
     setPlayerPosition(PLAYER_START_POSITION);
-    setEnemyPosition(ENEMY_START_POSITION);
+    setEnemyPositionsById(nextEnemyPositions);
   }, [activeEnemyInstanceId, defaultEnemyTargetId, playerChar.level, playerChar.class, state.currentFloor]);
 
   // Initialize battle log
-  interface LogEntry {
-    message: string;
-    type?: 'normal' | 'simultaneous';
-  }
   const encounterNumber = state.encountersCompleted + 1;
   const getEncounterStartMessage = () => `Encounter ${encounterNumber} against ${getCharacterName(enemyChar)} started!`;
 
-  const [battleLog, setBattleLog] = useState<LogEntry[]>(() => {
-    return [
-      { message: getEncounterStartMessage() },
-    ];
-  });
-
-  const appendLog = (message: string, type: 'normal' | 'simultaneous' = 'normal') => {
-    setBattleLog(prev => [...prev, { message, type }]);
-  };
-
-  const appendLogs = (messages: string[], type: 'normal' | 'simultaneous' = 'normal') => {
-    if (messages.length === 0) return;
-    setBattleLog(prev => [...prev, ...messages.map(message => ({ message, type }))]);
-  };
-
-  const scrollBattleLogToBottom = () => {
-    if (!shouldAutoScrollRef.current) return;
-
-    const logContainer = logEntriesRef.current;
-    if (!logContainer) return;
-
-    requestAnimationFrame(() => {
-      logContainer.scrollTop = logContainer.scrollHeight;
-    });
-  };
-
-  const handleLogScroll = () => {
-    const logContainer = logEntriesRef.current;
-    if (!logContainer) return;
-
-    const distanceFromBottom = logContainer.scrollHeight - (logContainer.scrollTop + logContainer.clientHeight);
-    shouldAutoScrollRef.current = distanceFromBottom <= 24;
-  };
+  const { battleLog, appendLog, appendLogs, appendEntries, resetLog } = useBattleLog(getEncounterStartMessage());
 
   // Track which turn we've logged to avoid duplicate messages
   const [lastLoggedTurn, setLastLoggedTurn] = useState(0);
@@ -400,7 +464,6 @@ export const Battle: React.FC<BattleProps> = ({
 
   const updateEnemyDebuffsForId = (targetId: string, updater: (prev: CombatBuff[]) => CombatBuff[]) => {
     setEnemyDebuffsById((prev) => ({
-      ...prev,
       [targetId]: updater(prev[targetId] || []),
     }));
   };
@@ -467,6 +530,7 @@ export const Battle: React.FC<BattleProps> = ({
 
   // Track selected item for use
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [hoveredActionPreview, setHoveredActionPreview] = useState<'attack' | 'spell' | 'item' | null>(null);
   
   // Track combat statistics for summary
   const [combatStats, setCombatStats] = useState({
@@ -556,14 +620,17 @@ export const Battle: React.FC<BattleProps> = ({
       setPendingBattleData(remainingEnemies.length > 0 ? remainingEnemies : null);
       setSummaryRewards(null);
       setShowSummary(true);
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} fled the battlefield at ${playerPosition} (bounds ${BATTLEFIELD_MIN_X} to ${BATTLEFIELD_MAX_X}).` },
-      ]);
+      appendLog(`${playerChar.name} fled the battlefield at ${playerPosition} (bounds ${BATTLEFIELD_MIN_X} to ${BATTLEFIELD_MAX_X}).`);
       return;
     }
 
-    if (isOutsideBattlefield(enemyPosition)) {
+    const escapedEnemy = state.enemyCharacters.find((enemy, index) => {
+      if (enemy.hp <= 0) return false;
+      const instanceId = getCharacterInstanceId(enemy, index);
+      return isOutsideBattlefield(getEnemyPositionById(instanceId, index));
+    });
+
+    if (escapedEnemy) {
       const remainingEnemies = state.originalEnemyQueue;
       setBattleEnded(true);
       setBattleResult('battle_fled');
@@ -571,12 +638,9 @@ export const Battle: React.FC<BattleProps> = ({
       setPendingBattleData(remainingEnemies.length > 0 ? remainingEnemies : null);
       setSummaryRewards(null);
       setShowSummary(true);
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${enemyChar.name} fled the battlefield at ${enemyPosition} (bounds ${BATTLEFIELD_MIN_X} to ${BATTLEFIELD_MAX_X}).` },
-      ]);
+      appendLog(`${escapedEnemy.name} fled the battlefield (bounds ${BATTLEFIELD_MIN_X} to ${BATTLEFIELD_MAX_X}).`);
     }
-  }, [battleEnded, playerPosition, enemyPosition, playerChar.name, enemyChar.name, state.originalEnemyQueue]);
+  }, [battleEnded, playerPosition, enemyPositionsById, playerChar.name, state.enemyCharacters, state.originalEnemyQueue]);
   
   useEffect(() => {
     if (!showSummary) return;
@@ -595,6 +659,76 @@ export const Battle: React.FC<BattleProps> = ({
   
   // Movement distance is player's movement speed scaled down for battlefield
   const MOVE_DISTANCE = Math.floor((playerScaledStats.movementSpeed || 350) / 10);
+
+  const hoveredPreviewTargetIds = useMemo(() => {
+    if (!hoveredActionPreview) {
+      return [] as string[];
+    }
+
+    if (hoveredActionPreview === 'attack') {
+      const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
+      if (!equippedWeaponId || !canPlayerAttack) {
+        return [] as string[];
+      }
+
+      return [selectedEnemyInstanceId];
+    }
+
+    if (hoveredActionPreview === 'spell') {
+      const equippedSpellId = state.spells[state.equippedSpellIndex];
+      const equippedSpell = equippedSpellId ? getSpellById(equippedSpellId) : null;
+      if (!equippedSpell) {
+        return [] as string[];
+      }
+
+      const previewTargets = new Set<string>();
+      const spellRange = equippedSpell.range || 500;
+      const hasOffensiveEffect = equippedSpell.effects.some((effect) => effect.type === 'damage' || effect.type === 'stun' || effect.type === 'debuff');
+      const hasSelfEffect = equippedSpell.effects.some((effect) => effect.type === 'heal' || effect.type === 'buff');
+
+      if (hasOffensiveEffect && currentDistance <= spellRange) {
+        previewTargets.add(selectedEnemyInstanceId);
+      }
+
+      if (hasSelfEffect) {
+        previewTargets.add('player-main');
+      }
+
+      return Array.from(previewTargets);
+    }
+
+    if (!selectedItemId) {
+      return [] as string[];
+    }
+
+    const selectedItem = getItemById(selectedItemId);
+    if (!selectedItem?.consumable) {
+      return [] as string[];
+    }
+
+    if (selectedItemId === 'flashbomb_trap') {
+      const trapRange = selectedItem.active?.range || 500;
+      return currentDistance <= trapRange ? [selectedEnemyInstanceId] : [];
+    }
+
+    if (selectedItemId === 'stealth_ward' || selectedItemId === 'control_ward') {
+      return [] as string[];
+    }
+
+    return ['player-main'];
+  }, [
+    hoveredActionPreview,
+    state.weapons,
+    state.equippedWeaponIndex,
+    state.spells,
+    state.equippedSpellIndex,
+    selectedItemId,
+    selectedEnemyInstanceId,
+    canPlayerAttack,
+    currentDistance,
+  ]);
+
+  const highlightedBattlefieldMarkerIds = hoveredActionPreview ? hoveredPreviewTargetIds : [];
 
   const handleRewardSelection = (selectedItem: InventoryItem) => {
     onEliteRewardTutorialComplete?.();
@@ -704,10 +838,7 @@ export const Battle: React.FC<BattleProps> = ({
     );
     setRewardOptions(newRewards);
     
-    setBattleLog((prev) => [
-      ...prev,
-      { message: `🎲 Rerolled rewards! (${state.rerolls} rerolls left)` },
-    ]);
+    appendLog(`🎲 Rerolled rewards! (${state.rerolls} rerolls left)`);
   };
 
   // Helper function to reduce spell cooldowns by 1 turn (called per timeline turn)
@@ -781,10 +912,7 @@ export const Battle: React.FC<BattleProps> = ({
     console.log('🔍 FULL WEAPON OBJECT:', equippedWeapon);
     
     if (!equippedWeapon) {
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} has no weapon equipped!` },
-      ]);
+      appendLog(`[P1] ${playerChar.name} has no weapon equipped!`);
       return;
     }
     
@@ -792,19 +920,13 @@ export const Battle: React.FC<BattleProps> = ({
     const weaponCooldown = weaponCooldowns[equippedWeaponId] || 0;
     if (weaponCooldown > 0) {
       console.log('❌ Weapon on cooldown, blocking attack');
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `⏰ ${equippedWeapon.name} is on cooldown (${weaponCooldown} turn${weaponCooldown > 1 ? 's' : ''} remaining)!` },
-      ]);
+      appendLog(`[P1] ⏰ ${equippedWeapon.name} is on cooldown (${weaponCooldown} turn${weaponCooldown > 1 ? 's' : ''} remaining)!`);
       return;
     }
     
     // Check if player is in range
     if (!canPlayerAttack) {
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} is out of range from ${getCharacterName(selectedEnemyChar)}! (${currentDistance} > ${playerScaledStats.attackRange || 125})` },
-      ]);
+      appendLog(`[P1] ${playerChar.name} is out of range from [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)}! (${currentDistance} > ${playerScaledStats.attackRange || 125})`);
       // Advance to next action in sequence even if attack fails
       setSequenceIndex((prev) => prev + 1);
       setTurnCounter((prev) => Math.ceil(prev + 1));
@@ -876,9 +998,9 @@ export const Battle: React.FC<BattleProps> = ({
         totalDamage += finalDamage;
         
         if (isCrit) {
-          logMessages.push({ message: `💥 CRITICAL HIT! ${playerChar.name} attacks ${getCharacterName(selectedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `[P1] 💥 CRITICAL HIT! ${playerChar.name} attacks [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
         } else {
-          logMessages.push({ message: `${playerChar.name} attacks ${getCharacterName(selectedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `[P1] ${playerChar.name} attacks [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
         }
       }
       
@@ -886,11 +1008,16 @@ export const Battle: React.FC<BattleProps> = ({
       if (effect.type === 'movement' && effect.movementAmount) {
         const direction = effect.movementAmount > 0 ? 'towards' : 'away';
         const distance = Math.abs(effect.movementAmount);
-        const newPosition = direction === 'towards' 
+        const attemptedPosition = direction === 'towards' 
           ? playerPosition + distance
           : playerPosition - distance;
+        const blockers = [
+          ...getAliveEnemyPositionsExcluding(),
+          ...familiarCombatants.map((_, index) => playerPosition + (index + 1) * POSITION_STEP),
+        ];
+        const newPosition = resolveMovementPosition(attemptedPosition, playerPosition, blockers);
         setPlayerPosition(newPosition);
-        logMessages.push({ message: `${playerChar.name} moves ${direction} by ${distance} units!` });
+        logMessages.push({ message: `[P1] ${playerChar.name} moves ${direction} by ${distance} units!` });
       }
     }
     
@@ -913,7 +1040,7 @@ export const Battle: React.FC<BattleProps> = ({
     }));
 
     if (damageResult.shieldDamage > 0) {
-      logMessages.push({ message: `🛡️ ${getCharacterName(selectedEnemyChar)}'s shield absorbed ${Math.round(damageResult.shieldDamage)} damage!` });
+      logMessages.push({ message: `[E${selectedEnemyIndex + 1}] 🛡️ ${getCharacterName(selectedEnemyChar)}'s shield absorbed ${Math.round(damageResult.shieldDamage)} damage!` });
     }
 
     // Check for Hemorrhage debuff (Delverhold Greateaxe)
@@ -1013,14 +1140,14 @@ export const Battle: React.FC<BattleProps> = ({
           if (effectiveDuration > 0) {
             if (selectedEnemyInstanceId === activeEnemyInstanceId) {
               // Apply stun immediately (no cast time for weapon attacks)
-              setTurnSequence(prev => applyStunDelay(prev, 'enemy', effectiveDuration, currentTime));
+              setTurnSequence(prev => applyStunDelay(prev, selectedEnemyInstanceId || 'enemy', effectiveDuration, currentTime));
               
               // Track stun period for timeline visualization
               const stunStartTime = currentTime;
               const stunEndTime = currentTime + effectiveDuration;
               console.log(`🔵 STUN WEAPON: Adding stun period from ${stunStartTime.toFixed(2)} to ${stunEndTime.toFixed(2)} (duration: ${effectiveDuration})`);
               setStunPeriods(prev => [...prev, {
-                entityId: 'enemy',
+                entityId: selectedEnemyInstanceId || 'enemy',
                 entityName: getCharacterName(selectedEnemyChar),
                 startTime: stunStartTime,
                 endTime: stunEndTime,
@@ -1063,7 +1190,7 @@ export const Battle: React.FC<BattleProps> = ({
     if (logMessages.length === 0) {
       logMessages.push({ message: `${playerChar.name} attacked with ${equippedWeapon.name}.` });
     }
-    setBattleLog((prev) => [...prev, ...logMessages]);
+    appendEntries(logMessages);
     
     // Apply weapon cooldown
     // TIMING MODEL: Cooldowns snap to next integer turn (same as spells)
@@ -1101,7 +1228,7 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
-      setTurnSequence(generateTurnSequence(playerEntity, enemyEntity, 20));
+      setTurnSequence(generateMultiEntityTurnSequence(allTurnEntities, 20));
       setSequenceIndex(0);
     }
   };
@@ -1122,10 +1249,7 @@ export const Battle: React.FC<BattleProps> = ({
     });
     
     if (!equippedSpell) {
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} has no spell equipped!` },
-      ]);
+      appendLog(`[P1] ${playerChar.name} has no spell equipped!`);
       return;
     }
     
@@ -1133,19 +1257,13 @@ export const Battle: React.FC<BattleProps> = ({
     const cooldownRemaining = state.spellCooldowns[equippedSpellId] || 0;
     if (cooldownRemaining > 0 && !isCastTutorialStep) {
       console.log('❌ Spell on cooldown, blocking cast');
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${equippedSpell.name} is on cooldown! (${cooldownRemaining} turn${cooldownRemaining > 1 ? 's' : ''} remaining)` },
-      ]);
+      appendLog(`[P1] ${equippedSpell.name} is on cooldown! (${cooldownRemaining} turn${cooldownRemaining > 1 ? 's' : ''} remaining)`);
       return;
     }
     
     // Check if player is in range
     if (!canPlayerCastSpell && !isCastTutorialStep) {
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name}'s spell is out of range from ${getCharacterName(selectedEnemyChar)}! (${currentDistance} > 500)` },
-      ]);
+      appendLog(`[P1] ${playerChar.name}'s spell is out of range from [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)}! (${currentDistance} > 500)`);
       // Advance to next action in sequence even if spell fails
       setSequenceIndex((prev) => prev + 1);
       setTurnCounter((prev) => Math.ceil(prev + 1));
@@ -1201,7 +1319,7 @@ export const Battle: React.FC<BattleProps> = ({
         finalDamage += trueDamage;
         
         totalDamage += finalDamage;
-        logMessages.push({ message: `${playerChar.name} casts ${equippedSpell.name} on ${getCharacterName(selectedEnemyChar)} for ${Math.round(finalDamage)} damage!` });
+        logMessages.push({ message: `[P1] ${playerChar.name} casts ${equippedSpell.name} on [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)} for ${Math.round(finalDamage)} damage!` });
       }
       
       if (effect.type === 'heal' && effect.healScaling) {
@@ -1293,7 +1411,7 @@ export const Battle: React.FC<BattleProps> = ({
             logMessages.push({ message: `💫 ${playerChar.name} stuns ${getCharacterName(selectedEnemyChar)} for ${effectiveDuration} turn(s)!` });
             // Apply stun immediately if no cast time
             if (selectedEnemyInstanceId === activeEnemyInstanceId) {
-              setTurnSequence(prev => applyStunDelay(prev, 'enemy', effectiveDuration, currentTime));
+              setTurnSequence(prev => applyStunDelay(prev, selectedEnemyInstanceId || 'enemy', effectiveDuration, currentTime));
             }
           }
         } else {
@@ -1446,7 +1564,7 @@ export const Battle: React.FC<BattleProps> = ({
     if (logMessages.length === 0) {
       logMessages.push({ message: `${playerChar.name} cast ${equippedSpell.name}.` });
     }
-    setBattleLog((prev) => [...prev, ...logMessages]);
+    appendEntries(logMessages);
     
     // Update store with any changes made to playerChar (shields, effects, etc.)
     // Note: Do NOT include hp here since updatePlayerHp() already synced it to the store
@@ -1497,7 +1615,7 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
-      setTurnSequence(generateTurnSequence(playerEntity, enemyEntity, 20));
+      setTurnSequence(generateMultiEntityTurnSequence(allTurnEntities, 20));
       setSequenceIndex(0);
     }
   };
@@ -1516,10 +1634,16 @@ export const Battle: React.FC<BattleProps> = ({
       newPosition = playerPosition - MOVE_DISTANCE;
     }
     
-    setPlayerPosition(newPosition);
-    const newDistance = Math.abs(newPosition - enemyPosition);
+    const collisionBlockers = [
+      ...getAliveEnemyPositionsExcluding(),
+      ...familiarCombatants.map((_, index) => playerPosition + (index + 1) * POSITION_STEP),
+    ];
+    const resolvedPosition = resolveMovementPosition(newPosition, playerPosition, collisionBlockers);
+
+    setPlayerPosition(resolvedPosition);
+    const newDistance = Math.abs(resolvedPosition - enemyPosition);
     
-    appendLog(`${playerChar.name} moved ${direction} by ${MOVE_DISTANCE} units. Distance: ${newDistance}`);
+    appendLog(`[P1] ${playerChar.name} moved ${direction} by ${MOVE_DISTANCE} units. Distance: ${newDistance}`);
     
     // Advance to next action in sequence
     setSequenceIndex((prev) => prev + 1);
@@ -1528,7 +1652,7 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
-      setTurnSequence(generateTurnSequence(playerEntity, enemyEntity, 20));
+      setTurnSequence(generateMultiEntityTurnSequence(allTurnEntities, 20));
       setSequenceIndex(0);
     }
   };
@@ -1546,10 +1670,7 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Check if item is consumable
     if (!item.consumable) {
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${item.name} cannot be used in battle!` },
-      ]);
+      appendLog(`${item.name} cannot be used in battle!`);
       return;
     }
     
@@ -1590,10 +1711,7 @@ export const Battle: React.FC<BattleProps> = ({
       
       // Check if enemy is in range
       if (currentDistance > trapRange) {
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `❌ Enemy is out of range! (${currentDistance} > ${trapRange})` },
-        ]);
+        appendLog(`❌ Enemy is out of range! (${currentDistance} > ${trapRange})`);
         return;
       }
       
@@ -1639,10 +1757,7 @@ export const Battle: React.FC<BattleProps> = ({
       // Fallback for other items
       const newBuff = createBuffFromItem(selectedItemId, `buff-${Date.now()}`, turnCounter);
       if (!newBuff) {
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `${item.name} has no usable effects!` },
-        ]);
+        appendLog(`${item.name} has no usable effects!`);
         return;
       }
       
@@ -1666,13 +1781,36 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
-      setTurnSequence(generateTurnSequence(playerEntity, enemyEntity, 20));
+      setTurnSequence(generateMultiEntityTurnSequence(allTurnEntities, 20));
       setSequenceIndex(0);
     }
   };
 
-  const summonEnemyUnits = (summons: any[]) => {
+  const summonEnemyUnits = (summons: Character[], anchorPosition?: number) => {
     if (summons.length === 0) return;
+
+    const liveEnemies = useGameStore.getState().state.enemyCharacters;
+    const occupiedPositions = liveEnemies
+      .map((enemy, index) => {
+        const instanceId = getCharacterInstanceId(enemy, index);
+        return enemy.hp > 0 ? getEnemyPositionById(instanceId, index) : null;
+      })
+      .filter((position): position is number => position !== null);
+
+    setEnemyPositionsById((prev) => {
+      const next = { ...prev };
+      const spawnAnchor = anchorPosition ?? getDefaultEnemySpawnPosition(liveEnemies.length);
+
+      summons.forEach((summon, index) => {
+        const summonInstanceId = getCharacterInstanceId(summon, liveEnemies.length + index);
+        const desiredSpawn = spawnAnchor + index * POSITION_STEP;
+        const resolvedSpawn = resolveSpawnPosition(desiredSpawn, occupiedPositions);
+        next[summonInstanceId] = resolvedSpawn;
+        occupiedPositions.push(resolvedSpawn);
+      });
+
+      return next;
+    });
 
     useGameStore.setState((store) => ({
       state: {
@@ -1685,13 +1823,23 @@ export const Battle: React.FC<BattleProps> = ({
   const handleEnemyMove = () => {
     if (!enemyEntity || !enemyChar) return;
     
+    const currentAction = turnSequence[sequenceIndex];
+    // Resolve which enemy is acting
+    const actingEnemyIndex = currentAction
+      ? state.enemyCharacters.findIndex((e, i) => getCharacterInstanceId(e, i) === currentAction.entityId)
+      : 0;
+    const actingEnemy = state.enemyCharacters[actingEnemyIndex] ?? enemyChar;
+    const actingEnemyStats = actingEnemy.stats;
+    const actingEnemyInstanceId = getCharacterInstanceId(actingEnemy, Math.max(0, actingEnemyIndex));
+    const actingEnemyPosition = getEnemyPositionById(actingEnemyInstanceId, Math.max(0, actingEnemyIndex));
+
     // AI: Only move if out of range to attack
-    const enemyAttackRange = enemyScaledStats.attackRange || 125;
-    const distance = Math.abs(playerPosition - enemyPosition);
+    const enemyAttackRange = actingEnemyStats.attackRange || 125;
+    const distance = Math.abs(playerPosition - actingEnemyPosition);
     
     // If in range to attack, don't move
     if (distance <= enemyAttackRange) {
-      appendLog(`${enemyChar.name} held position (already in range).`);
+      appendLog(`${actingEnemy.name} held position (already in range).`);
       setSequenceIndex((prev) => prev + 1);
       setTurnCounter((prev) => {
         const nextAction = turnSequence[sequenceIndex + 1];
@@ -1701,17 +1849,26 @@ export const Battle: React.FC<BattleProps> = ({
     }
     
     // Calculate enemy movement speed with debuffs
-    const baseEnemyMovement = Math.floor((enemyScaledStats.movementSpeed || 350) / 10);
-    const slowModifier = getSlowModifier(_statusEffects, 'enemy', turnSequence[sequenceIndex]?.time || 0);
+    const baseEnemyMovement = Math.floor((actingEnemyStats.movementSpeed || 350) / 10);
+    const slowModifier = getSlowModifier(_statusEffects, 'enemy', currentAction?.time || 0);
     const enemyMoveDistance = Math.max(1, Math.floor(baseEnemyMovement * slowModifier));
     
     // Out of range, so move towards player
-    let newPosition = enemyPosition + enemyMoveDistance;
-    
-    setEnemyPosition(newPosition);
+    const attemptedPosition = actingEnemyPosition + enemyMoveDistance;
+    const blockers = [
+      playerPosition,
+      ...familiarCombatants.map((_, index) => playerPosition + (index + 1) * POSITION_STEP),
+      ...getAliveEnemyPositionsExcluding(actingEnemyInstanceId),
+    ];
+    const newPosition = resolveMovementPosition(attemptedPosition, actingEnemyPosition, blockers);
+
+    setEnemyPositionsById((prev) => ({
+      ...prev,
+      [actingEnemyInstanceId]: newPosition,
+    }));
     const newDistance = Math.abs(playerPosition - newPosition);
     
-    appendLog(`${enemyChar.name} moved towards by ${enemyMoveDistance} units. Distance: ${newDistance}`);
+    appendLog(`${actingEnemy.name} moved towards by ${enemyMoveDistance} units. Distance: ${newDistance}`);
   };
 
   const handleSkip = () => {
@@ -1726,7 +1883,7 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
-      setTurnSequence(generateTurnSequence(playerEntity, enemyEntity, 20));
+      setTurnSequence(generateMultiEntityTurnSequence(allTurnEntities, 20));
       setSequenceIndex(0);
     }
   };
@@ -1736,18 +1893,33 @@ export const Battle: React.FC<BattleProps> = ({
     
     const currentAction = turnSequence[sequenceIndex];
     if (!currentAction) return;
+
+    // Resolve which enemy is acting based on the turn sequence entity ID
+    const actingEnemyIndex = state.enemyCharacters.findIndex(
+      (e, i) => getCharacterInstanceId(e, i) === currentAction.entityId
+    );
+    const actingEnemy = actingEnemyIndex >= 0 ? state.enemyCharacters[actingEnemyIndex] : enemyChar;
+    const actingEnemyStats = actingEnemy.stats;
+    const actingEnemyInstanceId = getCharacterInstanceId(actingEnemy, Math.max(0, actingEnemyIndex));
+    const actingEnemyPosition = getEnemyPositionById(actingEnemyInstanceId, Math.max(0, actingEnemyIndex));
+
+    // Guard: skip if acting enemy is dead (should have been caught earlier, but just in case)
+    if (actingEnemy.hp <= 0) {
+      setSequenceIndex((prev) => prev + 1);
+      return;
+    }
     
     // Get enemy loadout (use default if not specified)
-    const enemyLoadout = enemyChar.enemyLoadout || getDefaultEnemyLoadout();
-    const behaviorProfile = enemyChar.behaviorProfile || 'balanced';
+    const enemyLoadout = actingEnemy.enemyLoadout || getDefaultEnemyLoadout();
+    const behaviorProfile = actingEnemy.behaviorProfile || 'balanced';
     
     // Build AI decision context
     const aiContext: AIDecisionContext = {
-      enemy: enemyChar,
+      enemy: actingEnemy,
       player: playerChar,
-      enemyPosition,
+      enemyPosition: actingEnemyPosition,
       playerPosition,
-      enemyStats: enemyScaledStats,
+      enemyStats: actingEnemyStats,
       playerStats: playerScaledStats,
       turnCounter,
       weaponCooldowns: enemyWeaponCooldowns,
@@ -1793,20 +1965,20 @@ export const Battle: React.FC<BattleProps> = ({
           let trueDamage = effect.damageScaling.trueDamage || 0;
           
           if (effect.damageScaling.attackDamage) {
-            physicalBaseDamage += (enemyScaledStats.attackDamage || 0) * (effect.damageScaling.attackDamage / 100);
+            physicalBaseDamage += (actingEnemyStats.attackDamage || 0) * (effect.damageScaling.attackDamage / 100);
           }
           if (effect.damageScaling.abilityPower) {
-            magicBaseDamage += (enemyScaledStats.abilityPower || 0) * (effect.damageScaling.abilityPower / 100);
+            magicBaseDamage += (actingEnemyStats.abilityPower || 0) * (effect.damageScaling.abilityPower / 100);
           }
           if (effect.damageScaling.health) {
-            physicalBaseDamage += (enemyScaledStats.health || 0) * (effect.damageScaling.health / 100);
+            physicalBaseDamage += (actingEnemyStats.health || 0) * (effect.damageScaling.health / 100);
           }
           
           // Check for critical strike
           let isCrit = false;
-          if (rollCriticalStrike(enemyScaledStats.criticalChance || 0)) {
-            physicalBaseDamage = calculateCriticalDamage(physicalBaseDamage, enemyScaledStats.criticalDamage || 200);
-            magicBaseDamage = calculateCriticalDamage(magicBaseDamage, enemyScaledStats.criticalDamage || 200);
+          if (rollCriticalStrike(actingEnemyStats.criticalChance || 0)) {
+            physicalBaseDamage = calculateCriticalDamage(physicalBaseDamage, actingEnemyStats.criticalDamage || 200);
+            magicBaseDamage = calculateCriticalDamage(magicBaseDamage, actingEnemyStats.criticalDamage || 200);
             isCrit = true;
           }
           
@@ -1815,14 +1987,14 @@ export const Battle: React.FC<BattleProps> = ({
             finalDamage += calculatePhysicalDamage(
               physicalBaseDamage,
               targetDefenseStats.armor || 0,
-              enemyScaledStats.lethality || 0
+              actingEnemyStats.lethality || 0
             );
           }
           if (magicBaseDamage > 0) {
             finalDamage += calculateMagicDamage(
               magicBaseDamage,
               targetDefenseStats.magicResist || 0,
-              enemyScaledStats.magicPenetration || 0
+              actingEnemyStats.magicPenetration || 0
             );
           }
           
@@ -1830,9 +2002,9 @@ export const Battle: React.FC<BattleProps> = ({
           totalDamage += finalDamage;
           
           if (isCrit) {
-            logMessages.push({ message: `💥 CRITICAL HIT! ${getCharacterName(enemyChar)} uses ${weapon.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
+            logMessages.push({ message: `💥 CRITICAL HIT! ${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
           } else {
-            logMessages.push({ message: `${getCharacterName(enemyChar)} uses ${weapon.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
+            logMessages.push({ message: `${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
           }
         }
         
@@ -1840,11 +2012,20 @@ export const Battle: React.FC<BattleProps> = ({
         if (effect.type === 'movement' && effect.movementAmount) {
           const direction = effect.movementAmount > 0 ? 'towards' : 'away';
           const distance = Math.abs(effect.movementAmount);
-          const newPosition = direction === 'towards' 
-            ? enemyPosition + distance
-            : enemyPosition - distance;
-          setEnemyPosition(newPosition);
-          logMessages.push({ message: `${getCharacterName(enemyChar)} dashes ${direction}!` });
+          const attemptedPosition = direction === 'towards' 
+            ? actingEnemyPosition + distance
+            : actingEnemyPosition - distance;
+          const blockers = [
+            playerPosition,
+            ...familiarCombatants.map((_, index) => playerPosition + (index + 1) * POSITION_STEP),
+            ...getAliveEnemyPositionsExcluding(actingEnemyInstanceId),
+          ];
+          const newPosition = resolveMovementPosition(attemptedPosition, actingEnemyPosition, blockers);
+          setEnemyPositionsById((prev) => ({
+            ...prev,
+            [actingEnemyInstanceId]: newPosition,
+          }));
+          logMessages.push({ message: `${getCharacterName(actingEnemy)} dashes ${direction}!` });
         }
       }
       
@@ -1873,19 +2054,22 @@ export const Battle: React.FC<BattleProps> = ({
           
           // Check player death
           if (playerChar.hp <= 0 && !battleEnded) {
-            setBattleEnded(true);
-            setBattleResult('defeat');
-            setShowSummary(true);
-            setBattleLog((prev) => [...prev, ...logMessages]);
+            resolvePlayerDefeat({
+              setBattleEnded,
+              setBattleResult: (result) => setBattleResult(result),
+              setShowSummary,
+              appendEntries,
+              logMessages,
+            });
             return;
           }
         }
       }
       
       if (logMessages.length === 0) {
-        logMessages.push({ message: `${getCharacterName(enemyChar)} used ${weapon.name}.` });
+        logMessages.push({ message: `${getCharacterName(actingEnemy)} used ${weapon.name}.` });
       }
-      setBattleLog((prev) => [...prev, ...logMessages]);
+      appendEntries(logMessages);
       
       // Apply weapon cooldown
       if (weapon.cooldown && weapon.cooldown > 0) {
@@ -1919,12 +2103,12 @@ export const Battle: React.FC<BattleProps> = ({
 
           if (summonsNeeded > 0) {
             const newSoldiers = Array.from({ length: summonsNeeded }, (_, idx) =>
-              createShurimaSandSoldierSummon(activeEnemyInstanceId, enemyChar.level, livingSoldiers.length + idx + 1)
+              createShurimaSandSoldierSummon(activeEnemyInstanceId, actingEnemy.level, livingSoldiers.length + idx + 1)
             );
-            summonEnemyUnits(newSoldiers);
-            logMessages.push({ message: `🏺 ${getCharacterName(enemyChar)} summons ${summonsNeeded} Sand Soldier${summonsNeeded > 1 ? 's' : ''}!` });
+            summonEnemyUnits(newSoldiers, actingEnemyPosition);
+            logMessages.push({ message: `🏺 ${getCharacterName(actingEnemy)} summons ${summonsNeeded} Sand Soldier${summonsNeeded > 1 ? 's' : ''}!` });
           } else {
-            logMessages.push({ message: `🏺 ${getCharacterName(enemyChar)} commands his existing sand soldiers to hold the line!` });
+            logMessages.push({ message: `🏺 ${getCharacterName(actingEnemy)} commands his existing sand soldiers to hold the line!` });
           }
         }
 
@@ -1934,13 +2118,13 @@ export const Battle: React.FC<BattleProps> = ({
           let trueDamage = effect.damageScaling.trueDamage || 0;
 
           if (effect.damageScaling.abilityPower) {
-            magicBaseDamage += (enemyScaledStats.abilityPower || 0) * (effect.damageScaling.abilityPower / 100);
+            magicBaseDamage += (actingEnemyStats.abilityPower || 0) * (effect.damageScaling.abilityPower / 100);
           }
           if (effect.damageScaling.attackDamage) {
-            physicalBaseDamage += (enemyScaledStats.attackDamage || 0) * (effect.damageScaling.attackDamage / 100);
+            physicalBaseDamage += (actingEnemyStats.attackDamage || 0) * (effect.damageScaling.attackDamage / 100);
           }
           if (effect.damageScaling.health) {
-            magicBaseDamage += (enemyScaledStats.health || 0) * (effect.damageScaling.health / 100);
+            magicBaseDamage += (actingEnemyStats.health || 0) * (effect.damageScaling.health / 100);
           }
           if (effect.damageScaling.missingHealthTrueDamage) {
             const missingHpBeforeHit = Math.max(0, targetMaxHp - targetCurrentHp);
@@ -1952,21 +2136,21 @@ export const Battle: React.FC<BattleProps> = ({
             finalDamage += calculatePhysicalDamage(
               physicalBaseDamage,
               targetDefenseStats.armor || 0,
-              enemyScaledStats.lethality || 0
+              actingEnemyStats.lethality || 0
             );
           }
           if (magicBaseDamage > 0) {
             finalDamage += calculateMagicDamage(
               magicBaseDamage,
               targetDefenseStats.magicResist || 0,
-              enemyScaledStats.magicPenetration || 0
+              actingEnemyStats.magicPenetration || 0
             );
           }
 
           finalDamage += trueDamage;
           
           totalDamage += finalDamage;
-          logMessages.push({ message: `${getCharacterName(enemyChar)} casts ${spell.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `${getCharacterName(actingEnemy)} casts ${spell.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
         }
         
         if (effect.type === 'heal' && effect.healScaling) {
@@ -1976,21 +2160,21 @@ export const Battle: React.FC<BattleProps> = ({
             healAmount += effect.healScaling.flatAmount;
           }
           if (effect.healScaling.abilityPower) {
-            healAmount += (enemyScaledStats.abilityPower || 0) * (effect.healScaling.abilityPower / 100);
+            healAmount += (actingEnemyStats.abilityPower || 0) * (effect.healScaling.abilityPower / 100);
           }
           if (effect.healScaling.missingHealth) {
-            const missingHp = enemyScaledStats.health - enemyChar.hp;
+            const missingHp = actingEnemyStats.health - actingEnemy.hp;
             healAmount += missingHp * (effect.healScaling.missingHealth / 100);
           }
           
           totalHealing += healAmount;
-          logMessages.push({ message: `💚 ${getCharacterName(enemyChar)} heals for ${Math.round(healAmount)} HP!` });
+          logMessages.push({ message: `💚 ${getCharacterName(actingEnemy)} heals for ${Math.round(healAmount)} HP!` });
         }
 
         if (effect.type === 'buff' && spell.id === 'for_demacia') {
           const uniqueId = `enemy_for_demacia_${Date.now()}`;
-          const buff = applyForDemaciaBuff(enemyChar, uniqueId);
-          const adBonus = Math.round((enemyScaledStats.attackDamage || 0) * 0.05);
+          const buff = applyForDemaciaBuff(actingEnemy, uniqueId);
+          const adBonus = Math.round((actingEnemyStats.attackDamage || 0) * 0.05);
 
           updateEnemyBuffsForId(activeEnemyInstanceId, (prev) =>
             addOrMergeBuffStack(
@@ -2006,7 +2190,7 @@ export const Battle: React.FC<BattleProps> = ({
             )
           );
 
-          logMessages.push({ message: `🛡️ ${getCharacterName(enemyChar)} gains +${adBonus} AD and ${buff.shieldAmount} shield for 2 turns!` });
+          logMessages.push({ message: `🛡️ ${getCharacterName(actingEnemy)} gains +${adBonus} AD and ${buff.shieldAmount} shield for 2 turns!` });
         }
       }
       
@@ -2033,10 +2217,13 @@ export const Battle: React.FC<BattleProps> = ({
           }
           
           if (playerChar.hp <= 0 && !battleEnded) {
-            setBattleEnded(true);
-            setBattleResult('defeat');
-            setShowSummary(true);
-            setBattleLog((prev) => [...prev, ...logMessages]);
+            resolvePlayerDefeat({
+              setBattleEnded,
+              setBattleResult: (result) => setBattleResult(result),
+              setShowSummary,
+              appendEntries,
+              logMessages,
+            });
             return;
           }
         }
@@ -2045,16 +2232,16 @@ export const Battle: React.FC<BattleProps> = ({
       // Apply healing to enemy
       if (totalHealing > 0) {
         const newEnemyHp = Math.min(
-          Math.round(enemyChar.hp + totalHealing),
-          Math.round(enemyScaledStats.health)
+          Math.round(actingEnemy.hp + totalHealing),
+          Math.round(actingEnemyStats.health)
         );
-        updateEnemyHp(enemyCharIndex, newEnemyHp);
+        updateEnemyHp(actingEnemyIndex >= 0 ? actingEnemyIndex : enemyCharIndex, newEnemyHp);
       }
       
       if (logMessages.length === 0) {
-        logMessages.push({ message: `${getCharacterName(enemyChar)} cast ${spell.name}.` });
+        logMessages.push({ message: `${getCharacterName(actingEnemy)} cast ${spell.name}.` });
       }
-      setBattleLog((prev) => [...prev, ...logMessages]);
+      appendEntries(logMessages);
       
       // Apply spell cooldown
       if (spell.cooldown && spell.cooldown > 0) {
@@ -2080,15 +2267,12 @@ export const Battle: React.FC<BattleProps> = ({
         // Heal enemy over time (simplified for enemies)
         const healAmount = 50; // Flat heal for simplicity
         const newEnemyHp = Math.min(
-          Math.round(enemyChar.hp + healAmount),
-          Math.round(enemyScaledStats.health)
+          Math.round(actingEnemy.hp + healAmount),
+          Math.round(actingEnemyStats.health)
         );
-        updateEnemyHp(enemyCharIndex, newEnemyHp);
+        updateEnemyHp(actingEnemyIndex >= 0 ? actingEnemyIndex : enemyCharIndex, newEnemyHp);
         
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `${getCharacterName(enemyChar)} used ${item.name}! Restored ${healAmount} HP.` },
-        ]);
+        appendLog(`${getCharacterName(actingEnemy)} used ${item.name}! Restored ${healAmount} HP.`);
       }
       
     } else if (aiAction.type === 'move') {
@@ -2097,17 +2281,26 @@ export const Battle: React.FC<BattleProps> = ({
       const direction = aiAction.direction;
       
       let newPosition = direction === 'towards' 
-        ? enemyPosition + moveDistance
-        : enemyPosition - moveDistance;
-      
-      setEnemyPosition(newPosition);
+        ? actingEnemyPosition + moveDistance
+        : actingEnemyPosition - moveDistance;
+      const blockers = [
+        playerPosition,
+        ...familiarCombatants.map((_, index) => playerPosition + (index + 1) * POSITION_STEP),
+        ...getAliveEnemyPositionsExcluding(actingEnemyInstanceId),
+      ];
+      newPosition = resolveMovementPosition(newPosition, actingEnemyPosition, blockers);
+
+      setEnemyPositionsById((prev) => ({
+        ...prev,
+        [actingEnemyInstanceId]: newPosition,
+      }));
       const newDistance = Math.abs(playerPosition - newPosition);
       
-      appendLog(`${getCharacterName(enemyChar)} moved ${direction} by ${moveDistance} units. Distance: ${newDistance}`);
+      appendLog(`${getCharacterName(actingEnemy)} moved ${direction} by ${moveDistance} units. Distance: ${newDistance}`);
       
     } else if (aiAction.type === 'skip') {
       // Enemy skips turn
-      appendLog(`${getCharacterName(enemyChar)} skipped their turn.`);
+      appendLog(`${getCharacterName(actingEnemy)} skipped their turn.`);
     }
     
     // Advance to next action in sequence
@@ -2119,7 +2312,7 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
-      setTurnSequence(generateTurnSequence(playerEntity, enemyEntity, 20));
+      setTurnSequence(generateMultiEntityTurnSequence(allTurnEntities, 20));
       setSequenceIndex(0);
     }
   };
@@ -2127,10 +2320,7 @@ export const Battle: React.FC<BattleProps> = ({
   const handleAbility = (abilityIndex: number) => {
     const ability = playerChar.abilities[abilityIndex];
     if (ability.damage) {
-      setBattleLog((prev) => [
-        ...prev,
-        { message: `${playerChar.name} uses ${ability.name}! Deals ${ability.damage} damage!` },
-      ]);
+      appendLog(`${playerChar.name} uses ${ability.name}! Deals ${ability.damage} damage!`);
     }
     
     // End player turn
@@ -2255,10 +2445,7 @@ export const Battle: React.FC<BattleProps> = ({
               : indicator
           ));
           
-          setBattleLog(prev => [
-            ...prev,
-            { message: `💥 Flashbomb Trap activated! ${enemyChar.name} is stunned!` }
-          ]);
+          appendLog(`💥 Flashbomb Trap activated! ${enemyChar.name} is stunned!`);
           
           // Schedule actual removal after stun ends (another 0.5 turns)
           const aoeIndicator = aoeIndicators.find(a => a.id === item.label);
@@ -2301,31 +2488,13 @@ export const Battle: React.FC<BattleProps> = ({
         
         // Add log message
         const targetName = stun.targetId === 'player' ? playerChar.name : enemyChar.name;
-        setBattleLog(prev => [
-          ...prev,
-          { message: `💫 ${targetName} is stunned for ${stun.duration} turn(s)!` }
-        ]);
+        appendLog(`💫 ${targetName} is stunned for ${stun.duration} turn(s)!`);
       });
       
       // Remove applied stuns from pending list
       setPendingStuns(prev => prev.filter(stun => currentTime < stun.currentTime));
     }
   }, [sequenceIndex, turnSequence, pendingStuns, playerChar.name, enemyChar.name]);
-
-  // Auto-scroll battle log to bottom when new entries are added
-  useLayoutEffect(() => {
-    scrollBattleLogToBottom();
-  }, [battleLog.length]);
-
-  // Auto-scroll when turn indicator appears (player's turn)
-  useEffect(() => {
-    if (logEntriesRef.current && !playerTurnDone && !battleEnded) {
-      const currentAction = turnSequence[sequenceIndex];
-      if (currentAction && currentAction.entityId === 'player') {
-        scrollBattleLogToBottom();
-      }
-    }
-  }, [sequenceIndex, playerTurnDone, battleEnded, turnSequence]);
 
   // Apply turn-based effects every turn
   // TIMING MODEL - Hybrid:
@@ -2344,272 +2513,35 @@ export const Battle: React.FC<BattleProps> = ({
 
     processedTurnEffectsRef.current = currentTurn;
 
-    // Turn-based effects trigger at each integer turn count
-    const newLogMessages: Array<{ message: string }> = [];
-      const turnEffectSummary: string[] = [];
+    const newLogMessages = runTurnManager({
+      currentTurn,
+      turnCounter,
+      playerChar,
+      enemyChar,
+      enemyCharIndex,
+      playerScaledStats,
+      enemyScaledStats,
+      playerBuffs,
+      enemyBuffs,
+      enemyDebuffs,
+      enemyBuffsById,
+      enemyDebuffsById,
+      activeFamiliars,
+      familiarNextActionTurn,
+      familiarStates: state.familiarStates,
+      selectedEnemyTargetId,
+      activeEnemyInstanceId,
+      applyEnemyCombatModifiers,
+      updatePlayerHp,
+      updateEnemyHp,
+      updateEnemyDebuffsForId,
+      updateEnemyBuffsForId,
+      setPlayerBuffs: (updater) => setPlayerBuffs(updater),
+      setFamiliarNextActionTurn: (nextTimers) => setFamiliarNextActionTurn(nextTimers),
+      reduceSpellCooldowns,
+    });
       
-      // INSTANT DEATH CHECK: Only apply healing if player is alive (HP > 0)
-      // Apply player health regeneration from base stats
-      if (playerChar && playerChar.hp > 0 && playerScaledStats.health_regen > 0) {
-        const regenAmount = Math.floor(playerScaledStats.health_regen);
-        if (regenAmount > 0 && playerChar.hp < playerScaledStats.health) {
-          const newPlayerHp = Math.min(Math.round(playerChar.hp + regenAmount), Math.round(playerScaledStats.health));
-          const actualHealing = newPlayerHp - playerChar.hp;
-          if (actualHealing > 0) {
-            updatePlayerHp(newPlayerHp);
-            turnEffectSummary.push(`${playerChar.name} regenerated ${actualHealing} HP`);
-          }
-        }
-      }
-      
-      // Apply heal-over-time buffs (only if player is alive)
-      if (playerBuffs.length > 0 && playerChar && playerChar.hp > 0) {
-        const hotBuffs = playerBuffs.filter(b => b.type === 'heal_over_time');
-        if (hotBuffs.length > 0 && playerChar.hp < playerScaledStats.health) {
-          // Use new stacking system to compute total healing from all active stacks
-          let totalHealing = 0;
-          hotBuffs.forEach(buff => {
-            const { totalAmount } = computeBuffDisplayValues(buff, turnCounter);
-            totalHealing += totalAmount;
-          });
-          
-          // Ensure minimum 1 HP healing per turn
-          const healingAmount = Math.max(1, Math.floor(totalHealing));
-          const newPlayerHp = Math.min(Math.round(playerChar.hp + healingAmount), Math.round(playerScaledStats.health));
-          const actualHealing = newPlayerHp - playerChar.hp;
-          if (actualHealing > 0) {
-            updatePlayerHp(newPlayerHp);
-            turnEffectSummary.push(`${playerChar.name} healed ${actualHealing} HP from buffs`);
-          }
-        }
-        
-        // Decay buff durations using new stacking system
-        setPlayerBuffs((prevBuffs) => decayBuffStacks(prevBuffs, turnCounter));
-      }
-      
-      // Process StatusEffect durations and shield removal (always, not just when buffs exist)
-      if (playerChar && playerChar.effects && playerChar.effects.length > 0) {
-        // First decrement all durations
-        playerChar.effects = playerChar.effects.map(effect => ({
-          ...effect,
-          duration: effect.duration - 1,
-        }));
-        
-        // Filter out all expired effects
-        playerChar.effects = playerChar.effects.filter(e => e.duration > 0);
-      }
-      
-      // Decay shield durations at turn boundaries (removes expired shields)
-      if (playerChar) {
-        const beforeShields = playerChar.shields?.map(s => ({
-          id: s.id,
-          duration: s.duration,
-        })) || [];
-        
-        decayShieldDurations(playerChar);
-        
-        const afterShields = playerChar.shields?.map(s => ({
-          id: s.id,
-          duration: s.duration,
-        })) || [];
-        
-        console.log('🛡️ SHIELD DECAY:', {
-          before: beforeShields,
-          after: afterShields,
-          removed: beforeShields.filter((b: any) => !afterShields.some((a: any) => a.id === b.id)).length,
-        });
-
-        const playerShieldsChanged = beforeShields.length !== afterShields.length
-          || beforeShields.some((shield, index) => {
-            const nextShield = afterShields[index];
-            return !nextShield || nextShield.id !== shield.id || nextShield.duration !== shield.duration;
-          });
-
-        if (playerShieldsChanged) {
-          useGameStore.setState((store) => ({
-            state: {
-              ...store.state,
-              playerCharacter: {
-                ...store.state.playerCharacter,
-                shields: playerChar.shields,
-              },
-            },
-          }));
-        }
-      }
-      
-      // Reduce spell cooldowns once per timeline turn
-      reduceSpellCooldowns();
-
-      if (activeFamiliars.length > 0) {
-        setFamiliarNextActionTurn((prevTimers) => {
-          const updatedTimers = { ...prevTimers };
-
-          activeFamiliars.forEach((familiar) => {
-            if (!familiar) return;
-
-            const currentFamiliarHp = state.familiarStates[familiar.id]?.currentHp ?? familiar.stats.health;
-            if (currentFamiliarHp <= 0) return;
-
-            const nextReadyTurn = prevTimers[familiar.id] ?? 1;
-            if (currentTurn < nextReadyTurn) return;
-
-            const effectAmount = getFamiliarEffectAmount(familiar);
-
-            if (familiar.effect.type === 'physical' || familiar.effect.type === 'magic') {
-              const liveState = useGameStore.getState().state;
-              const latestTargetIndex = getEnemyIndexByTargetId(liveState.enemyCharacters, selectedEnemyTargetId);
-              const targetIndex = latestTargetIndex >= 0
-                ? latestTargetIndex
-                : liveState.enemyCharacters.findIndex((enemy) => enemy.hp > 0);
-              const latestEnemy = targetIndex >= 0 ? liveState.enemyCharacters[targetIndex] : undefined;
-
-              if (latestEnemy && latestEnemy.hp > 0) {
-                const latestTargetInstanceId = getCharacterInstanceId(latestEnemy, targetIndex);
-                const latestTargetBuffs = enemyBuffsById[latestTargetInstanceId] || [];
-                const latestTargetDebuffs = enemyDebuffsById[latestTargetInstanceId] || [];
-                const latestEnemyStats = applyEnemyCombatModifiers(latestEnemy.stats, latestTargetBuffs, latestTargetDebuffs);
-                const liveEnemy = {
-                  ...latestEnemy,
-                  shields: latestEnemy.shields?.map((shield) => ({ ...shield })),
-                };
-                const finalDamage = familiar.effect.type === 'physical'
-                  ? calculatePhysicalDamage(effectAmount, latestEnemyStats.armor, familiar.stats.lethality)
-                  : calculateMagicDamage(effectAmount, latestEnemyStats.magicResist, familiar.stats.magicPenetration);
-                const damageResult = applyDamageWithShield(liveEnemy, finalDamage);
-                updateEnemyHp(targetIndex, liveEnemy.hp);
-
-                useGameStore.setState((store) => ({
-                  state: {
-                    ...store.state,
-                    enemyCharacters: store.state.enemyCharacters.map((enemy, idx) =>
-                      idx === targetIndex ? { ...enemy, shields: liveEnemy.shields } : enemy
-                    ),
-                  },
-                }));
-
-                if (damageResult.shieldDamage > 0) {
-                  turnEffectSummary.push(`${familiar.name} cracks ${Math.round(damageResult.shieldDamage)} shield on ${getCharacterName(latestEnemy)}`);
-                }
-                if (damageResult.hpDamage > 0) {
-                  turnEffectSummary.push(`${familiar.name} deals ${Math.round(damageResult.hpDamage)} ${familiar.effect.type === 'magic' ? 'magic' : 'physical'} damage to ${getCharacterName(latestEnemy)}`);
-                }
-              }
-            } else if (familiar.effect.type === 'heal') {
-              const latestPlayer = useGameStore.getState().state.playerCharacter;
-              const healedHp = Math.min(Math.round(latestPlayer.hp + effectAmount), Math.round(playerScaledStats.health));
-              const actualHealing = healedHp - latestPlayer.hp;
-              if (actualHealing > 0) {
-                updatePlayerHp(healedHp);
-                turnEffectSummary.push(`${familiar.name} restores ${actualHealing} HP`);
-              }
-            } else if (familiar.effect.type === 'shield') {
-              addShield(playerChar, `familiar-${familiar.id}-shield-${currentTurn}`, effectAmount, 2);
-              useGameStore.setState((store) => ({
-                state: {
-                  ...store.state,
-                  playerCharacter: {
-                    ...store.state.playerCharacter,
-                    shields: playerChar.shields,
-                  },
-                },
-              }));
-              turnEffectSummary.push(`${familiar.name} grants ${effectAmount} shield`);
-
-              const buffStat = familiar.effect.buffStat;
-              const buffAmount = familiar.effect.buffAmount;
-              if (buffStat && buffAmount) {
-                setPlayerBuffs((prevBuffs) => addOrMergeBuffStack(
-                  prevBuffs,
-                  `${familiar.id}-${String(buffStat)}-buff`,
-                  `${familiar.name} Ward`,
-                  buffStat,
-                  buffAmount,
-                  familiar.effect.buffDuration || 2,
-                  turnCounter,
-                  'instant',
-                  false
-                ));
-              }
-            }
-
-            updatedTimers[familiar.id] = currentTurn + getFamiliarTurnInterval(familiar);
-          });
-
-          return updatedTimers;
-        });
-      }
-      
-      // Apply enemy health regeneration
-      if (enemyChar && enemyScaledStats.health_regen > 0) {
-        const regenAmount = Math.floor(enemyScaledStats.health_regen);
-        if (regenAmount > 0 && enemyChar.hp > 0 && enemyChar.hp < enemyScaledStats.health) {
-          const newEnemyHp = Math.min(enemyChar.hp + regenAmount, enemyScaledStats.health);
-          const actualHealing = newEnemyHp - enemyChar.hp;
-          if (actualHealing > 0) {
-            updateEnemyHp(enemyCharIndex, newEnemyHp);
-            turnEffectSummary.push(`${enemyChar.name} regenerated ${actualHealing} HP`);
-          }
-        }
-      }
-
-      // Apply damage-over-time debuffs to enemy (e.g., Hemorrhage)
-      if (enemyDebuffs.length > 0 && enemyChar && enemyChar.hp > 0) {
-        // Calculate Hemorrhage damage (stacking DoT) using new stacking system
-        const hemorrhageBuff = enemyDebuffs.find(d => d.id === 'hemorrhage');
-        if (hemorrhageBuff) {
-          const { totalAmount } = computeBuffDisplayValues(hemorrhageBuff, turnCounter);
-          const damageAmount = Math.max(1, Math.floor(totalAmount));
-          const stackCount = hemorrhageBuff.stacks.length;
-          const newEnemyHp = Math.max(0, enemyChar.hp - damageAmount);
-          const actualDamage = enemyChar.hp - newEnemyHp;
-          if (actualDamage > 0) {
-            updateEnemyHp(enemyCharIndex, newEnemyHp);
-            turnEffectSummary.push(`${enemyChar.name} takes ${actualDamage} damage from Hemorrhage (${stackCount} stack${stackCount > 1 ? 's' : ''})`);
-          }
-
-          // Check for immediate death from DoT
-          if (newEnemyHp <= 0 && !battleEnded) {
-            // Enemy died from bleeding - victory will be handled by the victory check useEffect
-          }
-        }
-
-        // Decay debuff durations using new stacking system
-        updateEnemyDebuffsForId(activeEnemyInstanceId, (prevDebuffs) => decayBuffStacks(prevDebuffs, turnCounter));
-      }
-
-      if (enemyBuffs.length > 0) {
-        updateEnemyBuffsForId(activeEnemyInstanceId, (prevBuffs) => decayBuffStacks(prevBuffs, turnCounter));
-      }
-
-      if (enemyChar) {
-        const beforeEnemyShields = enemyChar.shields?.map((s) => ({ id: s.id, duration: s.duration })) || [];
-        decayShieldDurations(enemyChar);
-        const afterEnemyShields = enemyChar.shields?.map((s) => ({ id: s.id, duration: s.duration })) || [];
-        const enemyShieldsChanged = beforeEnemyShields.length !== afterEnemyShields.length
-          || beforeEnemyShields.some((shield, index) => {
-            const nextShield = afterEnemyShields[index];
-            return !nextShield || nextShield.id !== shield.id || nextShield.duration !== shield.duration;
-          });
-
-        if (enemyShieldsChanged) {
-          useGameStore.setState((store) => ({
-            state: {
-              ...store.state,
-              enemyCharacters: store.state.enemyCharacters.map((enemy, idx) =>
-                idx === enemyCharIndex ? { ...enemy, shields: enemyChar.shields } : enemy
-              ),
-            },
-          }));
-        }
-      }
-
-      const turnHeader = turnEffectSummary.length > 0
-        ? `--- Turn ${currentTurn} --- ${turnEffectSummary.join(' | ')}`
-        : `--- Turn ${currentTurn} ---`;
-      newLogMessages.unshift({ message: turnHeader });
-      
-      setBattleLog((prev) => [...prev, ...newLogMessages]);
+      appendEntries(newLogMessages);
       setLastLoggedTurn(currentTurn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turnCounter, battleEnded, lastLoggedTurn, activeEnemyInstanceId]);
@@ -2630,9 +2562,22 @@ export const Battle: React.FC<BattleProps> = ({
     
     const currentAction = turnSequence[sequenceIndex];
     
-    // If it's enemy's turn, execute their action
-    if (currentAction.entityId === 'enemy' && enemyChar.hp > 0) {
-      // Wait a bit before executing enemy action for better UX
+    // It's an enemy's turn if the acting entity is not the player
+    if (currentAction.entityId !== 'player') {
+      // Find which enemy index this action belongs to
+      const actingEnemyIndex = state.enemyCharacters.findIndex(
+        (enemy, index) => getCharacterInstanceId(enemy, index) === currentAction.entityId
+      );
+      const actingEnemy = actingEnemyIndex >= 0 ? state.enemyCharacters[actingEnemyIndex] : null;
+
+      // Skip this turn if the acting enemy is already dead
+      if (!actingEnemy || actingEnemy.hp <= 0) {
+        const timer = setTimeout(() => {
+          setSequenceIndex((prev) => prev + 1);
+        }, 200);
+        return () => clearTimeout(timer);
+      }
+
       const timer = setTimeout(() => {
         if (currentAction.actionType === 'move') {
           handleEnemyMove();
@@ -2643,7 +2588,7 @@ export const Battle: React.FC<BattleProps> = ({
       
       return () => clearTimeout(timer);
     }
-  }, [sequenceIndex, battleEnded, enemyChar.hp, turnSequence]);
+  }, [sequenceIndex, battleEnded, state.enemyCharacters, turnSequence]);
 
   // Check for victory/defeat
   useEffect(() => {
@@ -2664,154 +2609,33 @@ export const Battle: React.FC<BattleProps> = ({
     
     if (enemyChar.hp <= 0) {
       console.log('💀 ENEMY DEFEATED! Starting victory sequence...', { battleEnded });
-      setBattleEnded(true);
-      console.log('📍 Called setBattleEnded(true)');
-      
-      // Track enemy defeat in profile
-      discoverEnemy(enemyChar.id);
-      incrementEnemiesKilled();
-      
-      // Check for Glory passive (Dark Seal / Mejai's Soulstealer)
-      // Grants stacking AP buff when defeating Champion or Legend tier enemies
-      if (enemyChar.tier === 'champion' || enemyChar.tier === 'legend') {
-        const hasGlory = playerPassiveIds.includes('glory');
-        const hasGloryUpgraded = playerPassiveIds.includes('glory_upgraded');
-        
-        if (hasGlory || hasGloryUpgraded) {
-          const apGain = hasGloryUpgraded ? 15 : 10;
-          const passiveName = hasGloryUpgraded ? "Glory (Upgraded)" : "Glory";
-          
-          // Add permanent AP buff using new stacking system
-          const updatedBuffs = addOrMergeBuffStack(
-            playerBuffs,
-            'glory_stacks',
-            passiveName + ' Stacks',
-            'abilityPower',
-            apGain,
-            9999, // Effectively permanent
-            turnCounter,
-            'stacking_permanent',
-            true // Infinite - persists entire game
-          );
-          
-          // Update both local and persistent buffs
-          setPlayerBuffs(updatedBuffs);
-          const gloryBuff = updatedBuffs.find(b => b.id === 'glory_stacks');
-          if (gloryBuff) {
-            updatePersistentBuff(gloryBuff);
-          }
-          
-          // Calculate current total AP for tracking
-          const baseAP = playerChar.stats.abilityPower || 0;
-          const buffAP = updatedBuffs
-            .filter(b => b.stat === 'abilityPower')
-            .reduce((sum, b) => {
-              const { totalAmount } = computeBuffDisplayValues(b, turnCounter);
-              return sum + totalAmount;
-            }, 0);
-          const totalAP = baseAP + buffAP;
-          
-          // Track max AP reached for unlock tracking
-          updateMaxAbilityPower(totalAP);
-          
-          setBattleLog((prev) => [
-            ...prev,
-            { message: `✨ ${passiveName}: +${apGain} AP gained! (Champion/Legend defeated)` },
-          ]);
-        }
-      }
-      
-      // Check for Manaflow passive (Tear of the Goddess)
-      // Grants +10 stacks per encounter victory (max 360 stacks)
-      // Stacks are tracked via persistent buff and grant +0.01 xpGain per stack
-      const hasManaflow = playerPassiveIds.includes('manaflow');
-      
-      if (hasManaflow) {
-        const stacksPerVictory = 10;
-        const maxStacks = 360;
-        
-        // Check current stacks from persistent buffs
-        const existingBuff = playerBuffs.find(b => b.id === 'manaflow_stacks');
-        const currentStackCount = existingBuff?.stacks.length || 0;
-        
-        // Only add stacks if under the cap
-        if (currentStackCount < maxStacks) {
-          const stacksToAdd = Math.min(stacksPerVictory, maxStacks - currentStackCount);
-          
-          // Add stacks one by one (each stack = 1 count = +0.01 xpGain)
-          let updatedBuffs = playerBuffs;
-          for (let i = 0; i < stacksToAdd; i++) {
-            updatedBuffs = addOrMergeBuffStack(
-              updatedBuffs,
-              'manaflow_stacks',
-              'Manaflow',
-              'xpGain', // XP gain bonus stat
-              0.01, // Each stack grants +0.01 xpGain
-              9999, // Effectively permanent
-              turnCounter,
-              'stacking_permanent',
-              true // Infinite - persists entire game
-            );
-          }
-          
-          // Update both local and persistent buffs
-          setPlayerBuffs(updatedBuffs);
-          const manaflowBuff = updatedBuffs.find(b => b.id === 'manaflow_stacks');
-          if (manaflowBuff) {
-            updatePersistentBuff(manaflowBuff);
-          }
-          
-          const newStackCount = Math.min(currentStackCount + stacksToAdd, maxStacks);
-          const xpGainBonus = newStackCount * 0.01;
-          
-          setBattleLog((prev) => [
-            ...prev,
-            { message: `💧 Manaflow: +${stacksToAdd} stacks gained! (${newStackCount}/${maxStacks}, +${xpGainBonus.toFixed(2)} XP Gain)` },
-          ]);
-        }
-      }
-      
-      // Use battleFlow system to handle victory
-      // Calculate player's magicFind and goldGain from inventory
-      const totalMagicFind = state.inventory.reduce((sum, invItem) => {
-        const item = getItemById(invItem.itemId);
-        return sum + (item?.stats.magicFind || 0);
-      }, 0);
-      
-      const totalGoldGain = state.inventory.reduce((sum, invItem) => {
-        const item = getItemById(invItem.itemId);
-        return sum + (item?.stats.goldGain || 0);
-      }, 0);
-      
-      // Check if player has reap passive (Cull's passive)
-      const hasReapPassive = playerPassiveIds.includes('reap');
-      
-      const victoryResult = handleEnemyDefeat(
+      resolveEnemyDefeat({
         enemyChar,
-        state.originalEnemyQueue, // Use the remaining encounter queue
-        state.currentFloor,
-        state.selectedRegion,
-        playerChar.level,
-        totalMagicFind,
-        totalGoldGain,
-        hasReapPassive
-      );
-      
-      // Apply manaflow xpGain bonus if present
-      // Manaflow stacks grant +0.01 xpGain per stack (max 360 stacks = +3.6 xpGain)
-      const manaflowBuff = playerBuffs.find(b => b.id === 'manaflow_stacks');
-      if (manaflowBuff) {
-        const stackCount = manaflowBuff.stacks.length;
-        const manaflowXpGain = stackCount * 0.01; // Each stack = +0.01 xpGain
-        
-        // Apply manaflow xpGain multiplier: 100 xpGain = 100% bonus = 2x experience
-        const manaflowMultiplier = 1 + (manaflowXpGain / 100);
-        victoryResult.expReward = Math.floor(victoryResult.expReward * manaflowMultiplier);
-      }
-      
-      // Apply rewards to game state
-      applyVictoryRewards(
-        victoryResult,
+        playerChar,
+        playerScaledHealth: playerScaledStats.health,
+        playerBuffs,
+        playerPassiveIds,
+        turnCounter,
+        stateCurrentFloor: state.currentFloor,
+        stateSelectedRegion: state.selectedRegion,
+        stateOriginalEnemyQueue: state.originalEnemyQueue,
+        stateInventory: state.inventory,
+        currentQuestPath,
+        appendLog,
+        appendLogs,
+        appendEntries,
+        setBattleEnded,
+        setShowSummary,
+        setBattleResult: (result) => setBattleResult(result),
+        setRewardOptions,
+        setPendingBattleData,
+        setSummaryRewards: (rewards) => setSummaryRewards(rewards),
+        setPlayerBuffs,
+        discoverEnemy,
+        incrementEnemiesKilled,
+        discoverFamiliar,
+        updatePersistentBuff,
+        updateMaxAbilityPower,
         addInventoryItem,
         addWeapon,
         addSpell,
@@ -2819,91 +2643,7 @@ export const Battle: React.FC<BattleProps> = ({
         addGold,
         addExperience,
         updatePlayerHp,
-        playerChar.hp,
-        playerScaledStats.health,
-        state.inventory
-      );
-      
-      // Add victory messages to battle log
-      const messages = getVictoryMessages(getCharacterName(enemyChar), victoryResult);
-      setBattleLog((prev) => [...prev, ...messages.map(msg => ({ message: msg }))]);
-      
-      // Prepare summary rewards including item, spell, and weapon drops
-      const itemDrops = victoryResult.loot
-        ?.filter(reward => reward.type === 'item' && reward.itemId)
-        .map(reward => ({ itemId: reward.itemId!, quantity: reward.amount || 1 })) || [];
-      const spellDrops = victoryResult.loot
-        ?.filter(reward => reward.type === 'spell' && reward.spellId)
-        .map(reward => reward.spellId!) || [];
-      const weaponDrops = victoryResult.loot
-        ?.filter(reward => reward.type === 'weapon' && reward.weaponId)
-        .map(reward => reward.weaponId!) || [];
-      const familiarDrops = victoryResult.loot
-        ?.filter(reward => reward.type === 'familiar' && reward.familiarId)
-        .map(reward => reward.familiarId!) || [];
-
-      familiarDrops.forEach((familiarId) => discoverFamiliar(familiarId));
-      
-      setSummaryRewards({
-        gold: victoryResult.goldReward,
-        exp: victoryResult.expReward,
-        items: itemDrops,
-        spells: spellDrops,
-        weapons: weaponDrops,
-        familiars: familiarDrops,
       });
-      
-      // Show battle summary
-      setShowSummary(true);
-      console.log('✅ Victory sequence complete - summary should show');
-      
-      // Check for level up after applying experience
-      const newPlayerExp = playerChar.experience + victoryResult.expReward;
-      const levelUpResult = checkLevelUp(newPlayerExp, playerChar.level);
-      if (levelUpResult) {
-        const levelsGained = levelUpResult.newLevel - playerChar.level;
-        setBattleLog((prev) => [
-          ...prev,
-          { message: `🎉 LEVEL UP! ${playerChar.name} reached level ${levelUpResult.newLevel}!` },
-          { message: `💪 Gained ${levelsGained} level${levelsGained > 1 ? 's' : ''}! All stats increased!` },
-        ]);
-      }
-      
-      // Handle next steps - store data for user-triggered progression
-      if (victoryResult.shouldShowRewardSelection) {
-        // Generate reward options and integrate into summary
-        const rewards = generateRewardOptions(
-          state.selectedRegion,
-          state.currentFloor,
-          playerChar.class,
-          currentQuestPath
-            ? {
-                difficulty: currentQuestPath.difficulty,
-                lootType: currentQuestPath.lootType,
-                pathName: currentQuestPath.name,
-                pathDescription: currentQuestPath.description,
-              }
-            : undefined
-        );
-        setRewardOptions(rewards);
-        
-        // Store next enemies for after reward selection
-        setPendingBattleData(victoryResult.nextEnemies);
-        
-        // Mark as reward selection mode (will be integrated in summary)
-        setBattleResult('reward_selection');
-        console.log('🎁 Reward selection mode activated');
-      } else if (victoryResult.hasMoreEnemies && victoryResult.nextEnemies) {
-        // Store next enemies - user will click Continue to proceed
-        setPendingBattleData(victoryResult.nextEnemies);
-        setBattleResult('victory'); // Regular victory with more enemies pending
-        console.log('⏭️ More enemies pending:', victoryResult.nextEnemies.length);
-      } else {
-        // All enemies defeated - show quest complete
-        setPendingBattleData(null);
-        setBattleResult('victory');
-        console.log('🏆 Quest complete - all enemies defeated');
-      }
     }
     // Note: Player defeat is now handled immediately when damage is dealt
     // Note: battleEnded is NOT in dependencies to avoid circular triggers
@@ -2950,91 +2690,247 @@ export const Battle: React.FC<BattleProps> = ({
     return isHighlighted ? 'battle-tutorial-highlight' : 'battle-tutorial-muted';
   };
 
+  // Formation presets: per-count configuration for spacing and slot placement
+  type SpacingMode = 'cinematic' | 'normal' | 'compact';
+  
+  interface FormationPreset {
+    slotIndices: number[];
+    spacing: SpacingMode;
+  }
+
+  const FORMATION_PRESETS: Record<number, FormationPreset> = {
+    1: { slotIndices: [2], spacing: 'cinematic' },
+    2: { slotIndices: [1, 2], spacing: 'normal' },
+    3: { slotIndices: [1, 2, 3], spacing: 'normal' },
+    4: { slotIndices: [1, 2, 3, 4], spacing: 'compact' },
+    5: { slotIndices: [0, 1, 2, 3, 4], spacing: 'compact' },
+  };
+
+  const getFormationPreset = (count: number): FormationPreset => {
+    if (count <= 0) return { slotIndices: [], spacing: 'normal' };
+    return FORMATION_PRESETS[count] || FORMATION_PRESETS[5];
+  };
+
+  type FormationUnit = {
+    id: string;
+    position: number;
+    team: 'player' | 'enemy';
+    tokenLabel: string;
+    tokenShape: 'circle' | 'square' | 'diamond';
+    tokenAccent: string;
+    markerImageSrc?: string;
+    markerFallbackLabel?: string;
+    compact?: boolean;
+    defeated?: boolean;
+    heightClass?: 'h-full' | 'h-90' | 'h-75' | 'h-70';
+    widthClass?: 'w-100' | 'w-90' | 'w-75' | 'w-70';
+    content: React.ReactNode;
+  };
+
+  const familiarCombatants = useMemo(
+    () => activeFamiliars.filter((familiar) => (state.familiarStates[familiar.id]?.currentHp || 0) > 0),
+    [activeFamiliars, state.familiarStates]
+  );
+
+  const playerFormationUnits = useMemo<FormationUnit[]>(() => {
+    const units: FormationUnit[] = [
+      {
+        id: 'player-main',
+        position: playerPosition,
+        team: 'player',
+        tokenLabel: 'P1',
+        tokenShape: 'circle',
+        tokenAccent: '#1fb6ff',
+        markerImageSrc: playerChar.characterArt || '/assets/global/images/player/miko1.png',
+        widthClass: 'w-100',
+        content: <CharacterStatus combatBuffs={playerBuffs} turnCounter={turnCounter} compact />,
+      },
+    ];
+
+    familiarCombatants.forEach((familiar, index) => {
+      units.push({
+        id: `familiar-${familiar.id}`,
+        position: playerPosition + (index + 1) * 10,
+        team: 'player',
+        tokenLabel: `F${index + 1}`,
+        tokenShape: 'diamond',
+        tokenAccent: '#7dd3fc',
+        markerImageSrc: familiar.imagePath,
+        markerFallbackLabel: `F${index + 1}`,
+        compact: true,
+        heightClass: 'h-70',
+        widthClass: 'w-70',
+        content: (
+          <FamiliarStatus
+            familiarId={familiar.id}
+            compact
+            currentTurn={Math.ceil(turnCounter)}
+            nextActionTurn={familiarNextActionTurn[familiar.id]}
+          />
+        ),
+      });
+    });
+
+    return units.sort((a, b) => a.position - b.position);
+  }, [familiarCombatants, familiarNextActionTurn, playerBuffs, playerPosition, turnCounter]);
+
+  const enemyFormationUnits = useMemo<FormationUnit[]>(() => {
+    const units = state.enemyCharacters.map((enemy, index) => {
+      const targetId = getCharacterInstanceId(enemy, index);
+      const enemyBattlePosition = getEnemyPositionById(targetId, index);
+      const isMinionTier = enemy.tier === 'minion';
+      const isHighTier = enemy.tier === 'elite' || enemy.tier === 'champion';
+      const enemyHeightClass: FormationUnit['heightClass'] = isMinionTier ? 'h-75' : isHighTier ? 'h-90' : 'h-full';
+      const enemyWidthClass: FormationUnit['widthClass'] = isMinionTier ? 'w-75' : isHighTier ? 'w-90' : 'w-100';
+
+      return {
+        id: targetId,
+        position: enemyBattlePosition,
+        team: 'enemy' as const,
+        tokenLabel: `E${index + 1}`,
+        tokenShape: (enemy.tier === 'boss' || enemy.tier === 'legend' ? 'diamond' : 'square') as 'diamond' | 'square',
+        tokenAccent: enemy.hp > 0 ? '#ff8f66' : '#8f6a5c',
+        markerImageSrc: enemy.characterArt,
+        markerFallbackLabel: `E${index + 1}`,
+        compact: isMinionTier,
+        defeated: enemy.hp <= 0,
+        heightClass: enemyHeightClass,
+        widthClass: enemyWidthClass,
+        content: (
+          <CharacterStatus
+            characterId={targetId}
+            combatDebuffs={enemyDebuffsById[targetId] || []}
+            isRevealed={store.isEnemyRevealed(enemy.id)}
+            turnCounter={turnCounter}
+            compact
+          />
+        ),
+      };
+    });
+
+    return units.sort((a, b) => b.position - a.position);
+  }, [enemyDebuffsById, enemyPositionsById, state.enemyCharacters, store, turnCounter]);
+
+  const assignUnitsToLane = (units: FormationUnit[], slotIndices: number[]): Array<FormationUnit | null> => {
+    const result: Array<FormationUnit | null> = [null, null, null, null, null];
+    const laneUnits = units.slice(0, slotIndices.length);
+    laneUnits.forEach((unit, idx) => {
+      result[slotIndices[idx]] = unit;
+    });
+    return result;
+  };
+
+  const playerPreset = useMemo(() => getFormationPreset(playerFormationUnits.length), [playerFormationUnits.length]);
+  const enemyPreset = useMemo(() => getFormationPreset(enemyFormationUnits.length), [enemyFormationUnits.length]);
+
+  const playerLaneSlots = useMemo(
+    () => assignUnitsToLane(playerFormationUnits, playerPreset.slotIndices),
+    [playerFormationUnits, playerPreset.slotIndices]
+  );
+  const enemyLaneSlots = useMemo(
+    () => assignUnitsToLane(enemyFormationUnits, enemyPreset.slotIndices),
+    [enemyFormationUnits, enemyPreset.slotIndices]
+  );
+
+  const selectedEnemyBattlePosition = useMemo(
+    () => enemyFormationUnits.find((unit) => unit.id === selectedEnemyInstanceId)?.position ?? selectedEnemyPosition,
+    [enemyFormationUnits, selectedEnemyInstanceId, selectedEnemyPosition]
+  );
+
+  const battlefieldMarkers = useMemo(
+    () => [...playerFormationUnits, ...enemyFormationUnits].map((unit) => {
+      let markerPosition = unit.position;
+
+      // Keep lane order and battlefield marker order aligned for player companions.
+      if (unit.team === 'player' && unit.tokenLabel.startsWith('F')) {
+        const familiarOrder = Number(unit.tokenLabel.slice(1));
+        if (!Number.isNaN(familiarOrder) && familiarOrder > 0) {
+          markerPosition = playerPosition - familiarOrder * 20;
+        }
+      }
+
+      return {
+        id: unit.id,
+        label: unit.tokenLabel,
+        position: markerPosition,
+        team: unit.team,
+        shape: unit.tokenShape,
+        accentColor: unit.tokenAccent,
+        pulsing: !unit.defeated && highlightedBattlefieldMarkerIds.includes(unit.id),
+        imageSrc: unit.markerImageSrc,
+        fallbackLabel: unit.markerFallbackLabel,
+      };
+    }),
+    [enemyFormationUnits, playerFormationUnits, highlightedBattlefieldMarkerIds, playerPosition]
+  );
+
+  const battlefieldRangePreview = useMemo(() => {
+    if (!hoveredActionPreview) {
+      return null;
+    }
+
+    if (hoveredActionPreview === 'attack') {
+      const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
+      if (!equippedWeaponId) {
+        return null;
+      }
+
+      return {
+        sourcePosition: playerPosition,
+        targetPosition: selectedEnemyBattlePosition,
+        range: playerScaledStats.attackRange || 125,
+        color: '#7dd3fc',
+      };
+    }
+
+    if (hoveredActionPreview === 'spell') {
+      const equippedSpellId = state.spells[state.equippedSpellIndex];
+      const equippedSpell = equippedSpellId ? getSpellById(equippedSpellId) : null;
+      if (!equippedSpell) {
+        return null;
+      }
+
+      return {
+        sourcePosition: playerPosition,
+        targetPosition: selectedEnemyBattlePosition,
+        range: equippedSpell.range || 500,
+        color: '#93c5fd',
+      };
+    }
+
+    if (!selectedItemId) {
+      return null;
+    }
+
+    const selectedItem = getItemById(selectedItemId);
+    const itemRange = selectedItem?.active?.range;
+    if (!itemRange || itemRange <= 0) {
+      return null;
+    }
+
+    return {
+      sourcePosition: playerPosition,
+      targetPosition: selectedEnemyBattlePosition,
+      range: itemRange,
+      color: '#fbbf24',
+    };
+  }, [
+    hoveredActionPreview,
+    state.weapons,
+    state.equippedWeaponIndex,
+    state.spells,
+    state.equippedSpellIndex,
+    selectedItemId,
+    playerPosition,
+    selectedEnemyBattlePosition,
+    playerScaledStats.attackRange,
+  ]);
+
   return (
-    <div className="battle-screen">
+    <div className={`battle-screen${logExpanded ? ' log-expanded' : ''}`}>
       {/* Character Panels */}
-      <div className={`battle-arena ${getTutorialClass(isBattleFocus || isArenaFocus)}`}>
-        <div className="team-player">
-          <div className="team-status-slot player-status-slot">
-            <CharacterStatus combatBuffs={playerBuffs} turnCounter={turnCounter} />
-          </div>
-          {activeFamiliarIds.length > 0 && (
-            <div className="familiar-team-row">
-              {activeFamiliarIds.map((familiarId) => (
-                <div key={familiarId} className="team-status-slot familiar-status-slot">
-                  <FamiliarStatus
-                    familiarId={familiarId}
-                    compact
-                    currentTurn={Math.ceil(turnCounter)}
-                    nextActionTurn={familiarNextActionTurn[familiarId]}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div className="team-enemy">
-          <div className="enemy-team-header">Enemy Team ({state.enemyCharacters.length})</div>
-          <div className="enemy-team-row">
-            {state.enemyCharacters.map((enemy, index) => {
-              const targetId = getCharacterInstanceId(enemy, index);
-              const isSelected = selectedEnemyInstanceId === targetId;
-
-              return (
-                <div
-                  key={targetId}
-                  className={`team-status-slot enemy-status-slot enemy-target-panel ${isSelected ? 'selected' : ''} ${enemy.hp <= 0 ? 'defeated' : ''}`}
-                  onClick={() => {
-                    if (enemy.hp > 0) {
-                      setSelectedEnemyTargetId(targetId);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={enemy.hp > 0 ? 0 : -1}
-                  onKeyDown={(event) => {
-                    if (enemy.hp > 0 && (event.key === 'Enter' || event.key === ' ')) {
-                      event.preventDefault();
-                      setSelectedEnemyTargetId(targetId);
-                    }
-                  }}
-                >
-                  <div className="enemy-target-label">
-                    {enemy.hp <= 0 ? 'Defeated' : isSelected ? 'Focused Target' : 'Click to Target'}
-                  </div>
-                  <CharacterStatus
-                    characterId={targetId}
-                    combatDebuffs={enemyDebuffsById[targetId] || []}
-                    isRevealed={store.isEnemyRevealed(enemy.id)}
-                    turnCounter={turnCounter}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Unified Combat Layout (desktop) */}
-      <div className="battle-combat-layout">
-        <div className={`battle-log battle-log-panel ${getTutorialClass(isLogFocus)}`}>
-          <div className="log-entries" ref={logEntriesRef} onScroll={handleLogScroll}>
-            {battleLog.map((entry, idx) => (
-              <div key={idx} className={`log-entry ${entry.type || ''}`}>
-                {entry.message}
-              </div>
-            ))}
-            {isPlayerTurn && !playerTurnDone && !battleEnded && currentAction && (
-              <div className="log-entry turn-indicator">
-                {currentAction.actionType === 'attack' || currentAction.actionType === 'move'
-                  ? `It's ${playerName || 'your'} turn to Attack or Move`
-                  : `It's ${playerName || 'your'} turn to use a Spell or Item`}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className={`battlefield-panel ${getTutorialClass(isBattlefieldFocus)}`}>
+      <div className={`battle-arena ${getTutorialClass(isBattleFocus || isArenaFocus || isBattlefieldFocus)}`}>
+        <div className={`battle-arena-track ${getTutorialClass(isBattlefieldFocus)}`}>
           <BattlefieldDisplay
             key={selectedEnemyInstanceId}
             playerPosition={playerPosition}
@@ -3044,10 +2940,71 @@ export const Battle: React.FC<BattleProps> = ({
             playerAttackRange={playerScaledStats.attackRange || 125}
             enemyAttackRange={selectedEnemyScaledStats.attackRange || 125}
             distance={currentDistance}
-            vertical={true}
             aoeIndicators={aoeIndicators}
+            markers={battlefieldMarkers}
+            highlightedMarkerIds={highlightedBattlefieldMarkerIds}
+            rangePreview={battlefieldRangePreview}
           />
         </div>
+
+        <div className="battle-lanes">
+          <div className="team-player formation-lane team-player-theme">
+            <div className="formation-lane-grid" data-spacing={playerPreset.spacing}>
+              {playerLaneSlots.map((slotUnit, slotIndex) => (
+                <div
+                  key={`player-slot-${slotIndex + 1}`}
+                  className={`formation-slot player-slot slot-${slotIndex + 1} ${slotUnit ? 'has-unit' : 'is-empty'} ${slotUnit?.compact ? 'compact-slot' : slotUnit ? 'primary-slot' : ''} ${slotUnit?.heightClass ?? 'h-full'} ${slotUnit?.widthClass ?? 'w-100'}`}
+                >
+                  {slotUnit && (
+                    <div className={`team-status-slot formation-entity-card ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''}`}>
+                      <div className={`entity-token-chip team-${slotUnit.team} token-${slotUnit.tokenShape}`} style={{ borderColor: slotUnit.tokenAccent }}>
+                        {slotUnit.tokenLabel}
+                      </div>
+                      {slotUnit.content}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="team-enemy formation-lane team-enemy-theme">
+            <div className="formation-lane-grid" data-spacing={enemyPreset.spacing}>
+              {enemyLaneSlots.map((slotUnit, slotIndex) => (
+                <div
+                  key={`enemy-slot-${slotIndex + 1}`}
+                  className={`formation-slot enemy-slot slot-${slotIndex + 1} ${slotUnit ? 'has-unit' : 'is-empty'} ${slotUnit?.compact ? 'compact-slot' : slotUnit ? 'primary-slot' : ''} ${slotUnit?.heightClass ?? 'h-full'} ${slotUnit?.widthClass ?? 'w-100'}`}
+                >
+                  {slotUnit && (
+                    <div
+                      className={`team-status-slot enemy-status-slot formation-entity-card enemy-target-panel ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${slotUnit.defeated ? 'defeated' : ''} ${slotUnit.id === selectedEnemyInstanceId ? 'selected' : ''} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''}`}
+                    >
+                      <div className={`entity-token-chip team-${slotUnit.team} token-${slotUnit.tokenShape}`} style={{ borderColor: slotUnit.tokenAccent }}>
+                        {slotUnit.tokenLabel}
+                      </div>
+                      {slotUnit.content}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Unified Combat Layout (desktop) */}
+      <div className="battle-combat-layout">
+        <BattleLogPanel
+          battleLog={battleLog}
+          isPlayerTurn={isPlayerTurn}
+          playerTurnDone={playerTurnDone}
+          battleEnded={battleEnded}
+          currentAction={currentAction}
+          playerName={playerName || ''}
+          tutorialClassName={getTutorialClass(isLogFocus)}
+          expanded={logExpanded}
+          onToggleExpand={() => setLogExpanded(v => !v)}
+        />
 
         <div className={`battle-controls-panel ${getTutorialClass(isActionsFocus)}`}>
           {/* Turn Timeline - key forces full remount on new enemy */}
@@ -3068,7 +3025,6 @@ export const Battle: React.FC<BattleProps> = ({
 
           {!showSummary && !battleEnded && (
             <div className={`battle-actions-container ${getTutorialClass(isActionsFocus || isSpeedFocus || isMoveFocus || isAttackFocus || isHasteFocus || isItemFocus || isCastFocus)}`}>
-              <div className="battle-target-strip">Current target: {getCharacterName(selectedEnemyChar)}</div>
               {/* Main Action Row */}
               <div className="main-actions-row">
                 {/* Move Section */}
@@ -3106,6 +3062,8 @@ export const Battle: React.FC<BattleProps> = ({
                     className={`main-action-btn attack-btn ${!canAttack ? 'disabled' : ''} ${isPlayerTurn && !canPlayerAttack ? 'breathing-red' : ''}`}
                     disabled={!canAttack}
                     title={canAttack ? 'Attack with equipped weapon!' : 'Wait for your attack turn'}
+                    onMouseEnter={() => setHoveredActionPreview('attack')}
+                    onMouseLeave={() => setHoveredActionPreview(null)}
                   >
                     <span className="action-icon">⚔️</span>
                     <span className="action-text">
@@ -3149,6 +3107,8 @@ export const Battle: React.FC<BattleProps> = ({
                     className={`main-action-btn item-btn ${!canSpell || !selectedItemId ? 'disabled' : ''} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}
                     disabled={!canSpell || !selectedItemId || blockItemDuringTutorial}
                     title={!canSpell ? 'Wait for your spell turn' : !selectedItemId ? 'Select an item first' : 'Use selected item'}
+                    onMouseEnter={() => setHoveredActionPreview('item')}
+                    onMouseLeave={() => setHoveredActionPreview(null)}
                   >
                     <span className="action-icon">🧪</span>
                     <span className="action-text">Use Item</span>
@@ -3183,6 +3143,8 @@ export const Battle: React.FC<BattleProps> = ({
                       if (!canSpell && !allowCastTutorialOverride) return 'Wait for your spell turn';
                       return 'Cast equipped spell!';
                     })()}
+                    onMouseEnter={() => setHoveredActionPreview('spell')}
+                    onMouseLeave={() => setHoveredActionPreview(null)}
                   >
                     <span className="action-icon">✨</span>
                     <span className="action-text">

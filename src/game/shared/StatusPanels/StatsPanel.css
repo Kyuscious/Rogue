@@ -191,6 +191,93 @@
   line-height: 1;
   font-size: 12px;
 }
+
+.compact-stats-panel {
+  width: 100%;
+  height: auto;
+}
+
+.compact-core-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+}
+
+.compact-core-stat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 2px 4px;
+  border-radius: 5px;
+  background: rgba(8, 18, 44, 0.72);
+  border: 1px solid rgba(74, 158, 255, 0.24);
+}
+
+.compact-core-stat-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.compact-core-stat-value {
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+  color: #9ed0ff;
+}
+
+.hidden-compact-stats {
+  filter: blur(1.2px) saturate(0.5);
+}
+
+.character-status.compact-card .stats-rail {
+  min-width: 56px;
+  padding: 3px;
+  gap: 4px;
+  border-radius: 6px;
+}
+
+.character-status.compact-card .stats-rail .status-icon-badge {
+  width: 26px;
+  height: 26px;
+}
+
+.character-status.compact-card .stats-rail .weapon-badge,
+.character-status.compact-card .stats-rail .spell-badge {
+  width: 28px;
+  height: 28px;
+}
+
+.character-status.compact-card .quick-stats {
+  gap: 4px;
+}
+
+.character-status.compact-card .quick-stat-group {
+  gap: 3px;
+  padding: 3px;
+}
+
+.character-status.compact-card .quick-stat {
+  min-width: 40px;
+  padding: 3px 4px;
+  font-size: 10px;
+}
+
+.character-status.compact-card .quick-stat-icon {
+  font-size: 10px;
+}
+
+.character-status.compact-card .quick-stat-value {
+  font-size: 10px;
+}
+
+.character-status.compact-card .stats-button {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
 /* Stats Tooltip */
 .stats-tooltip {
   position: fixed;

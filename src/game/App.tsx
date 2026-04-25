@@ -22,12 +22,10 @@ import { SettingsScreen } from './screens/Settings/Settings';
 import { ScreenTitle } from './shared/ScreenTitle';
 import { getQuestById, normalizeEncounterEnemyIds } from './screens/QuestSelect/logic';
 import { resolveEnemyIdByRegion, getEnemyById } from './shared/regions';
-import { getItemById } from '@data/items';
-import { CharacterStats } from '@utils/statsSystem';
-import { Region } from '@game/types';
+import { Character, Region } from '@game/types';
 import { updatePlayTime, incrementBattlesWon, visitRegion, getActiveProfile } from './screens/MainMenu/Profiles/profileSystem';
 import { loadRegionAssets, unloadRegionAssets } from '@utils/assetLoader';
-import { getActiveFamiliarIds } from './entity/Player/familiars';
+import { getActiveFamiliarIds, initializeFamiliarState } from './entity/Player/familiars';
 import './App.css';
 
 type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'postRegionAction' | 'loading';
@@ -586,64 +584,38 @@ export const App: React.FC = () => {
   };
 
   const handleStartTestBattle = (
-    player: any,
-    enemy: any,
+    player: Character,
+    enemies: Character[],
     playerItems: Array<{ itemId: string; quantity: number }>,
-    enemyItems: Array<{ itemId: string; quantity: number }>,
     playerUseItems: Array<{ itemId: string; quantity: number }>,
-    _enemyUseItems: Array<{ itemId: string; quantity: number }>,
-    _playerWeapons: string[],
-    _enemyWeapons: string[],
-    _playerSpells: string[],
-    _enemySpells: string[]
+    playerWeapons: string[],
+    playerSpells: string[],
+    playerFamiliars: string[]
   ) => {
     // Create inventory items from selected items (with quantities)
     const inventoryItems = [...playerItems];
     
     // Add use-items to inventory
     inventoryItems.push(...playerUseItems);
+
+    // Build familiarStates for each familiar
+    const familiarStates: Record<string, { currentHp: number }> = {};
+    playerFamiliars.forEach((id) => {
+      familiarStates[id] = initializeFamiliarState(id);
+    });
     
-    // Apply enemy items' stats to enemy character
-    const enemyWithItems = { ...enemy };
-    if (enemyItems.length > 0) {
-      const itemStats: Partial<CharacterStats> = {};
-      enemyItems.forEach(({ itemId, quantity }) => {
-        const item = getItemById(itemId);
-        if (item && item.stats) {
-          // Add each stat from the item to the enemy's stats (multiplied by quantity)
-          (Object.keys(item.stats) as Array<keyof CharacterStats>).forEach(stat => {
-            const currentValue = (itemStats[stat] as number) || 0;
-            const itemValue = (item.stats[stat] as number) || 0;
-            (itemStats[stat] as number) = currentValue + (itemValue * quantity);
-          });
-        }
-      });
-      
-      // Apply the accumulated item stats to enemy's base stats
-      enemyWithItems.stats = { ...enemy.stats };
-      (Object.keys(itemStats) as Array<keyof CharacterStats>).forEach(stat => {
-        const currentValue = (enemyWithItems.stats[stat] as number) || 0;
-        const bonusValue = (itemStats[stat] as number) || 0;
-        (enemyWithItems.stats[stat] as number) = currentValue + bonusValue;
-      });
-      
-      // Set enemy's inventory to the items they were given
-      enemyWithItems.inventory = enemyItems;
-    } else {
-      // Enemy has no items - initialize with empty inventory
-      enemyWithItems.inventory = [];
-    }
-    
-    // Update store with test characters, inventory, weapons and spells
-    useGameStore.setState((prev: any) => ({
+    // Update store with test characters, inventory, weapons, spells and familiars
+    useGameStore.setState((prev) => ({
       state: {
         ...prev.state,
         playerCharacter: player,
-        enemyCharacters: [enemyWithItems],
+        enemyCharacters: enemies,
         currentFloor: 1,
         inventory: inventoryItems,
-        weapons: _playerWeapons,
-        spells: _playerSpells,
+        weapons: playerWeapons,
+        spells: playerSpells,
+        familiars: playerFamiliars,
+        familiarStates,
       }
     }));
     setScene('testBattle');

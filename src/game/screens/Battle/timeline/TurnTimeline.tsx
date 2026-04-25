@@ -74,11 +74,11 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
     
     if (firstGroup && firstGroup.length > 1 && firstGroup[0].originalIndex === 0) {
       const hasPlayer = firstGroup.some(g => g.action.entityId === 'player');
-      const hasEnemy = firstGroup.some(g => g.action.entityId === 'enemy');
+      const hasEnemy = firstGroup.some(g => g.action.entityId !== 'player');
       
       if (hasPlayer && hasEnemy && onSimultaneousAction) {
         const playerAction = firstGroup.find(g => g.action.entityId === 'player')!.action;
-        const enemyAction = firstGroup.find(g => g.action.entityId === 'enemy')!.action;
+        const enemyAction = firstGroup.find(g => g.action.entityId !== 'player')!.action;
         const simultaneousKey = `${playerAction.time}-${currentIndex}`;
         
         // Only log if we haven't logged this exact simultaneous action yet
@@ -232,14 +232,14 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
           
           const position = getPositionPercent(firstAction.time);
           
-          // Check if this is a simultaneous action (both player and enemy)
+          // Check if this is a simultaneous action (player and any enemy)
           const hasPlayer = group.some(g => g.action.entityId === 'player');
-          const hasEnemy = group.some(g => g.action.entityId === 'enemy');
+          const hasEnemy = group.some(g => g.action.entityId !== 'player');
           const isSimultaneous = hasPlayer && hasEnemy;
           
           if (isSimultaneous) {
             const playerAction = group.find(g => g.action.entityId === 'player')!.action;
-            const enemyAction = group.find(g => g.action.entityId === 'enemy')!.action;
+            const enemyAction = group.find(g => g.action.entityId !== 'player')!.action;
             const playerIcon = playerAction.actionType === 'spell' ? '✨' : playerAction.actionType === 'move' ? '↔' : '⚔️';
             const enemyIcon = enemyAction.actionType === 'spell' ? '✨' : enemyAction.actionType === 'move' ? '↔' : '⚔️';
             
@@ -248,7 +248,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
                 key={timeKey}
                 className={`action-indicator simultaneous ${isActive ? 'active' : ''}`}
                 style={{ left: `${position}%` }}
-                title={`SIMULTANEOUS at ${firstAction.time.toFixed(2)}\n${playerName}: ${playerAction.actionType}\n${enemyName}: ${enemyAction.actionType}\n${playerName} has priority!`}
+                title={`SIMULTANEOUS at ${firstAction.time.toFixed(2)}\n${playerName}: ${playerAction.actionType}\n${enemyAction.entityName}: ${enemyAction.actionType}`}
               >
                 <div className="action-icon-merged">
                   <span className="player-icon">{playerIcon}</span>
@@ -262,7 +262,11 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
           // Single action (normal case)
           const action = firstAction;
           const isPlayer = action.entityId === 'player';
-          const name = isPlayer ? playerName : enemyName;
+          // For enemies, derive a short label (E1, E2…) from entityName or entityId
+          const enemyShortLabel = action.entityName
+            ? action.entityName.slice(0, 2).toUpperCase()
+            : 'E';
+          const name = isPlayer ? playerName : action.entityName;
           
           return (
             <div
@@ -274,7 +278,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
               <div className="action-icon">
                 {action.actionType === 'spell' ? '✨' : action.actionType === 'move' ? '↔' : '⚔️'}
               </div>
-              <div className="action-label">{isPlayer ? 'P' : 'E'}</div>
+              <div className="action-label">{isPlayer ? 'P' : enemyShortLabel}</div>
             </div>
           );
         })}

@@ -1,5 +1,7 @@
 # Targeting System
 
+> Update April 24, 2026: Position-based frontline/backline targeting direction is now specified in [position-based-targeting.md](position-based-targeting.md). This file documents the previous foundation and migration context.
+
 **Status:** ✅ Initial foundation implemented  
 **Last Updated:** April 19, 2026
 

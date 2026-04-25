@@ -21,7 +21,7 @@ They are designed to sit between gear and team systems:
 ## Core Rules
 
 ### Active slots
-- The first **2 familiars** in the player's familiar roster are considered **active**.
+- The first **4 familiars** in the player's familiar roster are considered **active**.
 - Additional familiars stay in **reserve** and can be reordered from the loadout panel.
 
 ### Battle behavior
@@ -43,10 +43,10 @@ Each active familiar:
 
 | Familiar | Role | Action |
 |----------|------|--------|
-| Silverwing Scout | Physical harasser | Deals recurring physical damage |
-| Rune Sprite | Sustainer | Heals the player every few turns |
-| Ember Fox | Magic striker | Deals recurring magic damage |
-| Ironback Crab | Defender | Grants shield-style sustain and armor support |
+| Star Guardian Dango | Physical harasser | Deals recurring physical damage |
+| Nixie | Heals the player every few turns |
+| Cosmic Squink | Magic striker | Deals recurring magic damage |
+| Paddlemar | Defender | Grants shield-style sustain and armor support |
 
 ---
 

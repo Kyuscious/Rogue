@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last Updated:** April 19, 2026
+**Last Updated:** April 24, 2026
 
 This index reflects the new category-first documentation structure. The docs root now stays intentionally minimal: the index, the reorganization proposal, and the main subfolders.
 
@@ -22,6 +22,7 @@ This index reflects the new category-first documentation structure. The docs roo
 | [systems/combat/difficulty-scaling.md](systems/combat/difficulty-scaling.md) | 🚧 WIP | Enemy scaling, region tiers, and revisit penalty notes |
 | [systems/combat/stun-mechanics.md](systems/combat/stun-mechanics.md) | 📋 PH | Stun behavior, Shield of Daybreak, and Dazzle notes |
 | [systems/combat/TARGETING_SYSTEM.md](systems/combat/TARGETING_SYSTEM.md) | ✅ DONE | Target selection rules for multi-enemy fights, familiars, and summons |
+| [systems/combat/position-based-targeting.md](systems/combat/position-based-targeting.md) | 🚧 WIP | Slot-based frontline/backline targeting and action-hover preview rules |
 | [systems/combat/enemy-ai-system.md](systems/combat/enemy-ai-system.md) | ✅ DONE | Behavior profiles, action legality, and enemy decision logic |
 
 ### Systems - Passive, Loot, Events & Unlocks
@@ -51,6 +52,7 @@ This index reflects the new category-first documentation structure. The docs roo
 | [features/loot-preview.md](features/loot-preview.md) | ✅ DONE | Loot preview and smart reroll feature overview |
 | [features/battle-flee.md](features/battle-flee.md) | ✅ DONE | Battlefield bounds, flee flow, and no-reward handling |
 | [features/battle-log.md](features/battle-log.md) | ✅ DONE | Battle log behavior, display guidance, and event messaging |
+| [features/battle-visuals.md](features/battle-visuals.md) | 🚧 WIP | Centered battlefield plus 10-slot formation visuals and entity card hierarchy |
 | [features/viewport-scrolling.md](features/viewport-scrolling.md) | ✅ DONE | Viewport and CSS scrolling fixes |
 
 ### Guides & Visual References

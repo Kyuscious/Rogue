@@ -7,6 +7,7 @@ export const SUMMONER: Character = {
   region: 'demacia',
   role: 'player',
   class: 'juggernaut',
+  characterArt: '/assets/global/images/player/miko1.png',
   hp: DEFAULT_STATS.health,
   abilities: [],
   level: 1,

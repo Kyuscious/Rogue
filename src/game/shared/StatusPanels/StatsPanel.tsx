@@ -16,6 +16,7 @@ export interface StatsPanelProps {
   classBadge?: React.ReactNode;
   weaponBadge?: React.ReactNode;
   spellBadge?: React.ReactNode;
+  compact?: boolean;
 }
 
 export const StatsPanel: React.FC<StatsPanelProps> = ({
@@ -27,6 +28,7 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   classBadge,
   weaponBadge,
   spellBadge,
+  compact = false,
 }) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -191,6 +193,31 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
       </div>
     </div>
   );
+
+  const canRevealStats = character.role === 'player' || isRevealed;
+  const compactStats = [
+    { label: t.common.attackDamage, icon: '⚔️', value: Math.round(stats?.attackDamage || 0) },
+    { label: t.common.abilityPower, icon: '✨', value: Math.round(stats?.abilityPower || 0) },
+    { label: t.common.armor, icon: '🛡️', value: Math.round(stats?.armor || 0) },
+    { label: t.common.magicResist, icon: '🔷', value: Math.round(stats?.magicResist || 0) },
+    { label: t.common.speed, icon: '⚡', value: Number((stats?.speed || 0).toFixed(1)) },
+    { label: t.common.haste, icon: '⏱️', value: `${Math.round(stats?.haste || 0)}%` },
+  ];
+
+  if (compact) {
+    return (
+      <div className="stats-panel compact-stats-panel">
+        <div className={`compact-core-stats-grid ${!canRevealStats ? 'hidden-compact-stats' : ''}`}>
+          {compactStats.map((stat, idx) => (
+            <div key={idx} className="compact-core-stat" title={stat.label}>
+              <span className="compact-core-stat-icon">{stat.icon}</span>
+              <span className="compact-core-stat-value">{canRevealStats ? stat.value : '?'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="stats-panel">
