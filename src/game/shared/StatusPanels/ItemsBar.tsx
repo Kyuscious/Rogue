@@ -22,11 +22,12 @@ export const ItemsBar: React.FC<ItemsBarProps> = ({ inventory: customInventory, 
   // If custom inventory is explicitly an empty array, use that (don't fallback to player inventory)
   const inventory = Array.isArray(customInventory) ? customInventory : (customInventory || state.inventory);
   
-  // Filter to only show items with stats (equipment), not consumables without stats
+  // Filter to only show non-consumable items with stats (equipment/passives)
   const equipmentItems = inventory.filter(item => {
     const itemData = getItemById(item.itemId);
     if (!itemData) return false;
-    // Show item if it has any stats (even if also consumable)
+    if (itemData.consumable) return false;
+    // Show item if it has any stats
     const hasStats = Object.values(itemData.stats).some(value => value && value > 0);
     return hasStats;
   });

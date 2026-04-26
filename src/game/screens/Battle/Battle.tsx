@@ -58,6 +58,7 @@ import {
 } from '@battle/Field/battlefield';
 import { getActiveFamiliarIds, getFamiliarById } from '../../entity/Player/familiars';
 import { createShurimaSandSoldierSummon } from '../../shared/regions';
+import { EntityInspectPanel, EntityInspectTarget } from '@entities/shared';
 import { buildEnemyTargets, buildPlayerTargets, chooseAutoTarget, getCharacterInstanceId, getEnemyIndexByTargetId, resolveSelectedTarget } from '@battle/logic/targetingSystem';
 import { resolveEnemyDefeat, resolvePlayerDefeat } from './Flow/Resolver';
 import './Battle.css';
@@ -126,6 +127,8 @@ export const Battle: React.FC<BattleProps> = ({
   const [enemySpellCooldowns, setEnemySpellCooldowns] = useState<Record<string, number>>({});
   const [familiarNextActionTurn, setFamiliarNextActionTurn] = useState<Record<string, number>>({});
   const [selectedEnemyTargetId, setSelectedEnemyTargetId] = useState<string | null>(null);
+  const [inspectOpen, setInspectOpen] = useState(false);
+  const [inspectTargetId, setInspectTargetId] = useState<string | null>(null);
 
   // Movement and range system
   const [playerPosition, setPlayerPosition] = useState(PLAYER_START_POSITION);
@@ -2811,6 +2814,61 @@ export const Battle: React.FC<BattleProps> = ({
     return units.sort((a, b) => b.position - a.position);
   }, [enemyDebuffsById, enemyPositionsById, state.enemyCharacters, store, turnCounter]);
 
+  const battleInspectTargets = useMemo<EntityInspectTarget[]>(() => {
+    const targets: EntityInspectTarget[] = [
+      {
+        id: 'player-main',
+        kind: 'character',
+        context: 'battle',
+        isRevealed: true,
+        character: playerChar,
+        combatBuffs: playerBuffs,
+        combatDebuffs: [],
+        turnCounter,
+      },
+    ];
+
+    familiarCombatants.forEach((familiar) => {
+      targets.push({
+        id: `familiar-${familiar.id}`,
+        kind: 'familiar',
+        context: 'battle',
+        isRevealed: true,
+        familiarId: familiar.id,
+        familiarCurrentHp: state.familiarStates[familiar.id]?.currentHp,
+        turnCounter,
+      });
+    });
+
+    state.enemyCharacters.forEach((enemy, index) => {
+      const targetId = getCharacterInstanceId(enemy, index);
+      targets.push({
+        id: targetId,
+        kind: 'character',
+        context: 'battle',
+        isRevealed: store.isEnemyRevealed(enemy.id),
+        character: enemy,
+        combatBuffs: enemyBuffsById[targetId] || [],
+        combatDebuffs: enemyDebuffsById[targetId] || [],
+        turnCounter,
+      });
+    });
+
+    return targets;
+  }, [enemyBuffsById, enemyDebuffsById, familiarCombatants, playerBuffs, playerChar, state.enemyCharacters, state.familiarStates, store, turnCounter]);
+
+  const handleOpenInspect = (targetId: string) => {
+    setInspectTargetId(targetId);
+    setInspectOpen(true);
+  };
+
+  const handleSelectInspectTarget = (targetId: string) => {
+    setInspectTargetId(targetId);
+    if (targetId !== 'player-main' && !targetId.startsWith('familiar-')) {
+      setSelectedEnemyTargetId(targetId);
+    }
+  };
+
   const assignUnitsToLane = (units: FormationUnit[], slotIndices: number[]): Array<FormationUnit | null> => {
     const result: Array<FormationUnit | null> = [null, null, null, null, null];
     const laneUnits = units.slice(0, slotIndices.length);
@@ -2956,7 +3014,18 @@ export const Battle: React.FC<BattleProps> = ({
                   className={`formation-slot player-slot slot-${slotIndex + 1} ${slotUnit ? 'has-unit' : 'is-empty'} ${slotUnit?.compact ? 'compact-slot' : slotUnit ? 'primary-slot' : ''} ${slotUnit?.heightClass ?? 'h-full'} ${slotUnit?.widthClass ?? 'w-100'}`}
                 >
                   {slotUnit && (
-                    <div className={`team-status-slot formation-entity-card ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''}`}>
+                    <div
+                      className={`team-status-slot formation-entity-card ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleOpenInspect(slotUnit.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleOpenInspect(slotUnit.id);
+                        }
+                      }}
+                    >
                       <div className={`entity-token-chip team-${slotUnit.team} token-${slotUnit.tokenShape}`} style={{ borderColor: slotUnit.tokenAccent }}>
                         {slotUnit.tokenLabel}
                       </div>
@@ -2978,6 +3047,19 @@ export const Battle: React.FC<BattleProps> = ({
                   {slotUnit && (
                     <div
                       className={`team-status-slot enemy-status-slot formation-entity-card enemy-target-panel ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${slotUnit.defeated ? 'defeated' : ''} ${slotUnit.id === selectedEnemyInstanceId ? 'selected' : ''} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        setSelectedEnemyTargetId(slotUnit.id);
+                        handleOpenInspect(slotUnit.id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setSelectedEnemyTargetId(slotUnit.id);
+                          handleOpenInspect(slotUnit.id);
+                        }
+                      }}
                     >
                       <div className={`entity-token-chip team-${slotUnit.team} token-${slotUnit.tokenShape}`} style={{ borderColor: slotUnit.tokenAccent }}>
                         {slotUnit.tokenLabel}
@@ -3177,6 +3259,14 @@ export const Battle: React.FC<BattleProps> = ({
                   <SpellSelector attackRange={playerScaledStats.attackRange} />
                 </div>
               </div>
+
+              <EntityInspectPanel
+                isOpen={inspectOpen}
+                targets={battleInspectTargets}
+                activeTargetId={inspectTargetId}
+                onSelectTarget={handleSelectInspectTarget}
+                onClose={() => setInspectOpen(false)}
+              />
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { getActiveProfile, isConnectionDiscovered } from '../MainMenu/Profiles/profileSystem';
 import { ITEM_DATABASE, Item, ItemRarity, getPassiveDescription } from '@data/items';
@@ -27,6 +27,7 @@ import {
   ICE_SEA_MINIONS, ICE_SEA_ELITES, ICE_SEA_BOSSES,
   RUNETERRA_MINIONS, RUNETERRA_ELITES, RUNETERRA_BOSSES, RUNETERRA_CHAMPIONS, RUNETERRA_LEGENDS,
 } from '../../shared/regions';
+import { EntityInspectPanel, EntityInspectTarget } from '@entities/shared';
 import './Index.css';
 
 interface IndexProps {
@@ -224,6 +225,26 @@ const getLoadoutEffectTypes = (entry: Weapon | Spell): string[] => {
   return effectTypes.length > 0 ? [...new Set(effectTypes)] : ['Unknown'];
 };
 
+const getAllIndexEnemies = () => [
+  ...DEMACIA_MINIONS, ...DEMACIA_ELITES, ...DEMACIA_BOSSES, ...DEMACIA_CHAMPIONS, ...DEMACIA_LEGENDS,
+  ...CAMAVOR_MINIONS, ...CAMAVOR_ELITES, ...CAMAVOR_BOSSES, ...CAMAVOR_CHAMPIONS, ...CAMAVOR_LEGENDS,
+  ...IONIA_MINIONS, ...IONIA_ELITES, ...IONIA_BOSSES, ...IONIA_CHAMPIONS, ...IONIA_LEGENDS,
+  ...SHURIMA_MINIONS, ...SHURIMA_ELITES, ...SHURIMA_BOSSES, ...SHURIMA_CHAMPIONS, ...SHURIMA_LEGENDS,
+  ...NOXUS_MINIONS, ...NOXUS_ELITES, ...NOXUS_BOSSES, ...NOXUS_CHAMPIONS, ...NOXUS_LEGENDS,
+  ...FRELJORD_MINIONS, ...FRELJORD_ELITES, ...FRELJORD_BOSSES,
+  ...ZAUN_MINIONS, ...ZAUN_ELITES, ...ZAUN_BOSSES,
+  ...IXTAL_MINIONS, ...IXTAL_ELITES, ...IXTAL_BOSSES,
+  ...BANDLE_CITY_MINIONS, ...BANDLE_CITY_ELITES, ...BANDLE_CITY_BOSSES,
+  ...BILGEWATER_MINIONS, ...BILGEWATER_ELITES, ...BILGEWATER_BOSSES,
+  ...PILTOVER_MINIONS, ...PILTOVER_ELITES, ...PILTOVER_BOSSES,
+  ...SHADOW_ISLES_MINIONS, ...SHADOW_ISLES_ELITES, ...SHADOW_ISLES_BOSSES,
+  ...VOID_MINIONS, ...VOID_ELITES, ...VOID_BOSSES,
+  ...TARGON_MINIONS, ...TARGON_ELITES, ...TARGON_BOSSES,
+  ...MARAI_MINIONS, ...MARAI_ELITES, ...MARAI_BOSSES,
+  ...ICE_SEA_MINIONS, ...ICE_SEA_ELITES, ...ICE_SEA_BOSSES,
+  ...RUNETERRA_MINIONS, ...RUNETERRA_ELITES, ...RUNETERRA_BOSSES, ...RUNETERRA_CHAMPIONS, ...RUNETERRA_LEGENDS,
+];
+
 export const Index: React.FC<IndexProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<TabType>('achievements');
   const [achievements, setAchievements] = useState<Achievement[]>(ACHIEVEMENTS);
@@ -243,6 +264,19 @@ export const Index: React.FC<IndexProps> = ({ onBack }) => {
   const [spellSearch, setSpellSearch] = useState('');
   const [spellSortMode, setSpellSortMode] = useState<LoadoutSortMode>('rarity');
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [indexInspectOpen, setIndexInspectOpen] = useState(false);
+  const [indexInspectTargetId, setIndexInspectTargetId] = useState<string | null>(null);
+
+  const allIndexEnemies = useMemo(() => getAllIndexEnemies(), []);
+  const indexInspectTargets = useMemo<EntityInspectTarget[]>(() => (
+    allIndexEnemies.map((enemy) => ({
+      id: enemy.id,
+      kind: 'character',
+      context: 'index',
+      character: enemy,
+      isRevealed: discoveredEnemies.includes(enemy.id),
+    }))
+  ), [allIndexEnemies, discoveredEnemies]);
 
   useEffect(() => {
     // Load profile data
@@ -355,25 +389,7 @@ export const Index: React.FC<IndexProps> = ({ onBack }) => {
   };
 
   const renderEnemies = () => {
-    const allEnemies = [
-      ...DEMACIA_MINIONS, ...DEMACIA_ELITES, ...DEMACIA_BOSSES, ...DEMACIA_CHAMPIONS, ...DEMACIA_LEGENDS,
-      ...CAMAVOR_MINIONS, ...CAMAVOR_ELITES, ...CAMAVOR_BOSSES, ...CAMAVOR_CHAMPIONS, ...CAMAVOR_LEGENDS,
-      ...IONIA_MINIONS, ...IONIA_ELITES, ...IONIA_BOSSES, ...IONIA_CHAMPIONS, ...IONIA_LEGENDS,
-      ...SHURIMA_MINIONS, ...SHURIMA_ELITES, ...SHURIMA_BOSSES, ...SHURIMA_CHAMPIONS, ...SHURIMA_LEGENDS,
-      ...NOXUS_MINIONS, ...NOXUS_ELITES, ...NOXUS_BOSSES, ...NOXUS_CHAMPIONS, ...NOXUS_LEGENDS,
-      ...FRELJORD_MINIONS, ...FRELJORD_ELITES, ...FRELJORD_BOSSES,
-      ...ZAUN_MINIONS, ...ZAUN_ELITES, ...ZAUN_BOSSES,
-      ...IXTAL_MINIONS, ...IXTAL_ELITES, ...IXTAL_BOSSES,
-      ...BANDLE_CITY_MINIONS, ...BANDLE_CITY_ELITES, ...BANDLE_CITY_BOSSES,
-      ...BILGEWATER_MINIONS, ...BILGEWATER_ELITES, ...BILGEWATER_BOSSES,
-      ...PILTOVER_MINIONS, ...PILTOVER_ELITES, ...PILTOVER_BOSSES,
-      ...SHADOW_ISLES_MINIONS, ...SHADOW_ISLES_ELITES, ...SHADOW_ISLES_BOSSES,
-      ...VOID_MINIONS, ...VOID_ELITES, ...VOID_BOSSES,
-      ...TARGON_MINIONS, ...TARGON_ELITES, ...TARGON_BOSSES,
-      ...MARAI_MINIONS, ...MARAI_ELITES, ...MARAI_BOSSES,
-      ...ICE_SEA_MINIONS, ...ICE_SEA_ELITES, ...ICE_SEA_BOSSES,
-      ...RUNETERRA_MINIONS, ...RUNETERRA_ELITES, ...RUNETERRA_BOSSES, ...RUNETERRA_CHAMPIONS, ...RUNETERRA_LEGENDS,
-    ];
+    const allEnemies = allIndexEnemies;
 
     const discoveredCount = allEnemies.filter(e => discoveredEnemies.includes(e.id)).length;
     const normalizedQuery = enemySearch.trim().toLowerCase();
@@ -509,7 +525,25 @@ export const Index: React.FC<IndexProps> = ({ onBack }) => {
                   const enemyClasses = getEnemyClassList(enemy.class).map(formatEnemyLabel).join(' / ');
 
                   return (
-                    <div key={`${group}-${enemy.id}`} className={`enemy-card ${isDiscovered ? 'discovered' : 'undiscovered'}`}>
+                    <div
+                      key={`${group}-${enemy.id}`}
+                      className={`enemy-card ${isDiscovered ? 'discovered' : 'undiscovered'}`}
+                      role={isDiscovered ? 'button' : undefined}
+                      tabIndex={isDiscovered ? 0 : -1}
+                      onClick={() => {
+                        if (!isDiscovered) return;
+                        setIndexInspectTargetId(enemy.id);
+                        setIndexInspectOpen(true);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!isDiscovered) return;
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setIndexInspectTargetId(enemy.id);
+                          setIndexInspectOpen(true);
+                        }
+                      }}
+                    >
                       <div className="enemy-header">
                         <h3>{isDiscovered ? enemy.name : '???'}</h3>
                         <span className="enemy-class">{isDiscovered ? enemyClasses : '???'}</span>
@@ -1423,6 +1457,14 @@ export const Index: React.FC<IndexProps> = ({ onBack }) => {
           {activeTab === 'regions' && renderRegions()}
           {activeTab === 'misc' && renderMiscellaneous()}
         </div>
+
+        <EntityInspectPanel
+          isOpen={indexInspectOpen}
+          targets={indexInspectTargets}
+          activeTargetId={indexInspectTargetId}
+          onSelectTarget={setIndexInspectTargetId}
+          onClose={() => setIndexInspectOpen(false)}
+        />
       </div>
     </div>
   );

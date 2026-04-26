@@ -8,9 +8,6 @@ import { ItemsBar } from './ItemsBar';
 import { StatsPanel } from './StatsPanel';
 import { getClassStatBonuses } from '@utils/statsSystem';
 import { CombatBuff, computeBuffDisplayValues } from '@utils/itemSystem';
-import { getWeaponById } from '@data/weapons';
-import { getSpellById } from '@data/spells';
-import { getDefaultEnemyLoadout } from '@entities/ai/enemyAI';
 import { getCharacterName } from '../../../i18n/helpers';
 import type { StatsPanelProps } from './StatsPanel';
 import './CharacterStatus.css';
@@ -164,16 +161,6 @@ export const CharacterStatus: React.FC<{
 
   const isEnemy = character.role === 'enemy';
   const displayName = getCharacterName(character);
-  const enemyLoadout = isEnemy ? (character.enemyLoadout || getDefaultEnemyLoadout()) : null;
-  const equippedWeaponId = isEnemy
-    ? enemyLoadout?.weapons[enemyLoadout.equippedWeaponIndex]
-    : state.weapons[state.equippedWeaponIndex];
-  const equippedSpellId = isEnemy
-    ? enemyLoadout?.spells[enemyLoadout.equippedSpellIndex]
-    : state.spells[state.equippedSpellIndex];
-  const equippedWeapon = equippedWeaponId ? getWeaponById(equippedWeaponId) : undefined;
-  const equippedSpell = equippedSpellId ? getSpellById(equippedSpellId) : undefined;
-
   const rawFaction = character.faction || (!isEnemy ? (state.selectedRegion || character.region) : character.region) || 'unknown';
   const factionLabel = prettifyLabel(rawFaction);
   const factionIcon = FACTION_ICONS[rawFaction] || REGION_ICONS[rawFaction] || '🌍';
@@ -210,31 +197,6 @@ export const CharacterStatus: React.FC<{
       .map(([stat, value]) => formatStatValue(stat, value as number)),
   };
 
-  const weaponTooltip: HoverInfo | null = equippedWeapon ? {
-    title: equippedWeapon.name || 'Weapon',
-    subtitle: 'Weapon',
-    tone: 'weapon',
-    lines: [
-      ...(equippedWeapon.description ? [equippedWeapon.description] : []),
-      ...Object.entries(equippedWeapon.stats || {}).map(([stat, value]) => formatStatValue(stat, value as number)),
-      ...equippedWeapon.effects.map(effect => effect.description),
-      ...(equippedWeapon.cooldown && equippedWeapon.cooldown > 0 ? [`Cooldown: ${equippedWeapon.cooldown} turn${equippedWeapon.cooldown > 1 ? 's' : ''}`] : []),
-    ],
-  } : null;
-
-  const spellTooltip: HoverInfo | null = equippedSpell ? {
-    title: equippedSpell.name || 'Spell',
-    subtitle: 'Spell',
-    tone: 'spell',
-    lines: [
-      ...(equippedSpell.description ? [equippedSpell.description] : []),
-      ...equippedSpell.effects.map(effect => effect.description),
-      ...(equippedSpell.range ? [`Range: ${equippedSpell.range} units`] : []),
-      ...(equippedSpell.castTime && equippedSpell.castTime > 0 ? [`Cast time: ${equippedSpell.castTime} turn${equippedSpell.castTime > 1 ? 's' : ''}`] : []),
-      ...(equippedSpell.cooldown && equippedSpell.cooldown > 0 ? [`Cooldown: ${equippedSpell.cooldown} turn${equippedSpell.cooldown > 1 ? 's' : ''}`] : []),
-    ],
-  } : null;
-
   const factionTooltip: HoverInfo = {
     title: factionLabel,
     subtitle: character.faction ? 'Faction' : 'Origin',
@@ -262,13 +224,9 @@ export const CharacterStatus: React.FC<{
 
   const classBadge = renderIconBadge(CLASS_ICONS[character.class], classTooltip, 'class-badge');
   const factionBadge = renderIconBadge(factionIcon, factionTooltip, 'faction-badge', false, true);
-  const weaponBadge = weaponTooltip ? renderIconBadge('⚔️', weaponTooltip, 'weapon-badge') : null;
-  const spellBadge = spellTooltip ? renderIconBadge('✦', spellTooltip, 'spell-badge') : null;
 
-  const statsPanelProps: Pick<StatsPanelProps, 'classBadge' | 'weaponBadge' | 'spellBadge'> = {
+  const statsPanelProps: Pick<StatsPanelProps, 'classBadge'> = {
     classBadge,
-    weaponBadge,
-    spellBadge,
   };
 
   const inventoryForDisplay = characterId ? (character.inventory ?? []) : state.inventory;

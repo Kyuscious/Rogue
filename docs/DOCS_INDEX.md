@@ -48,6 +48,7 @@ This index reflects the new category-first documentation structure. The docs roo
 | Document | Status | Description |
 |----------|--------|-------------|
 | [features/post-encounter.md](features/post-encounter.md) | ✅ DONE | Unified post-encounter reward and choice flow reference |
+| [features/travelling.md](features/travelling.md) | ✅ DONE | Region-to-region travel flow, adjacency rules, and revisit scaling |
 | [features/asset-loading.md](features/asset-loading.md) | ✅ DONE | Region-based asset loading and loading-screen flow |
 | [features/loot-preview.md](features/loot-preview.md) | ✅ DONE | Loot preview and smart reroll feature overview |
 | [features/battle-flee.md](features/battle-flee.md) | ✅ DONE | Battlefield bounds, flee flow, and no-reward handling |

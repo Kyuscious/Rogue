@@ -2,7 +2,7 @@ import { Character } from '@game/types';
 import { CharacterStats, getClassStatBonuses } from '@utils/statsSystem';
 import { getRandomItemsForEnemy } from '@data/items';
 import { calculateEnemyLevel } from '@entities/Player/experienceSystem';
-import { getRegionTier } from '@screens/PostRegionChoice/regionGraph';
+import { getRegionTier, getRevisitScalingBonuses } from '@screens/PostRegionChoice/regionGraph';
 import type { Region } from '@game/types';
 
 /**
@@ -13,13 +13,16 @@ export function spawnEnemies(
   enemies: Character[],
   floor: number,
   encountersCompleted: number,
-  currentRegion: Region
+  currentRegion: Region,
+  regionVisitCount: number = 1
 ): Character[] {
   const regionTier = getRegionTier(currentRegion);
+  const revisitScaling = getRevisitScalingBonuses(Math.max(1, regionVisitCount));
 
   return enemies.map((enemy, index) => {
     // Calculate enemy level based on floor and tier
-    const enemyLevel = calculateEnemyLevel(floor, enemy.tier || 'minion');
+    const baseEnemyLevel = calculateEnemyLevel(floor, enemy.tier || 'minion');
+    const enemyLevel = baseEnemyLevel + revisitScaling.levelBonus;
 
     console.log('🐛 ENEMY SPAWN:', enemy.name);
     console.log('  📊 Base stats:', {
@@ -32,7 +35,7 @@ export function spawnEnemies(
     // Get items for this enemy
     const enemyItems = getRandomItemsForEnemy(
       enemy.class,
-      encountersCompleted + 1,
+      encountersCompleted + 1 + revisitScaling.encounterBonusForItems,
       regionTier
     );
     console.log('  🎁 Items:', enemyItems.map((i) => i.name));

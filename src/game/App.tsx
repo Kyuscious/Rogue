@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '@game/store';
 import { useTranslation } from '../hooks/useTranslation';
 import { CharacterStatus } from './shared/StatusPanels/CharacterStatus';
@@ -26,6 +26,8 @@ import { Character, Region } from '@game/types';
 import { updatePlayTime, incrementBattlesWon, visitRegion, getActiveProfile } from './screens/MainMenu/Profiles/profileSystem';
 import { loadRegionAssets, unloadRegionAssets } from '@utils/assetLoader';
 import { getActiveFamiliarIds, initializeFamiliarState } from './entity/Player/familiars';
+import { EntityInspectPanel, EntityInspectTarget } from '@entities/shared';
+import { getAvailableDestinations } from './screens/PostRegionChoice/regionGraph';
 import './App.css';
 
 type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'postRegionAction' | 'loading';
@@ -172,6 +174,41 @@ export const App: React.FC = () => {
   const [showBattleActionPrompt, setShowBattleActionPrompt] = useState(false);
   const [showEliteRewardPrompt, setShowEliteRewardPrompt] = useState(false);
   const [questTutorialFocus, setQuestTutorialFocus] = useState<QuestTutorialFocus>(null);
+  const [appInspectOpen, setAppInspectOpen] = useState(false);
+  const [appInspectTargetId, setAppInspectTargetId] = useState<string | null>(null);
+
+  const activeFamiliarIds = useMemo(() => getActiveFamiliarIds(state.familiars), [state.familiars]);
+
+  const appInspectContext = scene === 'quest' ? 'quest' : scene === 'regionSelection' ? 'region' : 'generic';
+  const appInspectTargets = useMemo<EntityInspectTarget[]>(() => {
+    const targets: EntityInspectTarget[] = [
+      {
+        id: 'player-main',
+        kind: 'character',
+        context: appInspectContext,
+        isRevealed: true,
+        character: state.playerCharacter,
+      },
+    ];
+
+    activeFamiliarIds.forEach((familiarId) => {
+      targets.push({
+        id: `familiar-${familiarId}`,
+        kind: 'familiar',
+        context: appInspectContext,
+        isRevealed: true,
+        familiarId,
+        familiarCurrentHp: state.familiarStates[familiarId]?.currentHp,
+      });
+    });
+
+    return targets;
+  }, [activeFamiliarIds, appInspectContext, state.familiarStates, state.playerCharacter]);
+
+  const openAppInspect = (targetId: string) => {
+    setAppInspectTargetId(targetId);
+    setAppInspectOpen(true);
+  };
 
   const getTutorialStorageKey = (profileId: number) => `tutorialCompleted_profile_${profileId}`;
   const getEliteTutorialStorageKey = (profileId: number) => `eliteTutorialSeen_profile_${profileId}`;
@@ -680,6 +717,14 @@ export const App: React.FC = () => {
     const currentState = useGameStore.getState().state;
     
     if (!currentState.selectedRegion) return;
+
+    const allowedDestinations = getAvailableDestinations(
+      currentState.selectedRegion,
+      currentState.visitedRegionsThisRun
+    );
+    if (!allowedDestinations.includes(newRegion)) {
+      return;
+    }
     
     // Check if there's a pending post-region action to perform
     if (currentState.pendingPostRegionAction) {
@@ -879,7 +924,6 @@ export const App: React.FC = () => {
   if (scene === 'quest' && state.selectedRegion) {
     const isQuestTutorial = tutorialStage === 'quest';
     const isQuestHeaderFocus = isQuestTutorial && questTutorialFocus === 'header';
-    const activeFamiliarIds = getActiveFamiliarIds(state.familiars);
 
     return (
       <div className="game-wrapper">
@@ -920,13 +964,40 @@ export const App: React.FC = () => {
           <div className={`character-section ${isQuestHeaderFocus ? 'quest-tutorial-muted-global' : ''}`}>
             <h2 className="quest-title">Choose Your Path</h2>
             <div className={`character-info ${tutorialStage === 'quest' && questTutorialFocus === 'stats' ? 'quest-tutorial-highlight-global' : tutorialStage === 'quest' && (questTutorialFocus === 'header' || questTutorialFocus === 'path' || questTutorialFocus === 'mechanics') ? 'quest-tutorial-muted-global' : ''}`}>
-              <CharacterStatus />
+              <div
+                className="entity-inspect-trigger"
+                role="button"
+                tabIndex={0}
+                onClick={() => openAppInspect('player-main')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openAppInspect('player-main');
+                  }
+                }}
+              >
+                <CharacterStatus />
+              </div>
               {activeFamiliarIds.length > 0 && (
                 <div className="quest-character-familiars">
                   <div className="quest-character-familiars-title">Active Familiars</div>
                   <div className="quest-character-familiars-list">
                     {activeFamiliarIds.map((familiarId) => (
-                      <FamiliarStatus key={familiarId} familiarId={familiarId} compact />
+                      <div
+                        key={familiarId}
+                        className="entity-inspect-trigger"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => openAppInspect(`familiar-${familiarId}`)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openAppInspect(`familiar-${familiarId}`);
+                          }
+                        }}
+                      >
+                        <FamiliarStatus familiarId={familiarId} compact />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -974,6 +1045,14 @@ export const App: React.FC = () => {
         
         {/* Settings Modal */}
         <SettingsScreen />
+
+        <EntityInspectPanel
+          isOpen={appInspectOpen}
+          targets={appInspectTargets}
+          activeTargetId={appInspectTargetId}
+          onSelectTarget={setAppInspectTargetId}
+          onClose={() => setAppInspectOpen(false)}
+        />
       </div>
     );
   }
@@ -1239,7 +1318,20 @@ export const App: React.FC = () => {
 
       <div className="explore-screen">
         <div className="character-info">
-          <CharacterStatus />
+          <div
+            className="entity-inspect-trigger"
+            role="button"
+            tabIndex={0}
+            onClick={() => openAppInspect('player-main')}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openAppInspect('player-main');
+              }
+            }}
+          >
+            <CharacterStatus />
+          </div>
         </div>
       </div>
 
@@ -1258,6 +1350,14 @@ export const App: React.FC = () => {
       
       {/* Settings Modal */}
       <SettingsScreen />
+
+      <EntityInspectPanel
+        isOpen={appInspectOpen}
+        targets={appInspectTargets}
+        activeTargetId={appInspectTargetId}
+        onSelectTarget={setAppInspectTargetId}
+        onClose={() => setAppInspectOpen(false)}
+      />
     </div>
   );
 };

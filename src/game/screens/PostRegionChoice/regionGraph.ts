@@ -112,6 +112,23 @@ export function getAvailableDestinations(
 }
 
 /**
+ * Count how many times a region has been visited in the current run.
+ */
+export function getRegionVisitCount(region: Region, visitedRegions: Region[]): number {
+  return visitedRegions.filter((visitedRegion) => visitedRegion === region).length;
+}
+
+/**
+ * Revisit scaling for regions that are cleared multiple times in a run.
+ */
+export function getRevisitScalingBonuses(visitCount: number): { levelBonus: number; encounterBonusForItems: number } {
+  if (visitCount <= 1) return { levelBonus: 0, encounterBonusForItems: 0 };
+  if (visitCount === 2) return { levelBonus: 2, encounterBonusForItems: 1 };
+  if (visitCount === 3) return { levelBonus: 4, encounterBonusForItems: 2 };
+  return { levelBonus: 6, encounterBonusForItems: 3 };
+}
+
+/**
  * Check if a region has been visited this run
  */
 export function hasVisitedRegion(region: Region, visitedRegions: Region[]): boolean {

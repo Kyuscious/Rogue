@@ -765,3 +765,13 @@
 .abort-confirm-checkbox span {
   user-select: none;
 }
+
+.entity-inspect-trigger {
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+.entity-inspect-trigger:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.85);
+  outline-offset: 2px;
+}

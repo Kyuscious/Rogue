@@ -159,7 +159,7 @@
   flex-direction: row-reverse;
 }
 
-.status-edge .stats-panel-container {
+.status-edge .stats-rail {
   flex-wrap: nowrap;
 }
 

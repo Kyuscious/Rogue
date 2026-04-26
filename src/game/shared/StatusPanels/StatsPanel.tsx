@@ -14,9 +14,8 @@ export interface StatsPanelProps {
   isRevealed?: boolean; // Whether to show stats or hide them
   turnCounter?: number; // Current turn counter for accurate buff duration display
   classBadge?: React.ReactNode;
-  weaponBadge?: React.ReactNode;
-  spellBadge?: React.ReactNode;
   compact?: boolean;
+  detailedView?: boolean;
 }
 
 export const StatsPanel: React.FC<StatsPanelProps> = ({
@@ -26,9 +25,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   isRevealed = true,
   turnCounter = 0,
   classBadge,
-  weaponBadge,
-  spellBadge,
   compact = false,
+  detailedView = false,
 }) => {
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -220,9 +218,8 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
   }
 
   return (
-    <div className="stats-panel">
-      <div className={`stats-panel-container ${character.role === 'enemy' ? 'enemy-stats' : 'player-stats'}`}>
-        <div className="stats-rail">
+    <div className={`stats-panel ${detailedView ? 'stats-panel-detailed' : ''}`}>
+      {!detailedView && <div className="stats-rail">
           <div className="stats-rail-top">
             {classBadge || <span className="invisible-icon">👁️‍🗨️</span>}
           </div>
@@ -230,7 +227,6 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
           {(character.role === 'player' || isRevealed) ? (
             <div className={`quick-stats ${character.role === 'player' ? 'player-quick-stats' : 'enemy-quick-stats'}`}>
               <div className="quick-stat-group physical-group">
-                <div className="quick-stat-group-icon">{weaponBadge || <span className="invisible-icon">⚔️</span>}</div>
                 <div className="quick-stat" title={t.common.attackDamage}>
                   <span className="quick-stat-icon">⚔️</span>
                   <span className="quick-stat-value">{Math.round(stats?.attackDamage || 0)}</span>
@@ -248,7 +244,6 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
               <div className="quick-stat-separator"></div>
 
               <div className="quick-stat-group magical-group">
-                <div className="quick-stat-group-icon">{spellBadge || <span className="invisible-icon">✦</span>}</div>
                 <div className="quick-stat" title={t.common.abilityPower}>
                   <span className="quick-stat-icon">✨</span>
                   <span className="quick-stat-value">{Math.round(stats?.abilityPower || 0)}</span>
@@ -266,14 +261,12 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
           ) : (
             <div className="quick-stats hidden-stats">
               <div className="quick-stat-group physical-group hidden-stat-group">
-                <div className="quick-stat-group-icon"><span className="invisible-icon">?</span></div>
                 <div className="quick-stat"><span className="quick-stat-value">?</span></div>
                 <div className="quick-stat"><span className="quick-stat-value">?</span></div>
                 <div className="quick-stat"><span className="quick-stat-value">?</span></div>
               </div>
               <div className="quick-stat-separator"></div>
               <div className="quick-stat-group magical-group hidden-stat-group">
-                <div className="quick-stat-group-icon"><span className="invisible-icon">?</span></div>
                 <div className="quick-stat"><span className="quick-stat-value">?</span></div>
                 <div className="quick-stat"><span className="quick-stat-value">?</span></div>
                 <div className="quick-stat"><span className="quick-stat-value">?</span></div>
@@ -281,18 +274,38 @@ export const StatsPanel: React.FC<StatsPanelProps> = ({
             </div>
           )}
 
-          <button
-            className={`stats-button bar-total-button ${!isRevealed ? 'invisible-button' : ''}`}
-            onMouseEnter={isRevealed ? handleMouseEnter : undefined}
-            onMouseLeave={isRevealed ? handleMouseLeave : undefined}
-            aria-label="Total Character Stats"
-          >
-            <span className="stats-button-label">S</span>
-          </button>
+          {!detailedView && (
+            <button
+              className={`stats-button bar-total-button ${!isRevealed ? 'invisible-button' : ''}`}
+              onMouseEnter={isRevealed ? handleMouseEnter : undefined}
+              onMouseLeave={isRevealed ? handleMouseLeave : undefined}
+              aria-label="Total Character Stats"
+            >
+              <span className="stats-button-label">S</span>
+            </button>
+          )}
         </div>
-      </div>
+      }
 
-      {tooltipVisible && isRevealed && (
+      {detailedView ? (
+        <div className="stats-detailed-sheet">
+          {canRevealStats ? (
+            <div className="stats-columns">
+              <div className="stats-column stats-column-left">
+                {renderStatCategory(t.common.mobilityStats, mobilityStats)}
+                {renderStatCategory(t.common.miscStats, miscStats)}
+                {renderStatCategory(t.common.attackStats, attackStats)}
+              </div>
+              <div className="stats-column stats-column-right">
+                {renderStatCategory(t.common.survivalStats, survivalStats)}
+                {renderStatCategory(t.common.spellStats, spellStats)}
+              </div>
+            </div>
+          ) : (
+            <div className="stats-detailed-hidden">Hidden until reveal.</div>
+          )}
+        </div>
+      ) : tooltipVisible && isRevealed && (
         <div
           ref={tooltipRef}
           className={`stats-tooltip ${character.role === 'enemy' ? 'tooltip-left' : 'tooltip-right'}`}

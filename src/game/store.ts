@@ -10,6 +10,7 @@ import { spawnEnemies, deepCopyEnemyQueue } from '@battle/Field/enemySpawning';
 import { calculatePlayerMaxHp, applyItemToPlayer, removeItemFromPlayer, applyLevelUp } from '../game/entity/Player/playerStats';
 import { PostRegionChoice } from '../game/screens/PostRegionChoice/postRegionChoice';
 import { getStarterEquipment, hasStarterEquipment } from '../game/screens/PreGameSetup/starterEquipment';
+import { getRegionVisitCount } from '../game/screens/PostRegionChoice/regionGraph';
 import { Language } from '../i18n';
 import { AudioSettings, audioManager } from '../game/screens/Settings/audioManager';
 import { getFamiliarById, getFamiliarMaxHp, initializeFamiliarState } from '../game/entity/Player/familiars';
@@ -548,12 +549,14 @@ export const useGameStore = create<GameStoreState>((set) => ({
       
       // Use battle system to spawn and scale enemies
       const currentRegion = store.state.selectedRegion || 'demacia';
+      const currentRegionVisitCount = getRegionVisitCount(currentRegion, store.state.visitedRegionsThisRun);
       const spawnedEnemies = currentEncounter.length > 0
         ? spawnEnemies(
             currentEncounter,
             newFloor,
             store.state.encountersCompleted,
-            currentRegion
+            currentRegion,
+            currentRegionVisitCount
           )
         : [];
       
