@@ -185,9 +185,10 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
     ? (character.role === 'player'
       ? getPassiveIdsFromInventory(state.inventory).map((passiveId) => formatLabel(passiveId))
       : (character.inventory || [])
-          .map((entry) => getItemById(entry.itemId)?.passiveId)
-          .filter((passiveId): passiveId is string => Boolean(passiveId))
-          .map((passiveId) => formatLabel(passiveId)))
+          .flatMap((entry) => {
+            const passiveId = getItemById(entry.itemId)?.passiveId;
+            return passiveId ? [formatLabel(passiveId)] : [];
+          }))
     : [];
 
   const classBonuses = character ? getClassStatBonuses(character.class, character.level) : null;
@@ -356,7 +357,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                       const weapon = getWeaponById(weaponId);
                       return (
                         <div key={`${weaponId}-${index}`} className="inspect-loadout-row">
-                          <span>{canReveal ? getWeaponName(weaponId) : '???'}</span>
+                          <span>{canReveal ? getWeaponName({ id: weaponId, name: weapon?.name }) : '???'}</span>
                           {index === loadout.equippedWeaponIndex && <span className="inspect-equipped-chip">Equipped</span>}
                           {weapon?.cooldown ? <span className="inspect-cooldown-chip">CD {weapon.cooldown}</span> : null}
                         </div>
@@ -374,7 +375,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                       const spell = getSpellById(spellId);
                       return (
                         <div key={`${spellId}-${index}`} className="inspect-loadout-row">
-                          <span>{canReveal ? getSpellName(spellId) : '???'}</span>
+                          <span>{canReveal ? getSpellName({ id: spellId, name: spell?.name }) : '???'}</span>
                           {index === loadout.equippedSpellIndex && <span className="inspect-equipped-chip">Equipped</span>}
                           {spell?.cooldown ? <span className="inspect-cooldown-chip">CD {spell.cooldown}</span> : null}
                         </div>
