@@ -7,7 +7,6 @@ import { TurnTimeline } from './timeline';
 import { BattleLogPanel } from './log/BattleLogPanel';
 import { useBattleLog } from './log/useBattleLog';
 import { runTurnManager } from './Flow/TurnManager';
-import { formatSpellEffects, formatWeaponEffects } from './logic/abilityFormatters';
 import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, rollCriticalStrike, calculateCriticalDamage } from '@utils/statsSystem';
 import { getPassiveIdsFromInventory } from '@data/items';
 import { calculateOnHitEffects, applyOnHitEffects, formatOnHitEffects } from '@battle/logic/onHitEffects';
@@ -60,6 +59,8 @@ import { getActiveFamiliarIds, getFamiliarById } from '../../entity/Player/famil
 import { createShurimaSandSoldierSummon } from '../../shared/regions';
 import { EntityInspectPanel, EntityInspectTarget } from '@entities/shared';
 import { buildEnemyTargets, buildPlayerTargets, chooseAutoTarget, getCharacterInstanceId, getEnemyIndexByTargetId, resolveSelectedTarget } from '@battle/logic/targetingSystem';
+import { resolveActionTargeting } from '@battle/logic/targetingSystem/actionTargeting';
+import { getDefaultSpellTargetingProfile, getDefaultWeaponTargetingProfile } from '@battle/logic/targetingSystem/types';
 import { resolveEnemyDefeat, resolvePlayerDefeat } from './Flow/Resolver';
 import './Battle.css';
 
@@ -149,7 +150,10 @@ export const Battle: React.FC<BattleProps> = ({
     [activeFamiliarIds]
   );
   const activeFamiliarKey = activeFamiliarIds.join('|');
-  const enemyTargets = useMemo(() => buildEnemyTargets(state.enemyCharacters), [state.enemyCharacters]);
+  const enemyTargets = useMemo(
+    () => buildEnemyTargets(state.enemyCharacters, enemyPositionsById),
+    [state.enemyCharacters, enemyPositionsById]
+  );
   const selectedEnemyTarget = useMemo(
     () => resolveSelectedTarget(enemyTargets, selectedEnemyTargetId),
     [enemyTargets, selectedEnemyTargetId]
@@ -246,8 +250,8 @@ export const Battle: React.FC<BattleProps> = ({
   const enemyPosition = selectedEnemyPosition;
 
   const playerTeamTargets = useMemo(
-    () => buildPlayerTargets(playerChar, activeFamiliarIds, state.familiarStates),
-    [playerChar, activeFamiliarIds, state.familiarStates]
+    () => buildPlayerTargets(playerChar, activeFamiliarIds, state.familiarStates, playerPosition),
+    [playerChar, activeFamiliarIds, state.familiarStates, playerPosition]
   );
 
   // Get passive IDs from inventory
@@ -369,7 +373,6 @@ export const Battle: React.FC<BattleProps> = ({
     processedTurnEffectsRef.current = 0;
     setLastLoggedTurn(0);
     setSelectedEnemyTargetId(defaultEnemyTargetId);
-    setSelectedItemId(null); // Will be auto-selected by useEffect watching inventory
     setEnemyBuffsById({});
     setEnemyDebuffsById({}); // Reset enemy debuffs for new encounter
     
@@ -531,9 +534,10 @@ export const Battle: React.FC<BattleProps> = ({
     return applyEnemyCombatModifiers(selectedEnemyChar.stats, selectedEnemyBuffs, selectedEnemyDebuffs);
   }, [selectedEnemyChar.stats, selectedEnemyBuffs, selectedEnemyDebuffs, turnCounter, selectedEnemyInstanceId, activeEnemyInstanceId, enemyScaledStats]);
 
-  // Track selected item for use
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [hoveredActionPreview, setHoveredActionPreview] = useState<'attack' | 'spell' | 'item' | null>(null);
+  const [hoveredActionPreview, setHoveredActionPreview] = useState<{
+    kind: 'attack' | 'spell' | 'item';
+    actionId: string;
+  } | null>(null);
   
   // Track combat statistics for summary
   const [combatStats, setCombatStats] = useState({
@@ -574,25 +578,6 @@ export const Battle: React.FC<BattleProps> = ({
   };
 
   // Auto-select first available item whenever inventory changes
-  useEffect(() => {
-    const usableItemsList = getUsableItems(state.inventory);
-    
-    // If currently selected item still exists in inventory with quantity > 0, keep it
-    if (selectedItemId) {
-      const currentItemExists = usableItemsList.some((item: { itemId: string; item: any; quantity: number }) => item.item.id === selectedItemId);
-      if (currentItemExists) {
-        return; // Keep current selection
-      }
-    }
-    
-    // Otherwise, auto-select first available item
-    if (usableItemsList.length > 0) {
-      setSelectedItemId(usableItemsList[0].item.id);
-    } else {
-      setSelectedItemId(null);
-    }
-  }, [state.inventory, selectedItemId]);
-
   // Log component render after all state is declared
   console.log('⚙️ COMPONENT RENDER:', {
     enemyId: enemyChar.id,
@@ -657,9 +642,6 @@ export const Battle: React.FC<BattleProps> = ({
   // Check if player can attack (within attack range)
   const canPlayerAttack = currentDistance <= (playerScaledStats.attackRange || 125);
   
-  // Check if player can cast spells (within spell range)
-  const canPlayerCastSpell = currentDistance <= 500;
-  
   // Movement distance is player's movement speed scaled down for battlefield
   const MOVE_DISTANCE = Math.floor((playerScaledStats.movementSpeed || 350) / 10);
 
@@ -668,70 +650,67 @@ export const Battle: React.FC<BattleProps> = ({
       return [] as string[];
     }
 
-    if (hoveredActionPreview === 'attack') {
-      const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
-      if (!equippedWeaponId || !canPlayerAttack) {
+    if (hoveredActionPreview.kind === 'attack') {
+      const hoveredWeapon = getWeaponById(hoveredActionPreview.actionId);
+      if (!hoveredWeapon) {
         return [] as string[];
       }
 
-      return [selectedEnemyInstanceId];
+      const targetingResult = resolveActionTargeting({
+        actorInstanceId: 'player',
+        actorSide: 'player',
+        actorPosition: playerPosition,
+        targets: enemyTargets,
+        preferredTargetId: selectedEnemyInstanceId,
+        profile: getDefaultWeaponTargetingProfile(hoveredWeapon, playerScaledStats.attackRange || 125),
+      });
+
+      return targetingResult.targetIds;
     }
 
-    if (hoveredActionPreview === 'spell') {
-      const equippedSpellId = state.spells[state.equippedSpellIndex];
-      const equippedSpell = equippedSpellId ? getSpellById(equippedSpellId) : null;
+    if (hoveredActionPreview.kind === 'spell') {
+      const equippedSpell = getSpellById(hoveredActionPreview.actionId);
       if (!equippedSpell) {
         return [] as string[];
       }
 
-      const previewTargets = new Set<string>();
-      const spellRange = equippedSpell.range || 500;
-      const hasOffensiveEffect = equippedSpell.effects.some((effect) => effect.type === 'damage' || effect.type === 'stun' || effect.type === 'debuff');
-      const hasSelfEffect = equippedSpell.effects.some((effect) => effect.type === 'heal' || effect.type === 'buff');
+      const offensivePreview = resolveActionTargeting({
+        actorInstanceId: 'player',
+        actorSide: 'player',
+        actorPosition: playerPosition,
+        targets: enemyTargets,
+        preferredTargetId: selectedEnemyInstanceId,
+        profile: getDefaultSpellTargetingProfile(equippedSpell),
+      });
 
-      if (hasOffensiveEffect && currentDistance <= spellRange) {
-        previewTargets.add(selectedEnemyInstanceId);
+      if (offensivePreview.mode === 'self') {
+        return ['player-main'];
       }
 
-      if (hasSelfEffect) {
-        previewTargets.add('player-main');
-      }
-
-      return Array.from(previewTargets);
+      return offensivePreview.targetIds;
     }
 
-    if (!selectedItemId) {
-      return [] as string[];
-    }
-
-    const selectedItem = getItemById(selectedItemId);
-    if (!selectedItem?.consumable) {
-      return [] as string[];
-    }
-
-    if (selectedItemId === 'flashbomb_trap') {
-      const trapRange = selectedItem.active?.range || 500;
-      return currentDistance <= trapRange ? [selectedEnemyInstanceId] : [];
-    }
-
-    if (selectedItemId === 'stealth_ward' || selectedItemId === 'control_ward') {
-      return [] as string[];
-    }
-
-    return ['player-main'];
+    return [] as string[];
   }, [
     hoveredActionPreview,
-    state.weapons,
-    state.equippedWeaponIndex,
-    state.spells,
-    state.equippedSpellIndex,
-    selectedItemId,
+    enemyTargets,
+    playerChar,
+    activeFamiliarIds,
+    state.familiarStates,
+    playerPosition,
     selectedEnemyInstanceId,
-    canPlayerAttack,
-    currentDistance,
+    playerScaledStats.attackRange,
   ]);
 
   const highlightedBattlefieldMarkerIds = hoveredActionPreview ? hoveredPreviewTargetIds : [];
+
+  useEffect(() => {
+    if (!hoveredActionPreview) return;
+    const previewPrimaryTargetId = hoveredPreviewTargetIds[0];
+    if (!previewPrimaryTargetId) return;
+    if (previewPrimaryTargetId === selectedEnemyTargetId) return;
+    setSelectedEnemyTargetId(previewPrimaryTargetId);
+  }, [hoveredActionPreview, hoveredPreviewTargetIds, selectedEnemyTargetId]);
 
   const handleRewardSelection = (selectedItem: InventoryItem) => {
     onEliteRewardTutorialComplete?.();
@@ -905,17 +884,24 @@ export const Battle: React.FC<BattleProps> = ({
     });
   };
 
-  const handleAttack = () => {
+  const handleAttack = (weaponIndex?: number) => {
     if (!playerEntity || !enemyEntity) return;
     
-    // Get equipped weapon
-    const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
+    // Get equipped weapon (use override index if provided)
+    const weaponIdx = weaponIndex ?? state.equippedWeaponIndex;
+    const equippedWeaponId = state.weapons[weaponIdx];
     const equippedWeapon = equippedWeaponId ? getWeaponById(equippedWeaponId) : null;
     
     console.log('🔍 FULL WEAPON OBJECT:', equippedWeapon);
     
     if (!equippedWeapon) {
       appendLog(`[P1] ${playerChar.name} has no weapon equipped!`);
+      return;
+    }
+
+    if (!equippedWeapon.targeting) {
+      console.warn(`[DEV] Weapon '${equippedWeaponId}' has no targeting definition — add a targeting field to weapons.ts.`);
+      appendLog(`[P1] ${equippedWeapon.name} has no targeting defined and cannot be used.`);
       return;
     }
     
@@ -927,15 +913,37 @@ export const Battle: React.FC<BattleProps> = ({
       return;
     }
     
-    // Check if player is in range
-    if (!canPlayerAttack) {
-      appendLog(`[P1] ${playerChar.name} is out of range from [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)}! (${currentDistance} > ${playerScaledStats.attackRange || 125})`);
-      // Advance to next action in sequence even if attack fails
-      setSequenceIndex((prev) => prev + 1);
-      setTurnCounter((prev) => Math.ceil(prev + 1));
-      setPlayerTurnDone(true);
+    const weaponTargeting = resolveActionTargeting({
+      actorInstanceId: 'player',
+      actorSide: 'player',
+      actorPosition: playerPosition,
+      targets: enemyTargets,
+      preferredTargetId: selectedEnemyInstanceId,
+      profile: getDefaultWeaponTargetingProfile(equippedWeapon, playerScaledStats.attackRange || 125),
+    });
+
+    if (weaponTargeting.targetIds.length === 0) {
+      appendLog(`[P1] ${equippedWeapon.name}: ${weaponTargeting.blockedReason || 'No valid targets in range.'}`);
       return;
     }
+
+    // Derive the actual target from the resolver — for first-in-range weapons this is the
+    // closest enemy, not necessarily the one the player has selected in the UI.
+    const resolvedTarget = weaponTargeting.targets[0];
+    const resolvedEnemyInstanceId = resolvedTarget?.instanceId ?? selectedEnemyInstanceId;
+    const resolvedEnemyIndex = (() => {
+      const idx = getEnemyIndexByTargetId(state.enemyCharacters, resolvedEnemyInstanceId);
+      return idx >= 0 ? idx : selectedEnemyIndex;
+    })();
+    const resolvedEnemyChar = state.enemyCharacters[resolvedEnemyIndex] || selectedEnemyChar;
+    const resolvedEnemyScaledStats =
+      resolvedEnemyInstanceId === activeEnemyInstanceId
+        ? enemyScaledStats
+        : applyEnemyCombatModifiers(
+            resolvedEnemyChar.stats,
+            enemyBuffsById[resolvedEnemyInstanceId] ?? [],
+            enemyDebuffsById[resolvedEnemyInstanceId] ?? []
+          );
     
     discoverWeapon(equippedWeaponId);
 
@@ -967,8 +975,8 @@ export const Battle: React.FC<BattleProps> = ({
           playerScaledAP: playerScaledStats.abilityPower,
           damageScaling: effect.damageScaling,
           baseDamageBeforeReductions: rawDamage,
-          enemyArmor: selectedEnemyScaledStats.armor,
-          enemyMagicResist: selectedEnemyScaledStats.magicResist,
+          enemyArmor: resolvedEnemyScaledStats.armor,
+          enemyMagicResist: resolvedEnemyScaledStats.magicResist,
         });
         
         // Check for critical strike
@@ -983,7 +991,7 @@ export const Battle: React.FC<BattleProps> = ({
         if (physicalBaseDamage > 0) {
           const physicalDamage = calculatePhysicalDamage(
             physicalBaseDamage,
-            selectedEnemyScaledStats.armor || 0,
+            resolvedEnemyScaledStats.armor || 0,
             playerScaledStats.lethality || 0
           );
           finalDamage += physicalDamage;
@@ -991,7 +999,7 @@ export const Battle: React.FC<BattleProps> = ({
         if (magicBaseDamage > 0) {
           const magicDamage = calculateMagicDamage(
             magicBaseDamage,
-            selectedEnemyScaledStats.magicResist || 0,
+            resolvedEnemyScaledStats.magicResist || 0,
             playerScaledStats.magicPenetration || 0
           );
           finalDamage += magicDamage;
@@ -1001,9 +1009,9 @@ export const Battle: React.FC<BattleProps> = ({
         totalDamage += finalDamage;
         
         if (isCrit) {
-          logMessages.push({ message: `[P1] 💥 CRITICAL HIT! ${playerChar.name} attacks [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `[P1] 💥 CRITICAL HIT! ${playerChar.name} attacks [E${resolvedEnemyIndex + 1}] ${getCharacterName(resolvedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
         } else {
-          logMessages.push({ message: `[P1] ${playerChar.name} attacks [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `[P1] ${playerChar.name} attacks [E${resolvedEnemyIndex + 1}] ${getCharacterName(resolvedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
         }
       }
       
@@ -1024,31 +1032,47 @@ export const Battle: React.FC<BattleProps> = ({
       }
     }
     
-    // Update targeted enemy HP with shield handling
-    const liveTargetEnemy = {
-      ...selectedEnemyChar,
-      shields: selectedEnemyChar.shields?.map((shield) => ({ ...shield })),
-    };
-    const damageResult = applyDamageWithShield(liveTargetEnemy, totalDamage);
-    const newEnemyHp = liveTargetEnemy.hp;
-    updateEnemyHp(selectedEnemyIndex, newEnemyHp);
+    // Apply damage to all resolved targets (handles both single and AoE)
+    type HitRecord = { index: number; instanceId: string; newHp: number; shields: typeof resolvedEnemyChar.shields };
+    const hitRecords: HitRecord[] = [];
+
+    for (const hitTarget of weaponTargeting.targets) {
+      const hitIdx =
+        hitTarget.instanceId === resolvedEnemyInstanceId
+          ? resolvedEnemyIndex
+          : getEnemyIndexByTargetId(state.enemyCharacters, hitTarget.instanceId);
+      if (hitIdx < 0) continue;
+      const hitChar = state.enemyCharacters[hitIdx];
+      const liveHitEnemy = { ...hitChar, shields: hitChar.shields?.map((s) => ({ ...s })) };
+      const hitResult = applyDamageWithShield(liveHitEnemy, totalDamage);
+      updateEnemyHp(hitIdx, liveHitEnemy.hp);
+      hitRecords.push({ index: hitIdx, instanceId: hitTarget.instanceId, newHp: liveHitEnemy.hp, shields: liveHitEnemy.shields });
+      if (hitResult.shieldDamage > 0) {
+        logMessages.push({ message: `[E${hitIdx + 1}] 🛡️ ${getCharacterName(hitChar)}'s shield absorbed ${Math.round(hitResult.shieldDamage)} damage!` });
+      }
+      // Log extra hits for AoE secondary targets
+      if (hitTarget.instanceId !== resolvedEnemyInstanceId) {
+        logMessages.push({ message: `[P1] ${equippedWeapon.name} also hits [E${hitIdx + 1}] ${getCharacterName(hitChar)} for ${Math.round(totalDamage)} damage!` });
+      }
+    }
 
     useGameStore.setState((store) => ({
       state: {
         ...store.state,
-        enemyCharacters: store.state.enemyCharacters.map((enemy, idx) =>
-          idx === selectedEnemyIndex ? { ...enemy, shields: liveTargetEnemy.shields } : enemy
-        ),
+        enemyCharacters: store.state.enemyCharacters.map((enemy, idx) => {
+          const hit = hitRecords.find((r) => r.index === idx);
+          return hit ? { ...enemy, shields: hit.shields } : enemy;
+        }),
       },
     }));
 
-    if (damageResult.shieldDamage > 0) {
-      logMessages.push({ message: `[E${selectedEnemyIndex + 1}] 🛡️ ${getCharacterName(selectedEnemyChar)}'s shield absorbed ${Math.round(damageResult.shieldDamage)} damage!` });
-    }
+    // Primary target HP — used for per-target follow-up effects (stun, Hemorrhage, on-hit)
+    const primaryRecord = hitRecords.find((r) => r.instanceId === resolvedEnemyInstanceId) ?? hitRecords[0];
+    const newEnemyHp = primaryRecord?.newHp ?? 0;
 
     // Check for Hemorrhage debuff (Delverhold Greateaxe)
     if (equippedWeaponId === 'delverhold_greateaxe' && newEnemyHp > 0) {
-      updateEnemyDebuffsForId(selectedEnemyInstanceId, (prevDebuffs) => {
+      updateEnemyDebuffsForId(resolvedEnemyInstanceId, (prevDebuffs) => {
         const hemorrhageBuff = prevDebuffs.find(d => d.id === 'hemorrhage');
         const currentStacks = hemorrhageBuff?.stacks.length || 0;
         
@@ -1100,14 +1124,14 @@ export const Battle: React.FC<BattleProps> = ({
     if (newEnemyHp > 0) {
       const onHitResult = calculateOnHitEffects(
         playerChar,
-        selectedEnemyChar,
+        resolvedEnemyChar,
         totalDamage,
         playerScaledStats
       );
       
       const healingResult = applyOnHitEffects(
         playerChar,
-        selectedEnemyChar,
+        resolvedEnemyChar,
         onHitResult
       );
       totalHealing = healingResult.totalHealing;
@@ -1134,29 +1158,29 @@ export const Battle: React.FC<BattleProps> = ({
           const baseDuration = stunEffect.stunDuration;
           
           // Calculate effective stun duration after enemy tenacity reduction
-          const enemyTenacity = selectedEnemyChar.stats.tenacity || 0;
+          const enemyTenacity = resolvedEnemyChar.stats.tenacity || 0;
           const effectiveDuration = calculateCCDuration(baseDuration, enemyTenacity, 'stun');
           
           console.log(`[STUN WEAPON] Applying stun: base=${baseDuration}, tenacity=${enemyTenacity}, effective=${effectiveDuration}`);
           
           // Only apply stun if effective duration > 0 (not immune due to 100 tenacity)
           if (effectiveDuration > 0) {
-            if (selectedEnemyInstanceId === activeEnemyInstanceId) {
+            if (resolvedEnemyInstanceId === activeEnemyInstanceId) {
               // Apply stun immediately (no cast time for weapon attacks)
-              setTurnSequence(prev => applyStunDelay(prev, selectedEnemyInstanceId || 'enemy', effectiveDuration, currentTime));
+              setTurnSequence(prev => applyStunDelay(prev, resolvedEnemyInstanceId || 'enemy', effectiveDuration, currentTime));
               
               // Track stun period for timeline visualization
               const stunStartTime = currentTime;
               const stunEndTime = currentTime + effectiveDuration;
               console.log(`🔵 STUN WEAPON: Adding stun period from ${stunStartTime.toFixed(2)} to ${stunEndTime.toFixed(2)} (duration: ${effectiveDuration})`);
               setStunPeriods(prev => [...prev, {
-                entityId: selectedEnemyInstanceId || 'enemy',
-                entityName: getCharacterName(selectedEnemyChar),
+                entityId: resolvedEnemyInstanceId || 'enemy',
+                entityName: getCharacterName(resolvedEnemyChar),
                 startTime: stunStartTime,
                 endTime: stunEndTime,
               }]);
 
-              updateEnemyDebuffsForId(selectedEnemyInstanceId, (prevDebuffs) => 
+              updateEnemyDebuffsForId(resolvedEnemyInstanceId, (prevDebuffs) => 
                 addOrMergeBuffStack(
                   prevDebuffs,
                   'stunned',
@@ -1171,9 +1195,9 @@ export const Battle: React.FC<BattleProps> = ({
               );
             }
             
-            logMessages.push({ message: `💫 ${getCharacterName(selectedEnemyChar)} is stunned for ${effectiveDuration} turn(s)!` });
+            logMessages.push({ message: `💫 ${getCharacterName(resolvedEnemyChar)} is stunned for ${effectiveDuration} turn(s)!` });
           } else {
-            logMessages.push({ message: `🛡️ ${getCharacterName(selectedEnemyChar)}'s tenacity (${enemyTenacity}) negates the stun!` });
+            logMessages.push({ message: `🛡️ ${getCharacterName(resolvedEnemyChar)}'s tenacity (${enemyTenacity}) negates the stun!` });
           }
         }
       }
@@ -1236,12 +1260,13 @@ export const Battle: React.FC<BattleProps> = ({
     }
   };
 
-  const handleSpell = () => {
+  const handleSpell = (spellIndex?: number) => {
     if (!playerEntity || !enemyEntity) return;
     const isCastTutorialStep = tutorialFocus === 'cast';
     
-    // Get equipped spell
-    const equippedSpellId = state.spells[state.equippedSpellIndex];
+    // Get equipped spell (use override index if provided)
+    const spellIdx = spellIndex ?? state.equippedSpellIndex;
+    const equippedSpellId = state.spells[spellIdx];
     const equippedSpell = equippedSpellId ? getSpellById(equippedSpellId) : null;
     
     console.log('🔮 Attempting to cast spell:', {
@@ -1255,6 +1280,12 @@ export const Battle: React.FC<BattleProps> = ({
       appendLog(`[P1] ${playerChar.name} has no spell equipped!`);
       return;
     }
+
+    if (!equippedSpell.targeting) {
+      console.warn(`[DEV] Spell '${equippedSpellId}' has no targeting definition — add a targeting field to spells.ts.`);
+      appendLog(`[P1] ${equippedSpell.name} has no targeting defined and cannot be cast.`);
+      return;
+    }
     
     // Check cooldown
     const cooldownRemaining = state.spellCooldowns[equippedSpellId] || 0;
@@ -1264,14 +1295,48 @@ export const Battle: React.FC<BattleProps> = ({
       return;
     }
     
-    // Check if player is in range
-    if (!canPlayerCastSpell && !isCastTutorialStep) {
-      appendLog(`[P1] ${playerChar.name}'s spell is out of range from [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)}! (${currentDistance} > 500)`);
-      // Advance to next action in sequence even if spell fails
-      setSequenceIndex((prev) => prev + 1);
-      setTurnCounter((prev) => Math.ceil(prev + 1));
-      setPlayerTurnDone(true);
+    const spellProfile = getDefaultSpellTargetingProfile(equippedSpell);
+    const spellTargets = spellProfile.mode === 'self'
+      ? buildPlayerTargets(playerChar, activeFamiliarIds, state.familiarStates, playerPosition)
+      : enemyTargets;
+
+    const spellTargeting = resolveActionTargeting({
+      actorInstanceId: 'player',
+      actorSide: 'player',
+      actorPosition: playerPosition,
+      targets: spellTargets,
+      preferredTargetId: spellProfile.mode === 'self' ? 'player' : selectedEnemyInstanceId,
+      profile: spellProfile,
+    });
+
+    if (!isCastTutorialStep && spellTargeting.targetIds.length === 0 && spellProfile.mode !== 'none') {
+      appendLog(`[P1] ${equippedSpell.name}: ${spellTargeting.blockedReason || 'No valid targets in range.'}`);
       return;
+    }
+
+    const resolvedSpellEnemyTarget = spellTargeting.targets.find((target) => target.side === 'enemy');
+    const resolvedSpellEnemyInstanceId = resolvedSpellEnemyTarget?.instanceId ?? selectedEnemyInstanceId;
+    const resolvedSpellEnemyIndex = (() => {
+      const idx = getEnemyIndexByTargetId(state.enemyCharacters, resolvedSpellEnemyInstanceId);
+      return idx >= 0 ? idx : selectedEnemyIndex;
+    })();
+    const resolvedSpellEnemyChar = state.enemyCharacters[resolvedSpellEnemyIndex] || selectedEnemyChar;
+    const resolvedSpellEnemyScaledStats =
+      resolvedSpellEnemyInstanceId === activeEnemyInstanceId
+        ? enemyScaledStats
+        : applyEnemyCombatModifiers(
+            resolvedSpellEnemyChar.stats,
+            enemyBuffsById[resolvedSpellEnemyInstanceId] ?? [],
+            enemyDebuffsById[resolvedSpellEnemyInstanceId] ?? []
+          );
+    const resolvedSpellEnemyPosition = getEnemyPositionById(
+      resolvedSpellEnemyInstanceId,
+      Math.max(0, resolvedSpellEnemyIndex)
+    );
+    const resolvedSpellDistance = Math.abs(playerPosition - resolvedSpellEnemyPosition);
+
+    if (resolvedSpellEnemyTarget && resolvedSpellEnemyInstanceId !== selectedEnemyInstanceId) {
+      setSelectedEnemyTargetId(resolvedSpellEnemyInstanceId);
     }
     
     discoverSpell(equippedSpellId);
@@ -1298,7 +1363,7 @@ export const Battle: React.FC<BattleProps> = ({
           magicBaseDamage += playerScaledStats.health * (effect.damageScaling.health / 100);
         }
         if (effect.damageScaling.missingHealthTrueDamage) {
-          const missingHpBeforeHit = Math.max(0, selectedEnemyScaledStats.health - selectedEnemyChar.hp);
+          const missingHpBeforeHit = Math.max(0, resolvedSpellEnemyScaledStats.health - resolvedSpellEnemyChar.hp);
           trueDamage += missingHpBeforeHit * (effect.damageScaling.missingHealthTrueDamage / 100);
         }
 
@@ -1306,14 +1371,14 @@ export const Battle: React.FC<BattleProps> = ({
         if (physicalBaseDamage > 0) {
           finalDamage += calculatePhysicalDamage(
             physicalBaseDamage,
-            selectedEnemyScaledStats.armor || 0,
+            resolvedSpellEnemyScaledStats.armor || 0,
             playerScaledStats.lethality || 0
           );
         }
         if (magicBaseDamage > 0) {
           finalDamage += calculateMagicDamage(
             magicBaseDamage,
-            selectedEnemyScaledStats.magicResist || 0,
+            resolvedSpellEnemyScaledStats.magicResist || 0,
             playerScaledStats.magicPenetration || 0
           );
         }
@@ -1322,7 +1387,7 @@ export const Battle: React.FC<BattleProps> = ({
         finalDamage += trueDamage;
         
         totalDamage += finalDamage;
-        logMessages.push({ message: `[P1] ${playerChar.name} casts ${equippedSpell.name} on [E${selectedEnemyIndex + 1}] ${getCharacterName(selectedEnemyChar)} for ${Math.round(finalDamage)} damage!` });
+        logMessages.push({ message: `[P1] ${playerChar.name} casts ${equippedSpell.name} on [E${resolvedSpellEnemyIndex + 1}] ${getCharacterName(resolvedSpellEnemyChar)} for ${Math.round(finalDamage)} damage!` });
       }
       
       if (effect.type === 'heal' && effect.healScaling) {
@@ -1359,7 +1424,7 @@ export const Battle: React.FC<BattleProps> = ({
         const baseDuration = effect.stunDuration; // Base stun duration
         
         // Calculate effective stun duration after enemy tenacity reduction
-        const enemyTenacity = selectedEnemyChar.stats.tenacity || 0;
+        const enemyTenacity = resolvedSpellEnemyChar.stats.tenacity || 0;
         const effectiveDuration = calculateCCDuration(baseDuration, enemyTenacity, 'stun');
         
         console.log(`[STUN] Applying stun: base=${baseDuration}, tenacity=${enemyTenacity}, effective=${effectiveDuration}`);
@@ -1368,7 +1433,7 @@ export const Battle: React.FC<BattleProps> = ({
         if (effectiveDuration > 0) {
           // Check if enemy is in range
           const spellRange = equippedSpell.range || 500; // Default spell range
-          if (currentDistance <= spellRange) {
+          if (resolvedSpellDistance <= spellRange) {
             // Apply stun with reduced duration
             const stunEffect = createStunEffect('enemy', effectiveDuration, currentTime, 'player', castTime);
             setStatusEffects(prev => [...prev, stunEffect]);
@@ -1411,17 +1476,17 @@ export const Battle: React.FC<BattleProps> = ({
           if (castTime > 0) {
             logMessages.push({ message: `⏰ ${playerChar.name} begins casting ${equippedSpell.name}! Stun will apply in ${castTime} turn(s).` });
           } else {
-            logMessages.push({ message: `💫 ${playerChar.name} stuns ${getCharacterName(selectedEnemyChar)} for ${effectiveDuration} turn(s)!` });
+            logMessages.push({ message: `💫 ${playerChar.name} stuns ${getCharacterName(resolvedSpellEnemyChar)} for ${effectiveDuration} turn(s)!` });
             // Apply stun immediately if no cast time
-            if (selectedEnemyInstanceId === activeEnemyInstanceId) {
-              setTurnSequence(prev => applyStunDelay(prev, selectedEnemyInstanceId || 'enemy', effectiveDuration, currentTime));
+            if (resolvedSpellEnemyInstanceId === activeEnemyInstanceId) {
+              setTurnSequence(prev => applyStunDelay(prev, resolvedSpellEnemyInstanceId || 'enemy', effectiveDuration, currentTime));
             }
           }
         } else {
-          logMessages.push({ message: `❌ ${getCharacterName(selectedEnemyChar)} is out of range! (${Math.round(currentDistance)} > ${spellRange})` });
+          logMessages.push({ message: `❌ ${getCharacterName(resolvedSpellEnemyChar)} is out of range! (${Math.round(resolvedSpellDistance)} > ${spellRange})` });
         }
         } else {
-          logMessages.push({ message: `🛡️ ${getCharacterName(selectedEnemyChar)}'s tenacity (${enemyTenacity}) negates the stun!` });
+          logMessages.push({ message: `🛡️ ${getCharacterName(resolvedSpellEnemyChar)}'s tenacity (${enemyTenacity}) negates the stun!` });
         }
       }
       
@@ -1433,17 +1498,17 @@ export const Battle: React.FC<BattleProps> = ({
         const spellRange = equippedSpell.range || 500;
         
         // Check if enemy is in range
-        if (currentDistance <= spellRange) {
+        if (resolvedSpellDistance <= spellRange) {
           // Create StatusEffect for internal tracking
           const slowEffect = createSlowEffect('enemy', slowDuration, slowPercent, currentTime, 'player');
           setStatusEffects(prev => [...prev, slowEffect]);
           
           // Calculate flat movement speed reduction based on enemy's base movement speed
-          const enemyBaseMovement = selectedEnemyScaledStats.movementSpeed || 350;
+          const enemyBaseMovement = resolvedSpellEnemyScaledStats.movementSpeed || 350;
           const flatReduction = Math.round(enemyBaseMovement * (slowPercent / 100));
           
           // Add slow as CombatBuff for display and stat modification using new stacking system
-          updateEnemyDebuffsForId(selectedEnemyInstanceId, (prev) => 
+          updateEnemyDebuffsForId(resolvedSpellEnemyInstanceId, (prev) => 
             addOrMergeBuffStack(
               prev,
               'slowed',
@@ -1457,7 +1522,7 @@ export const Battle: React.FC<BattleProps> = ({
             )
           );
           
-          logMessages.push({ message: `🐌 ${getCharacterName(selectedEnemyChar)} is slowed by ${slowPercent}% for ${slowDuration} turn(s)!` });
+          logMessages.push({ message: `🐌 ${getCharacterName(resolvedSpellEnemyChar)} is slowed by ${slowPercent}% for ${slowDuration} turn(s)!` });
         } else {
           logMessages.push({ message: `❌ Target out of range for ${equippedSpell.name}!` });
         }
@@ -1507,24 +1572,24 @@ export const Battle: React.FC<BattleProps> = ({
     // Update enemy HP if damage was dealt
     if (totalDamage > 0) {
       const liveTargetEnemy = {
-        ...selectedEnemyChar,
-        shields: selectedEnemyChar.shields?.map((shield) => ({ ...shield })),
+        ...resolvedSpellEnemyChar,
+        shields: resolvedSpellEnemyChar.shields?.map((shield) => ({ ...shield })),
       };
       const damageResult = applyDamageWithShield(liveTargetEnemy, totalDamage);
       const newEnemyHp = liveTargetEnemy.hp;
-      updateEnemyHp(selectedEnemyIndex, newEnemyHp);
+      updateEnemyHp(resolvedSpellEnemyIndex, newEnemyHp);
 
       useGameStore.setState((store) => ({
         state: {
           ...store.state,
           enemyCharacters: store.state.enemyCharacters.map((enemy, idx) =>
-            idx === selectedEnemyIndex ? { ...enemy, shields: liveTargetEnemy.shields } : enemy
+            idx === resolvedSpellEnemyIndex ? { ...enemy, shields: liveTargetEnemy.shields } : enemy
           ),
         },
       }));
 
       if (damageResult.shieldDamage > 0) {
-        logMessages.push({ message: `🛡️ ${getCharacterName(selectedEnemyChar)}'s shield absorbed ${Math.round(damageResult.shieldDamage)} damage!` });
+        logMessages.push({ message: `🛡️ ${getCharacterName(resolvedSpellEnemyChar)}'s shield absorbed ${Math.round(damageResult.shieldDamage)} damage!` });
       }
       
       // Track damage dealt for combat stats
@@ -1660,15 +1725,10 @@ export const Battle: React.FC<BattleProps> = ({
     }
   };
 
-  const handleSelectItem = (itemId: string) => {
-    setSelectedItemId(itemId);
-  };
-
-  const handleUseSelectedItem = () => {
-    if (!selectedItemId) return;
+  const handleUseItem = (itemId: string) => {
     if (!playerEntity || !enemyEntity) return;
     
-    const item = getItemById(selectedItemId);
+    const item = getItemById(itemId);
     if (!item) return;
     
     // Check if item is consumable
@@ -1676,17 +1736,23 @@ export const Battle: React.FC<BattleProps> = ({
       appendLog(`${item.name} cannot be used in battle!`);
       return;
     }
+
+    if (!item.targeting) {
+      console.warn(`[DEV] Item '${itemId}' has no targeting definition — add a targeting field to items.ts.`);
+      appendLog(`${item.name} has no targeting defined and cannot be used.`);
+      return;
+    }
     
     // Handle specific item effects
-    if (selectedItemId === 'health_potion') {
+    if (itemId === 'health_potion') {
       const newBuff = createHealthPotionBuff(`buff-${Date.now()}`);
       setPlayerBuffs((prev) => [...prev, newBuff]);
       
       appendLog(`${playerChar.name} used ${item.name}! Restoring 10 HP per turn for 5 turns.`);
       
       // Consume the item from inventory
-      consumeInventoryItem(selectedItemId);
-    } else if (selectedItemId === 'stealth_ward') {
+      consumeInventoryItem(itemId);
+    } else if (itemId === 'stealth_ward') {
       // Stealth Ward: Reveal enemy stats for current encounter only (1 turn remaining after this battle)
       for (const enemy of state.enemyCharacters) {
         revealEnemy(enemy.id, 1);
@@ -1694,8 +1760,8 @@ export const Battle: React.FC<BattleProps> = ({
       
       appendLog(`👁️ ${playerChar.name} placed a Stealth Ward! Enemy stats are now revealed!`);
       
-      consumeInventoryItem(selectedItemId);
-    } else if (selectedItemId === 'control_ward') {
+      consumeInventoryItem(itemId);
+    } else if (itemId === 'control_ward') {
       // Control Ward: Reveal enemy stats for 3 encounters (current + next 2)
       for (const enemy of state.enemyCharacters) {
         revealEnemy(enemy.id, 3);
@@ -1703,8 +1769,8 @@ export const Battle: React.FC<BattleProps> = ({
       
       appendLog(`👁️ ${playerChar.name} placed a Control Ward! Enemy stats will be revealed for the next 3 encounters!`);
       
-      consumeInventoryItem(selectedItemId);
-    } else if (selectedItemId === 'flashbomb_trap' && item.active) {
+      consumeInventoryItem(itemId);
+    } else if (itemId === 'flashbomb_trap' && item.active) {
       // Handle flashbomb trap placement
       const trapRange = item.active.range || 500;
       const setupTime = item.active.setupTime || 0.5;
@@ -1755,10 +1821,10 @@ export const Battle: React.FC<BattleProps> = ({
       appendLog(`💣 ${playerChar.name} placed a Flashbomb Trap! It will activate in ${setupTime} turn(s).`);
       
       // Consume the item from inventory
-      consumeInventoryItem(selectedItemId);
+      consumeInventoryItem(itemId);
     } else {
       // Fallback for other items
-      const newBuff = createBuffFromItem(selectedItemId, `buff-${Date.now()}`, turnCounter);
+      const newBuff = createBuffFromItem(itemId, `buff-${Date.now()}`, turnCounter);
       if (!newBuff) {
         appendLog(`${item.name} has no usable effects!`);
         return;
@@ -1771,10 +1837,8 @@ export const Battle: React.FC<BattleProps> = ({
       appendLog(`${playerChar.name} used ${item.name}! +${totalAmount} ${newBuff.stat} for ${maxDuration} turns!`);
       
       // Consume the item from inventory
-      consumeInventoryItem(selectedItemId);
+      consumeInventoryItem(itemId);
     }
-    
-    // Auto-selection will be handled by the inventory change useEffect
     
     // Advance to next action in sequence (using item counts as an action)
     setSequenceIndex((prev) => prev + 1);
@@ -1934,16 +1998,24 @@ export const Battle: React.FC<BattleProps> = ({
     
     // Get AI decision
     const aiAction = decideEnemyAction(aiContext);
-    const chosenEnemyTarget = chooseAutoTarget(playerTeamTargets) || playerTeamTargets[0];
-    const targetedFamiliar = chosenEnemyTarget?.kind === 'familiar' ? getFamiliarById(chosenEnemyTarget.baseId) : null;
-    const targetDefenseStats = targetedFamiliar ? targetedFamiliar.stats : playerScaledStats;
-    const targetCurrentHp = targetedFamiliar
-      ? (state.familiarStates[chosenEnemyTarget.baseId]?.currentHp ?? targetedFamiliar.stats.health)
-      : playerChar.hp;
-    const targetMaxHp = targetedFamiliar ? targetedFamiliar.stats.health : playerScaledStats.health;
-    const targetName = chosenEnemyTarget?.name || playerChar.name;
+    let chosenEnemyTarget = chooseAutoTarget(playerTeamTargets) || playerTeamTargets[0];
+
+    const resolveEnemyTargetSnapshot = (target = chosenEnemyTarget) => {
+      const targetedFamiliar = target?.kind === 'familiar' ? getFamiliarById(target.baseId) : null;
+      return {
+        targetedFamiliar,
+        targetDefenseStats: targetedFamiliar ? targetedFamiliar.stats : playerScaledStats,
+        targetCurrentHp: targetedFamiliar
+          ? (state.familiarStates[target.baseId]?.currentHp ?? targetedFamiliar.stats.health)
+          : playerChar.hp,
+        targetMaxHp: targetedFamiliar ? targetedFamiliar.stats.health : playerScaledStats.health,
+        targetName: target?.name || playerChar.name,
+      };
+    };
+
+    let targetSnapshot = resolveEnemyTargetSnapshot(chosenEnemyTarget);
     
-    console.log('🤖 Enemy AI Action:', aiAction, '| target:', targetName);
+    console.log('🤖 Enemy AI Action:', aiAction, '| target:', targetSnapshot.targetName);
     
     // Execute AI decision
     if (aiAction.type === 'weapon') {
@@ -1956,6 +2028,31 @@ export const Battle: React.FC<BattleProps> = ({
         handleSkip();
         return;
       }
+
+      const enemyWeaponTargeting = resolveActionTargeting({
+        actorInstanceId: actingEnemyInstanceId,
+        actorSide: 'enemy',
+        actorPosition: actingEnemyPosition,
+        targets: playerTeamTargets,
+        profile: {
+          ...getDefaultWeaponTargetingProfile(weapon, actingEnemyStats.attackRange || 125),
+          selectionRule: 'auto-priority',
+          targetSide: 'player',
+        },
+      });
+
+      if (enemyWeaponTargeting.targets.length === 0) {
+        appendLog(`${getCharacterName(actingEnemy)} cannot use ${weapon.name}: ${enemyWeaponTargeting.blockedReason || 'no valid targets in range.'}`);
+        setSequenceIndex((prev) => prev + 1);
+        setTurnCounter((prev) => {
+          const nextAction = turnSequence[sequenceIndex + 1];
+          return nextAction ? Math.ceil(nextAction.turnNumber) : prev + 1;
+        });
+        return;
+      }
+
+      chosenEnemyTarget = enemyWeaponTargeting.targets[0];
+      targetSnapshot = resolveEnemyTargetSnapshot(chosenEnemyTarget);
       
       // Calculate weapon damage and effects
       let totalDamage = 0;
@@ -1989,14 +2086,14 @@ export const Battle: React.FC<BattleProps> = ({
           if (physicalBaseDamage > 0) {
             finalDamage += calculatePhysicalDamage(
               physicalBaseDamage,
-              targetDefenseStats.armor || 0,
+              targetSnapshot.targetDefenseStats.armor || 0,
               actingEnemyStats.lethality || 0
             );
           }
           if (magicBaseDamage > 0) {
             finalDamage += calculateMagicDamage(
               magicBaseDamage,
-              targetDefenseStats.magicResist || 0,
+              targetSnapshot.targetDefenseStats.magicResist || 0,
               actingEnemyStats.magicPenetration || 0
             );
           }
@@ -2005,9 +2102,9 @@ export const Battle: React.FC<BattleProps> = ({
           totalDamage += finalDamage;
           
           if (isCrit) {
-            logMessages.push({ message: `💥 CRITICAL HIT! ${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
+            logMessages.push({ message: `💥 CRITICAL HIT! ${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage)} damage!` });
           } else {
-            logMessages.push({ message: `${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
+            logMessages.push({ message: `${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage)} damage!` });
           }
         }
         
@@ -2034,10 +2131,10 @@ export const Battle: React.FC<BattleProps> = ({
       
       // Apply damage to the chosen target
       if (totalDamage > 0) {
-        if (targetedFamiliar && chosenEnemyTarget) {
-          const newFamiliarHp = Math.max(0, Math.round(targetCurrentHp - totalDamage));
+        if (targetSnapshot.targetedFamiliar && chosenEnemyTarget) {
+          const newFamiliarHp = Math.max(0, Math.round(targetSnapshot.targetCurrentHp - totalDamage));
           updateFamiliarHp(chosenEnemyTarget.baseId, newFamiliarHp);
-          logMessages.push({ message: `🐾 ${targetName} takes ${Math.round(totalDamage)} damage.` });
+          logMessages.push({ message: `🐾 ${targetSnapshot.targetName} takes ${Math.round(totalDamage)} damage.` });
         } else {
           const damageResult = applyDamageWithShield(playerChar, totalDamage);
           updatePlayerHp(playerChar.hp);
@@ -2093,6 +2190,33 @@ export const Battle: React.FC<BattleProps> = ({
         handleSkip();
         return;
       }
+
+      const enemySpellTargeting = resolveActionTargeting({
+        actorInstanceId: actingEnemyInstanceId,
+        actorSide: 'enemy',
+        actorPosition: actingEnemyPosition,
+        targets: playerTeamTargets,
+        profile: {
+          ...getDefaultSpellTargetingProfile(spell),
+          selectionRule: 'auto-priority',
+          targetSide: 'player',
+        },
+      });
+
+      if (enemySpellTargeting.targets.length === 0 && getDefaultSpellTargetingProfile(spell).mode !== 'none') {
+        appendLog(`${getCharacterName(actingEnemy)} cannot cast ${spell.name}: ${enemySpellTargeting.blockedReason || 'no valid targets in range.'}`);
+        setSequenceIndex((prev) => prev + 1);
+        setTurnCounter((prev) => {
+          const nextAction = turnSequence[sequenceIndex + 1];
+          return nextAction ? Math.ceil(nextAction.turnNumber) : prev + 1;
+        });
+        return;
+      }
+
+      if (enemySpellTargeting.targets.length > 0) {
+        chosenEnemyTarget = enemySpellTargeting.targets[0];
+        targetSnapshot = resolveEnemyTargetSnapshot(chosenEnemyTarget);
+      }
       
       let totalDamage = 0;
       let totalHealing = 0;
@@ -2130,7 +2254,7 @@ export const Battle: React.FC<BattleProps> = ({
             magicBaseDamage += (actingEnemyStats.health || 0) * (effect.damageScaling.health / 100);
           }
           if (effect.damageScaling.missingHealthTrueDamage) {
-            const missingHpBeforeHit = Math.max(0, targetMaxHp - targetCurrentHp);
+            const missingHpBeforeHit = Math.max(0, targetSnapshot.targetMaxHp - targetSnapshot.targetCurrentHp);
             trueDamage += missingHpBeforeHit * (effect.damageScaling.missingHealthTrueDamage / 100);
           }
 
@@ -2138,14 +2262,14 @@ export const Battle: React.FC<BattleProps> = ({
           if (physicalBaseDamage > 0) {
             finalDamage += calculatePhysicalDamage(
               physicalBaseDamage,
-              targetDefenseStats.armor || 0,
+              targetSnapshot.targetDefenseStats.armor || 0,
               actingEnemyStats.lethality || 0
             );
           }
           if (magicBaseDamage > 0) {
             finalDamage += calculateMagicDamage(
               magicBaseDamage,
-              targetDefenseStats.magicResist || 0,
+              targetSnapshot.targetDefenseStats.magicResist || 0,
               actingEnemyStats.magicPenetration || 0
             );
           }
@@ -2153,7 +2277,7 @@ export const Battle: React.FC<BattleProps> = ({
           finalDamage += trueDamage;
           
           totalDamage += finalDamage;
-          logMessages.push({ message: `${getCharacterName(actingEnemy)} casts ${spell.name} on ${targetName} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `${getCharacterName(actingEnemy)} casts ${spell.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage)} damage!` });
         }
         
         if (effect.type === 'heal' && effect.healScaling) {
@@ -2199,10 +2323,10 @@ export const Battle: React.FC<BattleProps> = ({
       
       // Apply damage to the chosen target
       if (totalDamage > 0) {
-        if (targetedFamiliar && chosenEnemyTarget) {
-          const newFamiliarHp = Math.max(0, Math.round(targetCurrentHp - totalDamage));
+        if (targetSnapshot.targetedFamiliar && chosenEnemyTarget) {
+          const newFamiliarHp = Math.max(0, Math.round(targetSnapshot.targetCurrentHp - totalDamage));
           updateFamiliarHp(chosenEnemyTarget.baseId, newFamiliarHp);
-          logMessages.push({ message: `🐾 ${targetName} takes ${Math.round(totalDamage)} damage.` });
+          logMessages.push({ message: `🐾 ${targetSnapshot.targetName} takes ${Math.round(totalDamage)} damage.` });
         } else {
           const damageResult = applyDamageWithShield(playerChar, totalDamage);
           updatePlayerHp(playerChar.hp);
@@ -2735,6 +2859,37 @@ export const Battle: React.FC<BattleProps> = ({
     [activeFamiliars, state.familiarStates]
   );
 
+  const familiarTimelineActions = useMemo(() => {
+    const currentTimelineTime = turnSequence[sequenceIndex]?.time || 1;
+    const horizon = currentTimelineTime + 20;
+
+    return familiarCombatants.flatMap((familiar) => {
+      if (familiar.trigger !== 'turn') return [];
+
+      const interval = Math.max(1, familiar.intervalTurns || 1);
+      const baseNextTurn = Math.max(1, familiarNextActionTurn[familiar.id] ?? Math.ceil(currentTimelineTime));
+      const actions: Array<{
+        entityId: string;
+        entityName: string;
+        time: number;
+        turnNumber: number;
+        actionType: 'attack' | 'spell' | 'move';
+      }> = [];
+
+      for (let nextTime = baseNextTurn; nextTime <= horizon; nextTime += interval) {
+        actions.push({
+          entityId: `familiar-${familiar.id}`,
+          entityName: familiar.name,
+          time: nextTime,
+          turnNumber: Math.ceil(nextTime),
+          actionType: familiar.effect.type === 'physical' ? 'attack' : 'spell',
+        });
+      }
+
+      return actions;
+    });
+  }, [familiarCombatants, familiarNextActionTurn, sequenceIndex, turnSequence]);
+
   const playerFormationUnits = useMemo<FormationUnit[]>(() => {
     const units: FormationUnit[] = [
       {
@@ -2813,6 +2968,35 @@ export const Battle: React.FC<BattleProps> = ({
 
     return units.sort((a, b) => b.position - a.position);
   }, [enemyDebuffsById, enemyPositionsById, state.enemyCharacters, store, turnCounter]);
+
+  const timelineEntityVisuals = useMemo(() => {
+    const visuals: Record<string, { imageSrc?: string; fallbackLabel: string; team: 'player' | 'enemy' | 'familiar' }> = {
+      player: {
+        imageSrc: playerChar.characterArt || '/assets/global/images/player/miko1.png',
+        fallbackLabel: 'P1',
+        team: 'player',
+      },
+    };
+
+    state.enemyCharacters.forEach((enemy, index) => {
+      const enemyId = getCharacterInstanceId(enemy, index);
+      visuals[enemyId] = {
+        imageSrc: enemy.characterArt,
+        fallbackLabel: `E${index + 1}`,
+        team: 'enemy',
+      };
+    });
+
+    familiarCombatants.forEach((familiar, index) => {
+      visuals[`familiar-${familiar.id}`] = {
+        imageSrc: familiar.imagePath,
+        fallbackLabel: `F${index + 1}`,
+        team: 'familiar',
+      };
+    });
+
+    return visuals;
+  }, [familiarCombatants, playerChar.characterArt, state.enemyCharacters]);
 
   const battleInspectTargets = useMemo<EntityInspectTarget[]>(() => {
     const targets: EntityInspectTarget[] = [
@@ -2927,58 +3111,44 @@ export const Battle: React.FC<BattleProps> = ({
       return null;
     }
 
-    if (hoveredActionPreview === 'attack') {
-      const equippedWeaponId = state.weapons[state.equippedWeaponIndex];
-      if (!equippedWeaponId) {
+    if (hoveredActionPreview.kind === 'attack') {
+      const hoveredWeapon = getWeaponById(hoveredActionPreview.actionId);
+      if (!hoveredWeapon) {
         return null;
       }
+
+      const profile = getDefaultWeaponTargetingProfile(hoveredWeapon, playerScaledStats.attackRange || 125);
 
       return {
         sourcePosition: playerPosition,
         targetPosition: selectedEnemyBattlePosition,
-        range: playerScaledStats.attackRange || 125,
+        range: profile.range || playerScaledStats.attackRange || 125,
         color: '#7dd3fc',
       };
     }
 
-    if (hoveredActionPreview === 'spell') {
-      const equippedSpellId = state.spells[state.equippedSpellIndex];
-      const equippedSpell = equippedSpellId ? getSpellById(equippedSpellId) : null;
+    if (hoveredActionPreview.kind === 'spell') {
+      const equippedSpell = getSpellById(hoveredActionPreview.actionId);
       if (!equippedSpell) {
+        return null;
+      }
+
+      const profile = getDefaultSpellTargetingProfile(equippedSpell);
+      if (profile.mode === 'self' || profile.mode === 'none') {
         return null;
       }
 
       return {
         sourcePosition: playerPosition,
         targetPosition: selectedEnemyBattlePosition,
-        range: equippedSpell.range || 500,
+        range: profile.range || equippedSpell.range || 500,
         color: '#93c5fd',
       };
     }
 
-    if (!selectedItemId) {
-      return null;
-    }
-
-    const selectedItem = getItemById(selectedItemId);
-    const itemRange = selectedItem?.active?.range;
-    if (!itemRange || itemRange <= 0) {
-      return null;
-    }
-
-    return {
-      sourcePosition: playerPosition,
-      targetPosition: selectedEnemyBattlePosition,
-      range: itemRange,
-      color: '#fbbf24',
-    };
+    return null;
   }, [
     hoveredActionPreview,
-    state.weapons,
-    state.equippedWeaponIndex,
-    state.spells,
-    state.equippedSpellIndex,
-    selectedItemId,
     playerPosition,
     selectedEnemyBattlePosition,
     playerScaledStats.attackRange,
@@ -3100,6 +3270,8 @@ export const Battle: React.FC<BattleProps> = ({
                 enemyName={getCharacterName(enemyChar)}
                 isPlayerTurn={isPlayerTurn}
                 stunPeriods={stunPeriods}
+                entityVisuals={timelineEntityVisuals}
+                familiarTimelineActions={familiarTimelineActions}
                 onSimultaneousAction={handleSimultaneousAction}
               />
             </div>
@@ -3139,32 +3311,14 @@ export const Battle: React.FC<BattleProps> = ({
                 {/* Attack Section */}
                 <div className={`action-section attack-section ${getTutorialClass(isSpeedFocus || isAttackFocus)}`}>
                   <div className="section-label">Attack</div>
-                  <button 
-                    onClick={handleAttack} 
-                    className={`main-action-btn attack-btn ${!canAttack ? 'disabled' : ''} ${isPlayerTurn && !canPlayerAttack ? 'breathing-red' : ''}`}
-                    disabled={!canAttack}
-                    title={canAttack ? 'Attack with equipped weapon!' : 'Wait for your attack turn'}
-                    onMouseEnter={() => setHoveredActionPreview('attack')}
-                    onMouseLeave={() => setHoveredActionPreview(null)}
-                  >
-                    <span className="action-icon">⚔️</span>
-                    <span className="action-text">
-                      {(() => {
-                        const weaponId = state.weapons[state.equippedWeaponIndex];
-                        const weapon = weaponId ? getWeaponById(weaponId) : null;
-                        return weapon ? `Attack with ${weapon.name}` : 'Attack';
-                      })()}
-                    </span>
-                    {(() => {
-                      const weaponId = state.weapons[state.equippedWeaponIndex];
-                      const weapon = weaponId ? getWeaponById(weaponId) : null;
-                      const effects = formatWeaponEffects(weapon);
-                      return effects.length > 0 ? (
-                        <span className="effect-preview">{effects.join(' + ')}</span>
-                      ) : null;
-                    })()}
-                  </button>
-                  <WeaponSelector attackRange={playerScaledStats.attackRange} />
+                  <WeaponSelector
+                    onAttack={(index) => handleAttack(index)}
+                    canAttack={canAttack}
+                    attackRange={playerScaledStats.attackRange}
+                    onHoverChange={(weaponId) => {
+                      setHoveredActionPreview(weaponId ? { kind: 'attack', actionId: weaponId } : null);
+                    }}
+                  />
                 </div>
 
                 {/* Skip Section */}
@@ -3184,79 +3338,26 @@ export const Battle: React.FC<BattleProps> = ({
                 {/* Item Section */}
                 <div className={`action-section item-section ${getTutorialClass(isHasteFocus || isItemFocus)} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}>
                   <div className="section-label">Item</div>
-                  <button 
-                    onClick={handleUseSelectedItem} 
-                    className={`main-action-btn item-btn ${!canSpell || !selectedItemId ? 'disabled' : ''} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}
-                    disabled={!canSpell || !selectedItemId || blockItemDuringTutorial}
-                    title={!canSpell ? 'Wait for your spell turn' : !selectedItemId ? 'Select an item first' : 'Use selected item'}
-                    onMouseEnter={() => setHoveredActionPreview('item')}
-                    onMouseLeave={() => setHoveredActionPreview(null)}
-                  >
-                    <span className="action-icon">🧪</span>
-                    <span className="action-text">Use Item</span>
-                  </button>
-                  {/* Item Bar - Always visible */}
                   <ItemBar
                     usableItems={getUsableItems(state.inventory)}
-                    onSelectItem={handleSelectItem}
-                    selectedItemId={selectedItemId}
-                    canUse={canSpell}
+                    onUseItem={handleUseItem}
+                    canUse={canSpell && !blockItemDuringTutorial}
                   />
                 </div>
 
                 {/* Spell Section */}
                 <div className={`action-section spell-section ${getTutorialClass(isHasteFocus || isCastFocus)} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}>
                   <div className="section-label">Cast</div>
-                  <button 
-                    onClick={handleSpell} 
-                    className={`main-action-btn spell-btn ${!canSpell && !allowCastTutorialOverride ? 'disabled' : ''} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''} ${(() => {
-                      const spellId = state.spells[state.equippedSpellIndex];
-                      const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
-                      return cooldown > 0 && !allowCastTutorialOverride ? 'on-cooldown' : '';
-                    })()}`}
-                    disabled={(!canSpell && !allowCastTutorialOverride) || blockSpellDuringTutorial || (() => {
-                      const spellId = state.spells[state.equippedSpellIndex];
-                      return (state.spellCooldowns[spellId] || 0) > 0 && !allowCastTutorialOverride;
-                    })()}
-                    title={(() => {
-                      const spellId = state.spells[state.equippedSpellIndex];
-                      const cooldown = state.spellCooldowns[spellId] || 0;
-                      if (cooldown > 0 && !allowCastTutorialOverride) return `Spell on cooldown (${cooldown} turn${cooldown > 1 ? 's' : ''} remaining)`;
-                      if (!canSpell && !allowCastTutorialOverride) return 'Wait for your spell turn';
-                      return 'Cast equipped spell!';
-                    })()}
-                    onMouseEnter={() => setHoveredActionPreview('spell')}
-                    onMouseLeave={() => setHoveredActionPreview(null)}
-                  >
-                    <span className="action-icon">✨</span>
-                    <span className="action-text">
-                      {(() => {
-                        const spellId = state.spells[state.equippedSpellIndex];
-                        const spell = spellId ? getSpellById(spellId) : null;
-                        const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
-
-                        if (cooldown > 0) {
-                          return `${cooldown} Turn${cooldown > 1 ? 's' : ''} Cooldown`;
-                        }
-
-                        return spell ? `Cast ${spell.name}` : 'Cast Spell';
-                      })()}
-                    </span>
-                    {(() => {
-                      const spellId = state.spells[state.equippedSpellIndex];
-                      const spell = spellId ? getSpellById(spellId) : null;
-                      const effects = formatSpellEffects(spell);
-                      const cooldown = spellId ? (state.spellCooldowns[spellId] || 0) : 0;
-
-                      // Don't show effects if on cooldown
-                      if (cooldown > 0) return null;
-
-                      return effects.length > 0 ? (
-                        <span className="effect-preview">{effects.join(' + ')}</span>
-                      ) : null;
-                    })()}
-                  </button>
-                  <SpellSelector attackRange={playerScaledStats.attackRange} />
+                  <SpellSelector
+                    onCast={(index) => handleSpell(index)}
+                    canCast={canSpell}
+                    blocked={blockSpellDuringTutorial}
+                    allowTutorialOverride={allowCastTutorialOverride}
+                    attackRange={playerScaledStats.attackRange}
+                    onHoverChange={(spellId) => {
+                      setHoveredActionPreview(spellId ? { kind: 'spell', actionId: spellId } : null);
+                    }}
+                  />
                 </div>
               </div>
 

@@ -63,6 +63,12 @@ export interface Item {
     requiresEnemyInRange?: boolean; // Must have enemy in range to use
   };
   onUseEffect?: string; // Description of what happens when used
+  targeting?: {
+    mode: 'none' | 'self' | 'single' | 'multiple' | 'aoe';
+    selectionRule?: 'first-in-range' | 'last-in-range' | 'all-in-range' | 'auto-priority';
+    range?: number;
+    requiresTargetInRange?: boolean;
+  };
   unlockRequirement?: {
     type: 'stat_threshold' | 'achievement' | 'progression';
     description: string; // Human-readable unlock condition
@@ -371,6 +377,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Restores 100 health over 5 turns',
+    targeting: { mode: 'self' },
   },
  
   flashbomb_trap: {
@@ -393,6 +400,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
       requiresEnemyInRange: true,
     },
     onUseEffect: 'Places a trap that stuns after 0.5 turns. Can be dodged by moving away.',
+    targeting: { mode: 'single', selectionRule: 'first-in-range', requiresTargetInRange: true, range: 500 },
   },
   
   stealth_ward: {
@@ -405,6 +413,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals the enemy stats for the remainder of the encounter',
+    targeting: { mode: 'none' },
   },
   control_ward: {
     id: 'control_ward',
@@ -416,6 +425,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals the enemy stats for the next 5 encounters',
+    targeting: { mode: 'none' },
   },
 
   oracle_lens: {
@@ -428,6 +438,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Allows to attack invisible enemies for the next 3 turns',
+    targeting: { mode: 'none' },
   },
   farsight_alteration: {
     id: 'farsight_alteration',
@@ -439,6 +450,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Reveals what the next encounter will be',
+    targeting: { mode: 'none' },
   },
   poro_snax: {
     id: 'poro_snax',
@@ -450,6 +462,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'It must do something',
+    targeting: { mode: 'none' },
   },
 
   // Common Items
@@ -618,6 +631,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Gain +300 Health, +250 Tenacity, and +150 Movement Speed for 15 encounters (persists across acts/regions)',
+    targeting: { mode: 'self' },
   },
   
   elixir_of_sorcery: {
@@ -630,6 +644,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Gain +50 Ability Power, +10 Magic Find, and +25 True Damage (ignores armor/MR) for 15 encounters (persists across acts/regions)',
+    targeting: { mode: 'self' },
   },
   
   elixir_of_wrath: {
@@ -642,6 +657,7 @@ export const ITEM_DATABASE: Record<string, Item> = {
     stats: {},
     consumable: true,
     onUseEffect: 'Gain +30 Attack Damage and +12% Lifesteal for 15 encounters (persists across acts/regions)',
+    targeting: { mode: 'self' },
   },
 
   // Epic Items

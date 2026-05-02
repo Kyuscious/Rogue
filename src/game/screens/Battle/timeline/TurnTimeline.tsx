@@ -9,6 +9,20 @@ interface TurnAction {
   turnNumber: number;
 }
 
+interface TimelineEntityVisual {
+  imageSrc?: string;
+  fallbackLabel: string;
+  team: 'player' | 'enemy' | 'familiar';
+}
+
+interface FamiliarTimelineAction {
+  entityId: string;
+  entityName: string;
+  time: number;
+  turnNumber: number;
+  actionType: 'attack' | 'spell' | 'move';
+}
+
 interface StunPeriod {
   entityId: string;
   entityName: string;
@@ -23,6 +37,8 @@ interface TurnTimelineProps {
   enemyName: string;
   isPlayerTurn: boolean;
   stunPeriods?: StunPeriod[];
+  entityVisuals?: Record<string, TimelineEntityVisual>;
+  familiarTimelineActions?: FamiliarTimelineAction[];
   onSimultaneousAction?: (playerAction: string, enemyAction: string, time: number) => void;
 }
 
@@ -33,6 +49,8 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   enemyName,
   isPlayerTurn,
   stunPeriods = [],
+  entityVisuals = {},
+  familiarTimelineActions = [],
   onSimultaneousAction,
 }) => {
   // Get next 30 actions starting from current
@@ -113,6 +131,40 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   // Calculate position percentage on timeline (works with decimal turn numbers)
   const getPositionPercent = (turnNumber: number) => {
     return ((turnNumber - startTurn) / turnRange) * 100;
+  };
+
+  const getEntityVisual = (entityId: string, fallbackName: string, isPlayer: boolean): TimelineEntityVisual => {
+    const existing = entityVisuals[entityId];
+    if (existing) return existing;
+
+    if (isPlayer) {
+      return {
+        fallbackLabel: 'P1',
+        team: 'player',
+      };
+    }
+
+    const short = fallbackName ? fallbackName.slice(0, 2).toUpperCase() : 'E1';
+    return {
+      fallbackLabel: short,
+      team: 'enemy',
+    };
+  };
+
+  const renderEntityChip = (
+    visual: TimelineEntityVisual,
+    name: string,
+    className = 'entity-chip'
+  ) => {
+    return (
+      <div className={`${className} ${visual.team}`} title={name}>
+        {visual.imageSrc ? (
+          <img src={visual.imageSrc} alt={name} />
+        ) : (
+          <span>{visual.fallbackLabel}</span>
+        )}
+      </div>
+    );
   };
 
   // Return null AFTER all hooks have been called
@@ -243,6 +295,8 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
             const enemyAction = group.find(g => g.action.entityId !== 'player')!.action;
             const playerIcon = playerAction.actionType === 'spell' ? '✨' : playerAction.actionType === 'move' ? '↔' : '⚔️';
             const enemyIcon = enemyAction.actionType === 'spell' ? '✨' : enemyAction.actionType === 'move' ? '↔' : '⚔️';
+            const playerVisual = getEntityVisual('player', playerName, true);
+            const enemyVisual = getEntityVisual(enemyAction.entityId, enemyAction.entityName || enemyName, false);
             
             return (
               <div
@@ -255,7 +309,10 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
                   <span className="player-icon">{playerIcon}</span>
                   <span className="enemy-icon">{enemyIcon}</span>
                 </div>
-                <div className="action-label">BOTH</div>
+                <div className="simultaneous-entity-chips">
+                  {renderEntityChip(playerVisual, playerName, 'entity-chip simultaneous-chip')}
+                  {renderEntityChip(enemyVisual, enemyAction.entityName || enemyName, 'entity-chip simultaneous-chip')}
+                </div>
               </div>
             );
           }
@@ -263,23 +320,43 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
           // Single action (normal case)
           const action = firstAction;
           const isPlayer = action.entityId === 'player';
-          // For enemies, derive a short label (E1, E2…) from entityName or entityId
-          const enemyShortLabel = action.entityName
-            ? action.entityName.slice(0, 2).toUpperCase()
-            : 'E';
           const name = isPlayer ? playerName : (action.entityName || enemyName);
+          const entityVisual = getEntityVisual(action.entityId, name, isPlayer);
           
           return (
             <div
               key={timeKey}
-              className={`action-indicator ${isActive ? 'active' : ''} ${isPlayer ? 'player' : 'enemy'}`}
+              className={`action-indicator ${isActive ? 'active' : ''} ${entityVisual.team}`}
               style={{ left: `${position}%` }}
               title={`${name} - ${action.actionType} at ${action.time.toFixed(2)}`}
             >
               <div className="action-icon">
                 {action.actionType === 'spell' ? '✨' : action.actionType === 'move' ? '↔' : '⚔️'}
               </div>
-              <div className="action-label">{isPlayer ? 'P' : enemyShortLabel}</div>
+              {renderEntityChip(entityVisual, name)}
+            </div>
+          );
+        })}
+
+        {/* Familiar action indicators - projected from familiar turn timers */}
+        {familiarTimelineActions.map((action) => {
+          if (action.time < startTurn || action.time > endTurn) {
+            return null;
+          }
+
+          const position = getPositionPercent(action.time);
+          const entityVisual = getEntityVisual(action.entityId, action.entityName, false);
+          const isActive = Math.abs(action.time - currentActionTime) < 0.0001;
+
+          return (
+            <div
+              key={`familiar-${action.entityId}-${action.time.toFixed(3)}`}
+              className={`action-indicator familiar familiar-projected ${isActive ? 'active' : ''}`}
+              style={{ left: `${position}%` }}
+              title={`${action.entityName} - ${action.actionType} at ${action.time.toFixed(2)}`}
+            >
+              <div className="action-icon familiar-action">✦</div>
+              {renderEntityChip(entityVisual, action.entityName)}
             </div>
           );
         })}

@@ -2,12 +2,12 @@
   display: flex;
   align-items: center;
   gap: clamp(0.25rem, 1vw, 0.5rem);
-  margin-top: clamp(0.25rem, 1vh, 0.5rem);
   padding: clamp(0.25rem, 1vh, 0.5rem);
   background: rgba(0, 0, 0, 0.3);
   border-radius: clamp(4px, 1vh, 6px);
   overflow-x: auto;
   overflow-y: hidden;
+  flex: 1;
 }
 
 .spell-selector-label {

@@ -5,32 +5,35 @@ import { Tooltip } from '../../../shared/Tooltip';
 import './WeaponSelector.css';
 
 interface WeaponSelectorProps {
-  onSelect?: () => void; // Called after switching weapon
-  attackRange?: number; // For tooltip display
+  onAttack: (index: number) => void;
+  canAttack: boolean;
+  attackRange?: number;
+  onHoverChange?: (weaponId: string | null) => void;
 }
 
-export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect }) => {
+export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onAttack, canAttack, onHoverChange }) => {
   const { state, equipWeapon } = useGameStore();
   const { weapons, equippedWeaponIndex } = state;
   const [tooltipData, setTooltipData] = useState<{ weaponId: string; position: { x: number; y: number } } | null>(null);
   const handleSelectWeapon = (index: number) => {
     if (index < weapons.length) {
       equipWeapon(index);
-      onSelect?.();
+      onAttack(index);
     }
   };
 
   const handleWeaponMouseEnter = (weaponId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    console.log('🎯 Weapon button rect:', rect);
     setTooltipData({
       weaponId,
       position: { x: rect.left + rect.width / 2, y: rect.bottom }
     });
+    onHoverChange?.(weaponId);
   };
 
   const handleWeaponMouseLeave = () => {
     setTooltipData(null);
+    onHoverChange?.(null);
   };
 
   // Always show 3 slots
@@ -43,9 +46,9 @@ export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onSelect }) => {
     return (
       <button
         key={i}
-        className={`weapon-slot ${weapon ? `rarity-${weapon.rarity}` : ''} ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''}`}
+        className={`weapon-slot ${weapon ? `rarity-${weapon.rarity}` : ''} ${isEquipped ? 'equipped' : ''} ${!isAvailable || !canAttack ? 'disabled' : ''}`}
         onClick={() => handleSelectWeapon(i)}
-        disabled={!isAvailable}
+        disabled={!isAvailable || !canAttack}
         onMouseEnter={(e) => weapon && handleWeaponMouseEnter(weapon.id, e)}
         onMouseLeave={handleWeaponMouseLeave}
       >

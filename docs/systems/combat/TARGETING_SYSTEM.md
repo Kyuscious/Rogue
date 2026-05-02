@@ -1,96 +1,143 @@
 # Targeting System
 
-> Update April 24, 2026: Position-based frontline/backline targeting direction is now specified in [position-based-targeting.md](position-based-targeting.md). This file documents the previous foundation and migration context.
-
-**Status:** ✅ Initial foundation implemented  
-**Last Updated:** April 19, 2026
+**Status:** In Progress (Targeting Modes + Resolver Foundation Implemented)
+**Last Updated:** May 1, 2026
 
 ---
 
-## Overview
+## Purpose
 
-The targeting system decides which unit an action is aimed at once battles contain more than one valid target.
+Targeting now uses an explicit per-action contract so every combat action is always in one of these states:
 
-This is designed for future encounters such as:
-- multiple enemies on the field
-- one boss with summons
-- player team setups that include familiars
+- `single`
+- `multiple`
+- `aoe`
+- `self`
+- `none`
 
----
-
-## Current Rules
-
-### Player targeting
-- The player can focus a specific enemy target from the enemy team panel.
-- A valid target should always exist while at least one enemy is alive.
-- Battle start should auto-select the first living enemy.
-- If the current target dies, focus should immediately move to the next living enemy from left to right.
-- The player must still be able to switch target manually at any time.
-
-### Enemy targeting
-- Enemies can now choose between the player and active familiars.
-- Defensive familiars are slightly more likely to draw attention than fragile support familiars.
-
-### Familiar targeting
-- Active familiars automatically attack or support based on their defined behavior.
-- Offensive familiar effects follow the current focused enemy target.
+This removes ambiguous behavior and ensures action resolution, UI preview, and click validation are consistent.
 
 ---
 
-## Target Priority Model
+## Action Targeting Contract
 
-Each targetable unit can expose optional targeting metadata:
+Each action (weapon/spell, and eventually item actives) resolves from a `targeting` profile.
 
-- `targetPriority` — higher value means the unit is more likely to be focused
-- `canBeTargeted` — allows future untargetable or hidden states
-- `ownerId` / `isSummon` — supports bosses with summoned allies later on
+Core fields:
+
+- `mode`: `none | self | single | multiple | aoe`
+- `selectionRule`: `selected | first-in-range | last-in-range | all-in-range | auto-priority`
+- `range`: effective cast/attack range
+- `maxTargets`: cap for multi-target actions
+- `requiresTargetInRange`: blocks execution when no target is in range
+- `targetSide`: `player` or `enemy`
+- `aoe`: shape + size (`circle` or `rectangle`)
+
+If content has no explicit `targeting` field, defaults are inferred from effects:
+
+- offensive weapon/spell -> `single` target, range-gated
+- self heal/buff spell -> `self`
+- spell with AoE metadata + offensive effect -> `aoe`
+- non-targeted utility/special effects -> `none`
 
 ---
 
-## Immediate UX Requirements
+## Resolver Modules
 
-The first summon-heavy encounters exposed several practical UI problems that need a tighter combat presentation layer.
+Targeting logic is split into focused modules under [src/game/screens/Battle/logic/targetingSystem/index.ts](src/game/screens/Battle/logic/targetingSystem/index.ts):
 
-### Enemy team panel limits
-- The enemy team battlefield panel should show a maximum of 4 enemy cards at once.
-- If more than 4 enemies are alive, the panel should support paging or scrolling so target controls never overflow off-screen.
-- Target switching controls must remain clickable even when summons increase the team size.
+- [src/game/screens/Battle/logic/targetingSystem/singleTarget.ts](src/game/screens/Battle/logic/targetingSystem/singleTarget.ts): single target resolution
+- [src/game/screens/Battle/logic/targetingSystem/multipleTarget.ts](src/game/screens/Battle/logic/targetingSystem/multipleTarget.ts): multi-target resolution and ordering
+- [src/game/screens/Battle/logic/targetingSystem/areaTarget.ts](src/game/screens/Battle/logic/targetingSystem/areaTarget.ts): anchor + area inclusion
+- [src/game/screens/Battle/logic/targetingSystem/actionTargeting.ts](src/game/screens/Battle/logic/targetingSystem/actionTargeting.ts): unified action-level resolution
+- [src/game/screens/Battle/logic/targetingSystem/types.ts](src/game/screens/Battle/logic/targetingSystem/types.ts): shared profile/result typing and profile defaults
 
-### Persistent target visibility
-- The battlefield should always visually highlight the currently selected enemy.
-- The selected target shown in the battlefield, target panel, and action resolution must always stay in sync.
-- There should never be a state where the player has no selected target while enemies are alive.
+The base target model in [src/game/screens/Battle/logic/targetingSystem.ts](src/game/screens/Battle/logic/targetingSystem.ts) now includes battlefield position metadata so range checks can be deterministic.
 
-### Timeline visibility
-- The timeline should display actions for every enemy currently participating in battle, not just the primary enemy.
-- Summons should appear with their own action entries so the player can understand incoming pressure.
-- Duplicate enemy types should still be distinguishable through battle instance identifiers or display labels.
+---
 
-## Implementation Order
+## UI Behavior
 
-To keep combat stable, these changes should be done in small passes:
+### Hover Preview
 
-1. **Persistent auto-targeting**
-   - Always select the first living enemy on battle start.
-   - Auto-advance target selection when the focused enemy dies.
+When hovering a weapon/spell slot:
 
-2. **Battlefield focus sync**
-   - Make the active battlefield unit always mirror the selected target.
-   - Ensure attack, spell, and familiar logic all resolve against the same focused unit.
+- target candidates are resolved using the same targeting profile used for execution
+- targeted units are highlighted in lane cards and battlefield markers
+- effective range is shown as a battlefield range band
+- for self-target actions, the player is highlighted
 
-3. **Enemy overflow handling**
-   - Limit visible enemy cards to 4 at a time.
-   - Add next and previous navigation or horizontal scrolling for larger summon waves.
+### AoE Preview
 
-4. **Full enemy timeline coverage**
-   - Render timeline entries for all enemy participants.
-   - Support boss plus summons encounters without hiding actions.
+For AoE actions:
 
-## Future Expansion
+- area shape/size comes from action metadata
+- preview highlights all currently affected units based on anchor + area size
+- battlefield AoE indicator rendering uses the same shape conventions (`circle` / `rectangle`)
 
-Planned next steps for this system:
-- taunt / guard mechanics
-- front-line vs back-line rules
-- true multi-enemy turn order
-- summon ownership and despawn behavior
-- battlefield-position-aware targeting
+---
+
+## Click Validation
+
+Before an action executes:
+
+- targets are resolved from the targeting profile and current battlefield positions
+- if `requiresTargetInRange` is true and no valid target exists, action execution is blocked
+- battle log shows the prompt: `No valid targets in range.` (or action-specific equivalent)
+
+This prevents invalid casts/attacks and avoids consuming turns on impossible actions.
+
+---
+
+## Player Targeting Rules
+
+Current player-facing behavior:
+
+- primary offensive actions resolve against selected target intent
+- target validity is still range-gated by the resolver
+- self-target actions (heal/buff) resolve to player self
+
+Planned extension:
+
+- expose action-level selection rules in content (`first-in-range`, `last-in-range`, `all-in-range`) for player actions where manual selection is not required
+
+---
+
+## Enemy Targeting Rules
+
+Enemy actions now use the same resolver pipeline:
+
+- weapon/spell action type determines targeting profile
+- enemy resolves valid targets from player side (player + familiars)
+- `auto-priority` can be used for AI target choice while still obeying range and mode
+- if no valid target exists in range, the action is blocked and logged
+
+This aligns player and enemy targeting semantics.
+
+---
+
+## Data Integration
+
+- Spells support explicit targeting metadata in [src/game/data/spells.ts](src/game/data/spells.ts).
+- Weapons support targeting metadata in [src/game/data/weapons.ts](src/game/data/weapons.ts).
+- Existing content continues to work via inferred defaults when metadata is omitted.
+
+Recommended content authoring rule:
+
+- every damage-dealing action should define `mode` and `range` explicitly
+- AoE actions should define shape + size explicitly
+
+---
+
+## Known Follow-Ups
+
+1. Apply explicit `targeting` metadata to all existing weapons and spells (not just defaults).
+2. Extend the same model to item actives that can target enemies/allies.
+3. Add UI text chips on action buttons/tooltips showing targeting mode and selection rule.
+4. Add tests for resolver edge cases (no targets, range boundary, tie ordering, AoE anchor loss).
+
+---
+
+## Summary
+
+Targeting is now defined per action mode and resolved through modular resolvers. Hover previews, range checks, and action execution all use the same profile-driven logic, and invalid in-range targeting is blocked with clear log feedback.

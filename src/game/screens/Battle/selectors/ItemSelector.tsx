@@ -4,12 +4,11 @@ import './ItemSelector.css';
 
 interface ItemBarProps {
   usableItems: Array<{ itemId: string; item: any; quantity: number }>;
-  onSelectItem: (itemId: string) => void;
-  selectedItemId: string | null;
+  onUseItem: (itemId: string) => void;
   canUse: boolean;
 }
 
-export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, selectedItemId, canUse }) => {
+export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse }) => {
   const [tooltipData, setTooltipData] = useState<{ itemId: string; position: { x: number; y: number } } | null>(null);
 
   const handleItemMouseEnter = (itemId: string, event: React.MouseEvent<HTMLButtonElement>) => {
@@ -52,7 +51,6 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, sel
           }
 
           const item = usableItem.item;
-          const isSelected = selectedItemId === item.id;
 
           return (
             <div
@@ -60,8 +58,8 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onSelectItem, sel
               className="item-bar-slot"
             >
               <button
-                className={`item-bar-btn ${!canUse ? 'disabled' : ''} ${isSelected ? 'selected' : ''} rarity-${item.rarity}`}
-                onClick={() => onSelectItem(item.id)}
+                className={`item-bar-btn ${!canUse ? 'disabled' : ''} rarity-${item.rarity}`}
+                onClick={() => onUseItem(item.id)}
                 onMouseEnter={(e) => handleItemMouseEnter(item.id, e)}
                 onMouseLeave={handleItemMouseLeave}
               >

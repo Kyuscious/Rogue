@@ -15,13 +15,17 @@ export interface BattleTarget {
   maxHp: number;
   targetPriority: number;
   canBeTargeted: boolean;
+  battlefieldPosition?: number;
 }
 
 export function getCharacterInstanceId(character: Character, fallbackIndex = 0): string {
   return character.battleInstanceId || `${character.id}__${fallbackIndex}`;
 }
 
-export function buildEnemyTargets(enemyCharacters: Character[]): BattleTarget[] {
+export function buildEnemyTargets(
+  enemyCharacters: Character[],
+  enemyPositionsById?: Record<string, number>
+): BattleTarget[] {
   return enemyCharacters.map((enemy, index) => ({
     instanceId: getCharacterInstanceId(enemy, index),
     baseId: enemy.id,
@@ -32,13 +36,15 @@ export function buildEnemyTargets(enemyCharacters: Character[]): BattleTarget[] 
     maxHp: enemy.stats.health || enemy.hp,
     targetPriority: enemy.targetPriority ?? (enemy.isSummon ? 0.85 : 1),
     canBeTargeted: enemy.canBeTargeted !== false,
+    battlefieldPosition: enemyPositionsById?.[getCharacterInstanceId(enemy, index)],
   }));
 }
 
 export function buildPlayerTargets(
   playerCharacter: Character,
   familiarIds: string[],
-  familiarStates: Record<string, { currentHp: number }>
+  familiarStates: Record<string, { currentHp: number }>,
+  playerPosition?: number
 ): BattleTarget[] {
   const playerTarget: BattleTarget = {
     instanceId: 'player',
@@ -50,6 +56,7 @@ export function buildPlayerTargets(
     maxHp: playerCharacter.stats.health || playerCharacter.hp,
     targetPriority: playerCharacter.targetPriority ?? 1.15,
     canBeTargeted: playerCharacter.canBeTargeted !== false,
+    battlefieldPosition: playerPosition,
   };
 
   const familiarTargets = familiarIds
@@ -67,6 +74,7 @@ export function buildPlayerTargets(
         maxHp: familiar.stats.health,
         targetPriority: familiar.effect.type === 'shield' ? 1.05 : 0.8,
         canBeTargeted: true,
+        battlefieldPosition: playerPosition !== undefined ? playerPosition + (index + 1) * 10 : undefined,
       };
     })
     .filter((target): target is BattleTarget => target !== null);

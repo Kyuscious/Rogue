@@ -47,6 +47,14 @@ export interface Spell {
     type: 'rectangle' | 'circle';
     size: number; // Width for rectangle, radius for circle
   };
+  targeting?: {
+    mode: 'none' | 'self' | 'single' | 'multiple' | 'aoe';
+    selectionRule?: 'first-in-range' | 'last-in-range' | 'all-in-range' | 'auto-priority';
+    range?: number;
+    maxTargets?: number;
+    requiresTargetInRange?: boolean;
+    targetSide?: 'player' | 'enemy';
+  };
 }
 
 export const SPELL_DATABASE: Record<string, Spell> = {
@@ -63,6 +71,10 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Grants +5% Attack Damage and a shield equal to 5% of your max HP for 1 turn.',
       },
     ],
+    targeting: {
+      mode: 'self',
+      targetSide: 'player',
+    },
     cooldown: 0,
     originRegion: 'demacia',
   },
@@ -82,6 +94,10 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Heals for 5 + 20% of your Ability Power.',
       },
     ],
+    targeting: {
+      mode: 'self',
+      targetSide: 'player',
+    },
     cooldown: 0,
     originRegion: 'ionia',
   },
@@ -107,6 +123,13 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         slowDuration: 1, // 1 turn
       },
     ],
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      range: 500,
+      requiresTargetInRange: true,
+      targetSide: 'enemy',
+    },
     cooldown: 0,
     originRegion: 'shurima',
   },
@@ -126,6 +149,13 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Deals 100% of your Ability Power as magic damage.',
       },
     ],
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      range: 500,
+      requiresTargetInRange: true,
+      targetSide: 'enemy',
+    },
     cooldown: 0,
     originRegion: 'runeterra',
   },
@@ -144,6 +174,10 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Removes all debuffs from target ally.',
       },
     ],
+    targeting: {
+      mode: 'self',
+      targetSide: 'player',
+    },
     cooldown: 1,
     originRegion: 'demacia',
   },
@@ -161,6 +195,9 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Summons up to 2 Sand Soldiers with Azir\'s level. These summoned soldiers carry no items.',
       },
     ],
+    targeting: {
+      mode: 'none',
+    },
     cooldown: 7,
     originRegion: 'shurima',
   },
@@ -180,6 +217,13 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Deals 250 physical damage, then true damage equal to 30% of the target\'s missing health.',
       },
     ],
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      range: 500,
+      requiresTargetInRange: true,
+      targetSide: 'enemy',
+    },
     cooldown: 3,
     originRegion: 'demacia',
   },
@@ -203,6 +247,10 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Heals 150 + 50% AP. Heals 50% more if below 40% max HP.',
       },
     ],
+    targeting: {
+      mode: 'self',
+      targetSide: 'player',
+    },
     cooldown: 5, // 5 turn cooldown for legendary
     originRegion: 'targon',
   },
@@ -221,6 +269,13 @@ export const SPELL_DATABASE: Record<string, Spell> = {
         description: 'Stuns target for 1.0 turn after 1.0 turn cast time.',
       },
     ],
+    targeting: {
+      mode: 'aoe',
+      selectionRule: 'first-in-range',
+      range: 625,
+      requiresTargetInRange: true,
+      targetSide: 'enemy',
+    },
     areaOfEffect: {
       type: 'rectangle',
       size: 625, // Shows range as a rectangle

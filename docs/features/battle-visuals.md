@@ -462,14 +462,14 @@ Design goal:
 | Portrait (large)       | [Class Token] Assassin              | Weapon: Blowgun            |
 | Name / Tier / Role     | HP  ??  / ??                        | Spell: Noxious Trap        |
 | Faction: Bandle City   |  — Survival —                       | Consumable: Venom Vial     |
-| (hidden until reveal)  | HP ?? | HPRegen ?? | Tenacity ??%    | (+ more slots)             |
+| (hidden until reveal)  | HP ?? | HPRegen ?? | Tenacity ??%   | (+ more slots)             |
 | Lore / combat style    | Armor ?? | MR ??                    | Cooldowns / slot notes     |
 |                        |  — Attack —                         |                            |
 |                        | AD ?? | Spd ?? | Crit ??%           |                            |
 |                        | Lethality ?? | Lifesteal ??%        |                            |
 |                        |  — Spell —                          |                            |
 |                        | AP ?? | Haste ?? | MagPen ??        |                            |
-|                        | HSP ??% | Omnivamp ??%             |                            |
+|                        | HSP ??% | Omnivamp ??%              |                            |
 |                        |  — Mobility / Misc —                |                            |
 |                        | MoveSpd ?? | Gold ??x | MagFind ??% |                            |
 |                        |  — Buffs/Debuffs —                  |                            |
@@ -478,10 +478,10 @@ Design goal:
 |                        | Passive: Move Then Sting            |                            |
 +-------------------------------------------------------------------------------------------+
 | ITEMS FOOTER (InventoryPanel — full panel width)                                          |
-| [Dart of Agony  ★★★] [Shadowcloak  ★★] [Hextech Shard  ★] [ ? ] [ ? ]                    |
-| Each item: icon + name + rarity + key stat line + passive effect                         |
+| [Dart of Agony  ★★★] [Shadowcloak  ★★] [Hextech Shard  ★] [ ? ] [ ? ]                  |
+| Each item: icon + name + rarity + key stat line + passive effect                          |
 +-------------------------------------------------------------------------------------------+
-| [Prev Entity]  [Pin]  [Compare]  [Track]                         [Next Entity]  [Close]  |
+| [Prev Entity]  [Pin]  [Compare]  [Track]                         [Next Entity]  [Close]   |
 +-------------------------------------------------------------------------------------------+
 ```
 
@@ -507,9 +507,9 @@ Design goal:
 |                        | Passive: Move Then Sting            |                            |
 +-------------------------------------------------------------------------------------------+
 | ITEMS FOOTER (InventoryPanel — possible items pool, class-based)                          |
-| [Dart of Agony  ★★★] [Shadowcloak  ★★] [Hextech Shard  ★] [ ? ] [ ? ]                    |
+| [Dart of Agony  ★★★] [Shadowcloak  ★★] [Hextech Shard  ★] [ ? ] [ ? ]                  |
 +-------------------------------------------------------------------------------------------+
-| [Prev Entity]  [Pin]  [Compare]                                  [Next Entity]  [Close]  |
+| [Prev Entity]  [Pin]  [Compare]                                  [Next Entity]  [Close]   |
 +-------------------------------------------------------------------------------------------+
 ```
 

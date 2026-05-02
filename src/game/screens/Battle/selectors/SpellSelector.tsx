@@ -5,18 +5,22 @@ import { Tooltip } from '../../../shared/Tooltip';
 import './SpellSelector.css';
 
 interface SpellSelectorProps {
-  onSelect?: () => void; // Called after switching spell
-  attackRange?: number; // For tooltip display
+  onCast: (index: number) => void;
+  canCast: boolean;
+  blocked?: boolean;
+  allowTutorialOverride?: boolean;
+  attackRange?: number;
+  onHoverChange?: (spellId: string | null) => void;
 }
 
-export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
+export const SpellSelector: React.FC<SpellSelectorProps> = ({ onCast, canCast, blocked, allowTutorialOverride, onHoverChange }) => {
   const { state, equipSpell } = useGameStore();
   const { spells, equippedSpellIndex, spellCooldowns } = state;
   const [tooltipData, setTooltipData] = useState<{ spellId: string; position: { x: number; y: number } } | null>(null);
   const handleSelectSpell = (index: number) => {
     if (index < spells.length) {
       equipSpell(index);
-      onSelect?.();
+      onCast(index);
     }
   };
 
@@ -26,10 +30,12 @@ export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
       spellId,
       position: { x: rect.left + rect.width / 2, y: rect.bottom }
     });
+    onHoverChange?.(spellId);
   };
 
   const handleSpellMouseLeave = () => {
     setTooltipData(null);
+    onHoverChange?.(null);
   };
 
   // Always show 5 slots
@@ -41,12 +47,14 @@ export const SpellSelector: React.FC<SpellSelectorProps> = ({ onSelect }) => {
     const cooldown = spellId ? (spellCooldowns[spellId] || 0) : 0;
     const isOnCooldown = cooldown > 0;
 
+    const isDisabled = !isAvailable || ((!canCast && !allowTutorialOverride) || !!blocked || (isOnCooldown && !allowTutorialOverride));
+
     return (
       <button
         key={i}
         className={`spell-slot ${spell ? `rarity-${spell.rarity}` : ''} ${isEquipped ? 'equipped' : ''} ${!isAvailable ? 'disabled' : ''} ${isOnCooldown ? 'on-cooldown' : ''}`}
         onClick={() => handleSelectSpell(i)}
-        disabled={!isAvailable}
+        disabled={isDisabled}
         onMouseEnter={(e) => spell && handleSpellMouseEnter(spell.id, e)}
         onMouseLeave={handleSpellMouseLeave}
       >

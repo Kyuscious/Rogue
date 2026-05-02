@@ -42,6 +42,14 @@ export interface Weapon {
     // Mobility
     movementSpeed?: number;
   };
+  targeting?: {
+    mode: 'none' | 'self' | 'single' | 'multiple' | 'aoe';
+    selectionRule?: 'first-in-range' | 'last-in-range' | 'all-in-range' | 'auto-priority';
+    range?: number;
+    maxTargets?: number;
+    requiresTargetInRange?: boolean;
+    targetSide?: 'player' | 'enemy';
+  };
 }
 
 export const WEAPON_DATABASE: Record<string, Weapon> = {
@@ -67,6 +75,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       attackDamage: 5,
     },
     cooldown: 0,
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
   },
   
   spirit_tree_bow: {
@@ -91,6 +104,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       movementSpeed: 30,
     },
     cooldown: 0,
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
   },
 
   glyphed_bronze_spear: {
@@ -114,6 +132,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       attackRange: 100,
     },
     cooldown: 0,
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
   },
 
   test_weapon: {
@@ -132,6 +155,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     ],
     cooldown: 0,
     originRegion: 'runeterra',
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
   },
   // LOOTABLE WEAPONS
 
@@ -141,7 +169,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     id: 'swinging_glaive',
     name: 'Swinging Glaive',
     description: 'A heavy glaive that deals significant physical damage with each swing.',
-    rarity: 'starter',
+    rarity: 'common',
     effects: [
       {
         type: 'damage',
@@ -153,6 +181,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     ],
     cooldown: 0,
     originRegion: 'noxus',
+    targeting: {
+      mode: 'aoe',
+      selectionRule: 'all-in-range',
+      requiresTargetInRange: true,
+    },
   },
   
   // EPIC WEAPON - New mechanics
@@ -177,6 +210,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     ],
     cooldown: 3,
     originRegion: 'targon',
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
   },
 
   // LEGENDARY WEAPON - 
@@ -201,6 +239,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       abilityPower: 50,
       attackRange: 425,
     },
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
   },
 
   delverhold_greateaxe: {
@@ -223,6 +266,11 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     ],
     cooldown: 0,
     originRegion: 'noxus',
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
   },
 };
 
