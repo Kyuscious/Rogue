@@ -16,7 +16,7 @@ export const ScreenTitle: React.FC<ScreenTitleProps> = ({ scene }) => {
   
   switch (scene) {
     case 'quest':
-      title = t.screenTitle.questSelection;
+      title = t.screenTitle.quest;
       break;
     case 'shop':
       title = t.screenTitle.shop;
@@ -35,7 +35,7 @@ export const ScreenTitle: React.FC<ScreenTitleProps> = ({ scene }) => {
       title = t.screenTitle.regionSelection;
       break;
     case 'pregame':
-      title = t.screenTitle.characterSetup;
+      title = t.screenTitle.pregame;
       break;
     case 'profiles':
       title = t.screenTitle.profiles;
@@ -44,10 +44,10 @@ export const ScreenTitle: React.FC<ScreenTitleProps> = ({ scene }) => {
       title = t.screenTitle.index;
       break;
     case 'preTestSetup':
-      title = t.screenTitle.testSetup;
+      title = t.screenTitle.preTestSetup;
       break;
     case 'postRegionAction':
-      title = t.screenTitle.nextStep;
+      title = t.screenTitle.postRegionAction;
       break;
     case 'loading':
       title = t.common.loading;

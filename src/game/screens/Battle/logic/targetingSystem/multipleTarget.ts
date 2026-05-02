@@ -3,7 +3,7 @@ import { TargetSelectionRule } from './types';
 
 export function resolveMultipleTargets<T extends BattleTarget>(
   targets: T[],
-  preferredTargetId?: string | null,
+  _preferredTargetId?: string | null,
   selectionRule: TargetSelectionRule = 'all-in-range',
   maxTargets?: number
 ): T[] {

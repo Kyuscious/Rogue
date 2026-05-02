@@ -28,9 +28,10 @@ export function resolveAreaTargets<T extends BattleTarget>(
     return { anchorTarget, targets };
   }
 
+  const anchorPosition = anchorTarget.battlefieldPosition;
   const affectedTargets = targets.filter((target) => {
     if (target.battlefieldPosition === undefined) return false;
-    return Math.abs(target.battlefieldPosition - anchorTarget.battlefieldPosition) <= areaSize;
+    return Math.abs(target.battlefieldPosition - anchorPosition) <= areaSize;
   });
 
   return {
