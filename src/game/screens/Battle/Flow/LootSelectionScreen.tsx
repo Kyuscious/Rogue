@@ -3,6 +3,7 @@ import { Character } from '@game/types';
 import { LootPreviewModal } from '../../../shared/LootPreviewModal';
 import { calculateQuestLoot, canReroll, QuestLootInfo } from '@utils/lootCalculator';
 import { Region } from '@game/types';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import '../styles/LootSelectionScreen.css';
 
 interface LootSelectionScreenProps {
@@ -34,6 +35,7 @@ export const LootSelectionScreen: React.FC<LootSelectionScreenProps> = ({
   const [selectedLootInfo, setSelectedLootInfo] = useState<QuestLootInfo | null>(null);
   const [offeredItems, setOfferedItems] = useState<Set<string>>(new Set(availableLoot));
   const [canRerollMore, setCanRerollMore] = useState(false);
+  const t = useTranslation();
 
   // Update offered items when availableLoot changes
   useEffect(() => {
@@ -77,17 +79,17 @@ export const LootSelectionScreen: React.FC<LootSelectionScreenProps> = ({
   return (
     <div className="loot-selection-screen">
       <div className="loot-container">
-        <h2>Boss Defeated!</h2>
-        <p className="loot-flavor">Choose your reward from the fallen foe...</p>
+        <h2>{t.lootSelection.bossDefeated}</h2>
+        <p className="loot-flavor">{t.lootSelection.chooseReward}</p>
         
         <div className="loot-actions">
           {region && enemyIds.length > 0 && (
             <button 
               className="loot-preview-button"
               onClick={handleShowLootPreview}
-              title="View all possible loot and drop rates"
+              title={t.lootSelection.viewAllTooltip}
             >
-              👁️ View All Possible Loot
+              {t.lootSelection.viewAllLoot}
             </button>
           )}
           {onReroll && (
@@ -97,13 +99,13 @@ export const LootSelectionScreen: React.FC<LootSelectionScreenProps> = ({
               disabled={rerollsRemaining <= 0 || !canRerollMore}
               title={
                 rerollsRemaining <= 0 
-                  ? 'No rerolls remaining' 
+                  ? t.questSelect.noRerollsRemaining
                   : !canRerollMore 
                   ? 'No more unique items available'
                   : `Reroll for different items (${rerollsRemaining} rerolls left)`
               }
             >
-              🔄 Reroll ({rerollsRemaining} left)
+              {t.lootSelection.reroll.replace('{{count}}', String(rerollsRemaining))}
             </button>
           )}
         </div>

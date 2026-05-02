@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './TurnTimeline.css';
 
 interface TurnAction {
@@ -55,6 +56,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
 }) => {
   // Get next 30 actions starting from current
   const visibleActions = turnSequence.slice(currentIndex, currentIndex + 30);
+  const t = useTranslation();
   
   // Track previous action time for smooth transitions
   const prevActionTimeRef = React.useRef<number>(visibleActions[0]?.time || 1);
@@ -172,7 +174,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
 
   return (
     <div className="turn-timeline">
-      <div className="timeline-header">Encounter Timeline</div>
+      <div className="timeline-header">{t.timeline.title}</div>
       <div 
         className={`timeline-container ${isPlayerTurn ? 'paused' : ''} ${isTransitioning ? 'transitioning' : ''}`}
         style={{

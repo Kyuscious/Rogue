@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGameStore } from '@game/store';
 import { getSpellById } from '@data/spells';
 import { Tooltip } from '../../../shared/Tooltip';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './SpellSelector.css';
 
 interface SpellSelectorProps {
@@ -17,6 +18,7 @@ export const SpellSelector: React.FC<SpellSelectorProps> = ({ onCast, canCast, b
   const { state, equipSpell } = useGameStore();
   const { spells, equippedSpellIndex, spellCooldowns } = state;
   const [tooltipData, setTooltipData] = useState<{ spellId: string; position: { x: number; y: number } } | null>(null);
+  const t = useTranslation();
   const handleSelectSpell = (index: number) => {
     if (index < spells.length) {
       equipSpell(index);
@@ -77,7 +79,7 @@ export const SpellSelector: React.FC<SpellSelectorProps> = ({ onCast, canCast, b
 
   return (
     <div className="spell-selector">
-      <div className="spell-selector-label">Spells:</div>
+      <div className="spell-selector-label">{t.battle.spellsLabel}</div>
       <div className="spell-slots">{slots}</div>
       
       {tooltipData && (

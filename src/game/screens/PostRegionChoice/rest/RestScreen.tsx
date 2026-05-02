@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '@game/store';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './RestScreen.css';
 
 interface RestScreenProps {
@@ -11,27 +12,28 @@ export const RestScreen: React.FC<RestScreenProps> = ({ completedRegion, onConti
   const state = useGameStore((store) => store.state);
   const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const applyRestAction = useGameStore((store) => store.applyRestAction);
+  const t = useTranslation();
 
   const restActions = [
     {
       id: 'meditate',
-      name: '🧘 Meditate',
-      description: 'Clear your mind and focus. Gain temporary mental fortitude.',
-      benefit: '+10% Ability Power buff for next 10 encounters',
+      name: t.rest.actions.meditate.name,
+      description: t.rest.actions.meditate.description,
+      benefit: t.rest.actions.meditate.benefit,
       available: true,
     },
     {
       id: 'train',
-      name: '⚔️ Train',
-      description: 'Practice your combat techniques.',
-      benefit: '+10% Attack Damage buff for next 10 encounters',
+      name: t.rest.actions.train.name,
+      description: t.rest.actions.train.description,
+      benefit: t.rest.actions.train.benefit,
       available: true,
     },
     {
       id: 'scout',
-      name: '🔍 Scout',
-      description: 'Survey the area and plan your approach.',
-      benefit: '+5 Rerolls',
+      name: t.rest.actions.scout.name,
+      description: t.rest.actions.scout.description,
+      benefit: t.rest.actions.scout.benefit,
       available: true,
     },
   ];
@@ -46,28 +48,28 @@ export const RestScreen: React.FC<RestScreenProps> = ({ completedRegion, onConti
   return (
     <div className="rest-screen">
       <div className="rest-container">
-        <h1 className="rest-title">🏕️ Rest</h1>
+        <h1 className="rest-title">{t.rest.title}</h1>
         <p className="rest-subtitle">
-          You've completed {completedRegion}! Prepare yourself for the next region.
+          {t.rest.subtitle.replace('{{region}}', completedRegion)}
         </p>
 
         <div className="rest-status">
           <div className="status-item">
-            <span className="status-label">Health:</span>
-            <span className="status-value">✅ Fully Restored</span>
+            <span className="status-label">{t.rest.healthLabel}</span>
+            <span className="status-value">{t.rest.fullyRestored}</span>
           </div>
           <div className="status-item">
-            <span className="status-label">Level:</span>
+            <span className="status-label">{t.rest.levelLabel}</span>
             <span className="status-value">{state.playerCharacter?.level}</span>
           </div>
           <div className="status-item">
-            <span className="status-label">Gold:</span>
+            <span className="status-label">{t.rest.goldLabel}</span>
             <span className="status-value">{state.gold}g</span>
           </div>
         </div>
 
         <div className="rest-actions">
-          <h2>Choose an action to prepare:</h2>
+          <h2>{t.rest.chooseAction}</h2>
           <div className="action-grid">
             {restActions.map((action) => (
               <button
@@ -89,7 +91,7 @@ export const RestScreen: React.FC<RestScreenProps> = ({ completedRegion, onConti
           onClick={handleContinue}
           disabled={!selectedAction}
         >
-          {selectedAction ? `Continue to ${completedRegion} →` : 'Select an action to continue'}
+          {selectedAction ? t.rest.continueButton.replace('{{region}}', completedRegion) : t.rest.selectActionPrompt}
         </button>
       </div>
     </div>

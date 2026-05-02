@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGameStore } from '@game/store';
 import { getWeaponById } from '@data/weapons';
 import { Tooltip } from '../../../shared/Tooltip';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './WeaponSelector.css';
 
 interface WeaponSelectorProps {
@@ -15,6 +16,7 @@ export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onAttack, canAtt
   const { state, equipWeapon } = useGameStore();
   const { weapons, equippedWeaponIndex } = state;
   const [tooltipData, setTooltipData] = useState<{ weaponId: string; position: { x: number; y: number } } | null>(null);
+  const t = useTranslation();
   const handleSelectWeapon = (index: number) => {
     if (index < weapons.length) {
       equipWeapon(index);
@@ -70,7 +72,7 @@ export const WeaponSelector: React.FC<WeaponSelectorProps> = ({ onAttack, canAtt
 
   return (
     <div className="weapon-selector">
-      <div className="weapon-selector-label">Weapons:</div>
+      <div className="weapon-selector-label">{t.battle.weaponsLabel}</div>
       <div className="weapon-slots">{slots}</div>
       
       {tooltipData && (

@@ -10,6 +10,7 @@ import {
 import { getItemById } from '@data/items';
 import { getFamiliarById } from '../../../entity/Player/familiars';
 import { discoverFamiliar } from '../../MainMenu/Profiles/profileSystem';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './EventScreen.css';
 
 interface EventScreenProps {
@@ -24,6 +25,7 @@ export const EventScreen: React.FC<EventScreenProps> = ({ completedRegion, onCon
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [resolutionLines, setResolutionLines] = useState<string[]>([]);
   const [showNotImplementedModal, setShowNotImplementedModal] = useState(false);
+  const t = useTranslation();
 
   // Initialize offered events on mount
   useEffect(() => {
@@ -148,9 +150,9 @@ export const EventScreen: React.FC<EventScreenProps> = ({ completedRegion, onCon
   return (
     <div className="event-screen">
       <div className="event-container">
-        <h1 className="event-title">✨ Mysterious Event</h1>
+        <h1 className="event-title">{t.event.title}</h1>
         <p className="event-subtitle">
-          An event awaits you in {completedRegion.toUpperCase()}...
+          {t.event.subtitle.replace('{{region}}', completedRegion.toUpperCase())}
         </p>
 
         {/* Feedback Message */}
@@ -162,17 +164,17 @@ export const EventScreen: React.FC<EventScreenProps> = ({ completedRegion, onCon
 
         {/* Event Header */}
         <div className="event-header">
-          <h2>Choose Your Fate</h2>
+          <h2>{t.event.chooseYourFate}</h2>
           <p className="event-description">
-            Select an event to experience. Each event offers different challenges and rewards.
+            {t.event.description}
           </p>
           <button
             className="reroll-btn"
             onClick={handleRerollEvents}
             disabled={state.rerolls <= 0}
-            title={state.rerolls <= 0 ? 'No rerolls left' : `Rerolls: ${state.rerolls}`}
+            title={state.rerolls <= 0 ? t.questSelect.noRerollsRemaining : `Rerolls: ${state.rerolls}`}
           >
-            🔄 Reroll Events ({state.rerolls})
+            {t.event.rerollButton.replace('{{count}}', String(state.rerolls))}
           </button>
         </div>
 
@@ -207,7 +209,7 @@ export const EventScreen: React.FC<EventScreenProps> = ({ completedRegion, onCon
               </div>
             ))
           ) : (
-            <p className="no-events">No events available for this region</p>
+            <p className="no-events">{t.event.noEvents}</p>
           )}
         </div>
 
@@ -218,7 +220,7 @@ export const EventScreen: React.FC<EventScreenProps> = ({ completedRegion, onCon
               className="execute-btn event-execute-btn"
               onClick={handleSelectEvent}
             >
-              ✓ Enter Event: {selectedEvent.title}
+              {t.event.enterEvent.replace('{{title}}', selectedEvent.title)}
             </button>
           )}
         </div>
@@ -228,12 +230,12 @@ export const EventScreen: React.FC<EventScreenProps> = ({ completedRegion, onCon
       {showNotImplementedModal && (
         <div className="modal-overlay">
           <div className="event-modal">
-            <h2>✨ Event Resolved</h2>
+            <h2>{t.event.eventResolved}</h2>
             <p className="modal-message">
-              The event has been applied to your run.
+              {t.event.appliedMessage}
             </p>
             <p className="modal-event-name">
-              📌 Selected Event: <strong>{selectedEvent?.title}</strong>
+              {t.event.selectedEventLabel} <strong>{selectedEvent?.title}</strong>
             </p>
             <div className="modal-message">
               {resolutionLines.map((line) => (
@@ -245,7 +247,7 @@ export const EventScreen: React.FC<EventScreenProps> = ({ completedRegion, onCon
                 className="modal-btn modal-skip-btn"
                 onClick={handleSkipEvent}
               >
-                ✓ Continue
+                {t.event.continue}
               </button>
             </div>
           </div>

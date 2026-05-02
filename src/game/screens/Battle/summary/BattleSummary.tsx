@@ -6,6 +6,7 @@ import { getSpellById } from '@data/spells';
 import { getWeaponById } from '@data/weapons';
 import { getFamiliarById } from '../../../entity/Player/familiars';
 import { getItemName, getItemDescription, getSpellName, getWeaponName } from '../../../../i18n/helpers';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import { LootPreviewModal } from '../../../shared/LootPreviewModal';
 import { calculateQuestLoot, QuestLootInfo } from '@utils/lootCalculator';
 import './BattleSummary.css';
@@ -77,6 +78,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [lootPreviewOpen, setLootPreviewOpen] = useState(false);
   const [selectedLootInfo, setSelectedLootInfo] = useState<QuestLootInfo | null>(null);
+  const t = useTranslation();
 
   useEffect(() => {
     // Show rewards instantly
@@ -117,14 +119,14 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
         {/* Header */}
         <div className="summary-header">
           <h2>
-            {isVictory ? '⚔️ Victory!' : isBattleFled ? '🏃 Battle Fled' : '💀 Defeated'}
+            {isVictory ? `⚔️ ${t.battle.victory}` : isBattleFled ? `🏃 ${t.battle.fled}` : `💀 ${t.battle.defeat}`}
           </h2>
         </div>
 
         {/* Combat Statistics */}
         <div className="combat-stats">
           <div className="stat-row">
-            <span className="stat-label">Highest Damage Dealt:</span>
+            <span className="stat-label">{t.battle.highestDamageDealt}</span>
             <span className="stat-value damage-dealt">
               {combatStats.highestDamageDealt} 
               {combatStats.highestDamageSource === 'spell' ? ' ✨' : ' ⚔️'}
@@ -134,7 +136,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
             </span>
           </div>
           <div className="stat-row">
-            <span className="stat-label">Highest Damage Taken:</span>
+            <span className="stat-label">{t.battle.highestDamageTaken}</span>
             <span className="stat-value damage-taken">
               {combatStats.highestDamageTaken}
               {combatStats.highestDamageTakenSource === 'spell' ? ' ✨' : ' ⚔️'}
@@ -153,7 +155,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
               <>
                 {hasBattleLoot && rewards && (
                   <>
-                    <div className="rewards-header">Loot Earned From Battle</div>
+                    <div className="rewards-header">{t.battle.lootEarned}</div>
                     <div className="rewards-grid">
                       {rewards.gold > 0 && (
                         <div className="reward-item gold">
@@ -169,7 +171,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                       )}
                       {(rewards.items.length > 0 || rewards.spells.length > 0 || rewards.weapons.length > 0 || rewards.familiars.length > 0) && (
                         <div className="rewards-items-container">
-                          <div className="rewards-items-label">Auto-added to your run:</div>
+                          <div className="rewards-items-label">{t.battle.autoAddedToRun}</div>
                           <div className="rewards-items-grid">
                             {rewards.items.map((item, idx) => {
                               const itemData = getItemById(item.itemId);
@@ -242,7 +244,7 @@ export const BattleSummary: React.FC<BattleSummaryProps> = ({
                     </div>
                   </>
                 )}
-                <div className="rewards-header">Choose Your Reward</div>
+                <div className="rewards-header">{t.battle.chooseReward}</div>
                 {rewardTutorialActive && rewardTutorialText && (
                   <div className="summary-tutorial-text reward-selection-tutorial">{rewardTutorialText}</div>
                 )}

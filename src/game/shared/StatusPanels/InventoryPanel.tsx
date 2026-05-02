@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGameStore } from '@game/store';
 import { getItemById, getPassiveDescription } from '@data/items';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface InventoryPanelProps {
   mode?: 'dropdown' | 'inspect-grid';
@@ -19,6 +20,8 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const t = useTranslation();
+  const resolvedEmptyMessage = emptyMessage !== 'No items yet' ? emptyMessage : t.inventory.empty;
   const items = inventoryItems || state.inventory;
 
   const tooltip = hoveredItemId && getItemById(hoveredItemId) && (
@@ -88,7 +91,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
             })}
           </div>
         ) : (
-          <p className="no-items">{emptyMessage}</p>
+          <p className="no-items">{resolvedEmptyMessage}</p>
         )}
         {tooltip}
       </div>
@@ -101,7 +104,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
         className="inventory-toggle"
         onClick={() => setIsOpen(!isOpen)}
       >
-        Inventory ({items.length})
+        {t.inventory.title} ({items.length})
       </button>
 
       {isOpen && (
@@ -131,7 +134,7 @@ export const InventoryPanel: React.FC<InventoryPanelProps> = ({
               })}
             </div>
           ) : (
-            <p className="no-items">{emptyMessage}</p>
+            <p className="no-items">{resolvedEmptyMessage}</p>
           )}
 
           {tooltip}

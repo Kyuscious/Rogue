@@ -9,6 +9,7 @@ import {
 } from './buildModificationSystem';
 import { getItemById } from '@data/items';
 import { getItemName, getItemDescription } from '../../../../i18n/helpers';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './BuildModificationScreen.css';
 
 interface BuildModificationScreenProps {
@@ -32,9 +33,10 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
 
   const availableClasses = getAvailableClasses();
   const playerChar = state.playerCharacter;
+  const t = useTranslation();
 
   if (!playerChar) {
-    return <div>Loading...</div>;
+    return <div>{t.buildMod.loading}</div>;
   }
 
   const handleClassChange = (newClass: string) => {
@@ -86,9 +88,9 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
   return (
     <div className="build-mod-screen">
       <div className="build-mod-container">
-        <h1 className="build-mod-title">🔧 Build Modification</h1>
+        <h1 className="build-mod-title">{t.buildMod.title}</h1>
         <p className="build-mod-subtitle">
-          Customize your character before entering the next region
+          {t.buildMod.subtitle}
         </p>
 
         <div className="tab-navigation">
@@ -96,26 +98,26 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
             className={`tab-btn ${activeTab === 'class' ? 'active' : ''}`}
             onClick={() => setActiveTab('class')}
           >
-            🎭 Class
+            {t.buildMod.tabClass}
           </button>
           <button 
             className={`tab-btn ${activeTab === 'stats' ? 'active' : ''}`}
             onClick={() => setActiveTab('stats')}
           >
-            📊 Stats
+            {t.buildMod.tabStats}
           </button>
           <button 
             className={`tab-btn ${activeTab === 'items' ? 'active' : ''}`}
             onClick={() => setActiveTab('items')}
           >
-            🎒 Items
+            {t.buildMod.tabItems}
           </button>
         </div>
 
         <div className="tab-content">
           {activeTab === 'class' && (
             <div className="class-tab">
-              <h2>Select Your Class</h2>
+              <h2>{t.buildMod.selectClass}</h2>
               <div className="class-grid">
                 {availableClasses.map((className) => (
                   <button
@@ -132,7 +134,7 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                       {className === 'support' && '✨'}
                     </div>
                     <div className="class-name">{className.toUpperCase()}</div>
-                    {selectedClass === className && <div className="current-badge">CURRENT</div>}
+                    {selectedClass === className && <div className="current-badge">{t.buildMod.currentBadge}</div>}
                   </button>
                 ))}
               </div>
@@ -141,8 +143,8 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
 
           {activeTab === 'stats' && (
             <div className="stats-tab">
-              <h2>Adjust Base Stats</h2>
-              <p className="stats-info">Redistribute your stat points (±50 per stat)</p>
+              <h2>{t.buildMod.adjustStats}</h2>
+              <p className="stats-info">{t.buildMod.statInfo}</p>
               
               <div className="stat-adjustments">
                 {Object.entries(statAdjustments).map(([stat, value]) => (
@@ -174,17 +176,17 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                   setHasChanges(false);
                 }}
               >
-                Reset All Stats
+                {t.buildMod.resetStats}
               </button>
             </div>
           )}
 
           {activeTab === 'items' && (
             <div className="items-tab">
-              <h2>Manage Inventory</h2>
+              <h2>{t.buildMod.manageInventory}</h2>
               <div className="inventory-grid">
                 {state.inventory.length === 0 ? (
-                  <p className="no-items">No items in inventory</p>
+                  <p className="no-items">{t.buildMod.noItems}</p>
                 ) : (
                   state.inventory.map((invItem, index) => {
                     const item = getItemById(invItem.itemId);
@@ -203,7 +205,7 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                               onClick={() => handleRemoveCurse(index)}
                               title="Remove curse (100g)"
                             >
-                              ✨ Remove Curse (100g)
+                              {t.buildMod.removeCurse}
                             </button>
                           )}
                           <button 
@@ -211,7 +213,7 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
                             onClick={() => handleDiscardItem(index)}
                             title="Discard item"
                           >
-                            🗑️ Discard
+                            {t.buildMod.discard}
                           </button>
                         </div>
                       </div>
@@ -229,7 +231,7 @@ export const BuildModificationScreen: React.FC<BuildModificationScreenProps> = (
             onClick={handleApplyChanges}
             disabled={!hasChanges}
           >
-            {hasChanges ? 'Apply Changes & Continue →' : 'Continue →'}
+            {hasChanges ? t.buildMod.applyButton : t.buildMod.continueButton}
           </button>
         </div>
       </div>

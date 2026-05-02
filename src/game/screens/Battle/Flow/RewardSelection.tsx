@@ -1,6 +1,7 @@
 import React from 'react';
 import { InventoryItem } from '@game/types';
 import { getItemById } from '@data/items';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './RewardSelection.css';
 
 interface RewardSelectionProps {
@@ -21,6 +22,7 @@ export const RewardSelection: React.FC<RewardSelectionProps> = ({
   floor,
 }) => {
   const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
+  const t = useTranslation();
 
   const handleSelect = (option: InventoryItem) => {
     onSelectReward(option);
@@ -30,8 +32,8 @@ export const RewardSelection: React.FC<RewardSelectionProps> = ({
     <div className="reward-selection-overlay">
       <div className="reward-selection-container">
         <div className="reward-header">
-          <h2>🎉 Floor {floor} Milestone!</h2>
-          <p>Choose your reward</p>
+          <h2>{t.reward.floorMilestone.replace('{{floor}}', String(floor))}</h2>
+          <p>{t.reward.chooseReward}</p>
         </div>
 
         <div className="reward-cards">
@@ -65,62 +67,62 @@ export const RewardSelection: React.FC<RewardSelectionProps> = ({
                   <div className="reward-card-stats">
                     {item.stats.health && item.stats.health > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">❤️ Health:</span>
+                        <span className="stat-label">{t.reward.statLabels.health}</span>
                         <span className="stat-value">+{item.stats.health}</span>
                       </div>
                     )}
                     {item.stats.attackDamage && item.stats.attackDamage > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">⚔️ Attack Damage:</span>
+                        <span className="stat-label">{t.reward.statLabels.attackDamage}</span>
                         <span className="stat-value">+{item.stats.attackDamage}</span>
                       </div>
                     )}
                     {item.stats.abilityPower && item.stats.abilityPower > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">✨ Ability Power:</span>
+                        <span className="stat-label">{t.reward.statLabels.abilityPower}</span>
                         <span className="stat-value">+{item.stats.abilityPower}</span>
                       </div>
                     )}
                     {item.stats.armor && item.stats.armor > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">🛡️ Armor:</span>
+                        <span className="stat-label">{t.reward.statLabels.armor}</span>
                         <span className="stat-value">+{item.stats.armor}</span>
                       </div>
                     )}
                     {item.stats.magicResist && item.stats.magicResist > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">🔮 Magic Resist:</span>
+                        <span className="stat-label">{t.reward.statLabels.magicResist}</span>
                         <span className="stat-value">+{item.stats.magicResist}</span>
                       </div>
                     )}
                     {item.stats.speed && item.stats.speed > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">⚡ Speed:</span>
+                        <span className="stat-label">{t.reward.statLabels.speed}</span>
                         <span className="stat-value">+{item.stats.speed}</span>
                       </div>
                     )}
                     {item.stats.haste && item.stats.haste > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">💫 Haste:</span>
+                        <span className="stat-label">{t.reward.statLabels.haste}</span>
                         <span className="stat-value">+{item.stats.haste}</span>
                       </div>
                     )}
                     {item.stats.criticalChance && item.stats.criticalChance > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">💥 Crit Chance:</span>
+                        <span className="stat-label">{t.reward.statLabels.critChance}</span>
                         <span className="stat-value">+{item.stats.criticalChance}%</span>
                       </div>
                     )}
                     {item.stats.lifeSteal && item.stats.lifeSteal > 0 && (
                       <div className="stat-line">
-                        <span className="stat-label">💚 Lifesteal:</span>
+                        <span className="stat-label">{t.reward.statLabels.lifeSteal}</span>
                         <span className="stat-value">+{item.stats.lifeSteal}%</span>
                       </div>
                     )}
                   </div>
 
                   <div className="reward-card-footer">
-                    <button className="select-btn">Select</button>
+                    <button className="select-btn">{t.reward.select}</button>
                   </div>
                 </div>
               </div>
@@ -134,15 +136,15 @@ export const RewardSelection: React.FC<RewardSelectionProps> = ({
             onClick={onSkip}
             title="Skip this reward and continue"
           >
-            ⏭️ Skip
+            {t.reward.skip}
           </button>
           <button 
             className="reroll-btn"
             onClick={onReroll}
             disabled={rerollsRemaining <= 0}
-            title={rerollsRemaining > 0 ? `Reroll options (${rerollsRemaining} left)` : 'No rerolls remaining'}
+            title={rerollsRemaining > 0 ? `Reroll options (${rerollsRemaining} left)` : t.questSelect.noRerollsRemaining}
           >
-            🎲 Reroll ({rerollsRemaining})
+            {t.reward.reroll.replace('{{count}}', String(rerollsRemaining))}
           </button>
         </div>
       </div>

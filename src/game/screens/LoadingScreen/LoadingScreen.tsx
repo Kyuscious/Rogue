@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '../../../hooks/useTranslation';
 import './LoadingScreen.css';
 
 interface LoadingScreenProps {
@@ -8,10 +9,11 @@ interface LoadingScreenProps {
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ regionName, progress, message }) => {
+  const t = useTranslation();
   return (
     <div className="loading-screen">
       <div className="loading-content">
-        <h1 className="loading-title">Traveling to {regionName}</h1>
+        <h1 className="loading-title">{t.loading.travelingTo.replace('{{region}}', regionName)}</h1>
         
         <div className="loading-bar-container">
           <div className="loading-bar">

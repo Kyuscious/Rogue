@@ -4,6 +4,7 @@ import { getFamiliarById, getFamiliarMaxHp } from '@entities/Player/familiars';
 import { BuffsDisplay } from './BuffsDisplay';
 import type { CombatBuff } from '@utils/itemSystem';
 import { computeBuffDisplayValues } from '@utils/itemSystem';
+import { useTranslation } from '../../../hooks/useTranslation';
 import './FamiliarStatus.css';
 
 interface FamiliarStatusProps {
@@ -25,6 +26,7 @@ export const FamiliarStatus: React.FC<FamiliarStatusProps> = ({
 }) => {
   const familiar = getFamiliarById(familiarId);
   const familiarState = useGameStore((store) => store.state.familiarStates[familiarId]);
+  const t = useTranslation();
 
   if (!familiar) return null;
 
@@ -104,14 +106,14 @@ export const FamiliarStatus: React.FC<FamiliarStatusProps> = ({
           </div>
           {turnsUntilAction !== null && familiar.trigger === 'turn' && (
             <div className={`familiar-compact-timer ${turnsUntilAction === 0 ? 'ready' : ''}`}>
-              {turnsUntilAction === 0 ? '✓ Ready' : `Acts in ${turnsUntilAction}t`}
+              {turnsUntilAction === 0 ? t.familiar.ready : t.familiar.actsIn.replace('{{count}}', String(turnsUntilAction))}
             </div>
           )}
           {familiar.trigger === 'fight_start' && (
-            <div className="familiar-compact-timer">At fight start</div>
+            <div className="familiar-compact-timer">{t.familiar.atFightStart}</div>
           )}
           {familiar.trigger === 'fight_end' && (
-            <div className="familiar-compact-timer">At fight end</div>
+            <div className="familiar-compact-timer">{t.familiar.atFightEnd}</div>
           )}
           <div className="familiar-compact-hp">
             <span className="familiar-health-value">{currentHp}/{maxHp}</span>
@@ -151,18 +153,16 @@ export const FamiliarStatus: React.FC<FamiliarStatusProps> = ({
 
       {turnsUntilAction !== null && familiar.trigger === 'turn' && (
         <div className={`familiar-status-timer ${turnsUntilAction === 0 ? 'ready' : ''}`}>
-          {turnsUntilAction === 0 ? 'Ready this turn' : `Acts in ${turnsUntilAction} turn${turnsUntilAction === 1 ? '' : 's'}`}
+          {turnsUntilAction === 0
+            ? t.familiar.readyThisTurn
+            : (turnsUntilAction === 1 ? t.familiar.actsInTurns : t.familiar.actsInTurnsPlural).replace('{{count}}', String(turnsUntilAction))}
         </div>
       )}
       {familiar.trigger === 'fight_start' && (
-        <div className="familiar-status-timer">
-          Activates at fight start
-        </div>
+        <div className="familiar-status-timer">{t.familiar.activatesAtFightStart}</div>
       )}
       {familiar.trigger === 'fight_end' && (
-        <div className="familiar-status-timer">
-          Activates at end of fight
-        </div>
+        <div className="familiar-status-timer">{t.familiar.activatesAtFightEnd}</div>
       )}
     </div>
   );

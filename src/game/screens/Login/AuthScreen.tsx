@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { authApi } from "../../../api/authApi.js";
 import { useAuthStore } from "@game/authStore";
+import { useTranslation } from "../../../hooks/useTranslation";
 
 export const AuthScreen: React.FC<{
   onSuccess: () => void;
@@ -13,10 +14,11 @@ export const AuthScreen: React.FC<{
   const [error, setError] = useState("");
 
   const { setUser, setToken } = useAuthStore();
+  const t = useTranslation();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError("Email and password are required");
+      setError(t.login.errors.emptyCredentials);
       return;
     }
 
@@ -28,7 +30,7 @@ export const AuthScreen: React.FC<{
       setToken(result.token);
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t.login.errors.connectionFailed);
     } finally {
       setLoading(false);
     }
@@ -36,7 +38,7 @@ export const AuthScreen: React.FC<{
 
   const handleRegister = async () => {
     if (!email || !password || !username) {
-      setError("All fields are required");
+      setError(t.login.errors.emptySignUpCredentials);
       return;
     }
 
@@ -48,7 +50,7 @@ export const AuthScreen: React.FC<{
       setToken(result.token);
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : t.login.errors.connectionFailed);
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,7 @@ export const AuthScreen: React.FC<{
       setToken(result.token);
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Anonymous login failed");
+      setError(err instanceof Error ? err.message : t.login.errors.autoLoginFailed);
     } finally {
       setLoading(false);
     }
@@ -78,64 +80,64 @@ export const AuthScreen: React.FC<{
       <div style={{ marginBottom: "20px" }}>
         {!isRegister ? (
           <>
-            <h2>Login</h2>
+            <h2>{t.login.loginTab}</h2>
             <input
               type="email"
-              placeholder="Email"
+              placeholder={t.login.usernameLabel}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder={t.login.passwordLabel}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
             <button onClick={handleLogin} disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
+              {loading ? t.login.loggingIn : t.login.loginButton}
             </button>
             <button onClick={() => setIsRegister(true)}>
-              Create Account
+              {t.login.signUpButton}
             </button>
           </>
         ) : (
           <>
-            <h2>Register</h2>
+            <h2>{t.login.signUpTab}</h2>
             <input
               type="text"
-              placeholder="Username"
+              placeholder={t.login.usernameLabel}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={loading}
             />
             <input
               type="email"
-              placeholder="Email"
+              placeholder={t.login.usernameLabel}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder={t.login.passwordLabel}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
             />
             <button onClick={handleRegister} disabled={loading}>
-              {loading ? "Creating..." : "Register"}
+              {loading ? t.login.creatingAccount : t.login.signUpButton}
             </button>
-            <button onClick={() => setIsRegister(false)}>Back to Login</button>
+            <button onClick={() => setIsRegister(false)}>{t.login.backToLogin}</button>
           </>
         )}
       </div>
 
       <div style={{ borderTop: "1px solid #ccc", paddingTop: "20px" }}>
-        <h3>Or continue as guest</h3>
+        <h3>{t.login.orContinueAsGuest}</h3>
         <button onClick={handleAnonymous} disabled={loading}>
-          {loading ? "Loading..." : "Play as Guest"}
+          {loading ? t.common.loading : t.login.playAsGuest}
         </button>
       </div>
     </div>

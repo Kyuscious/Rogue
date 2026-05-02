@@ -1,6 +1,13 @@
 import type { Language, Translations } from './types';
 import { en } from './translations/en/index';
 import { fr } from './translations/fr/index';
+import { es } from './translations/es/index';
+import { de } from './translations/de/index';
+import { pt } from './translations/pt/index';
+import { zh } from './translations/zh/index';
+import { ja } from './translations/ja/index';
+import { ko } from './translations/ko/index';
+import { ru } from './translations/ru/index';
 export { LANGUAGES } from './types';
 export type { Language, LanguageOption, Translations } from './types';
 
@@ -8,13 +15,13 @@ export type { Language, LanguageOption, Translations } from './types';
 const translations: Record<Language, Translations> = {
   en,
   fr,
-  es: fr, // Placeholder - uses FR format for now
-  de: fr, // Placeholder
-  pt: fr, // Placeholder
-  zh: fr, // Placeholder
-  ja: fr, // Placeholder
-  ko: fr, // Placeholder
-  ru: fr, // Placeholder
+  es,
+  de,
+  pt,
+  zh,
+  ja,
+  ko,
+  ru,
 };
 
 /**

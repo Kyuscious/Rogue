@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '@game/store';
 import { getQuestById } from '../screens/QuestSelect/logic';
+import { useTranslation } from '../../hooks/useTranslation';
 import './ScreenTitle.css';
 
 interface ScreenTitleProps {
@@ -9,46 +10,47 @@ interface ScreenTitleProps {
 
 export const ScreenTitle: React.FC<ScreenTitleProps> = ({ scene }) => {
   const state = useGameStore((store) => store.state);
+  const t = useTranslation();
   
   let title = 'Runeterrogue';
   
   switch (scene) {
     case 'quest':
-      title = 'Quest Selection';
+      title = t.screenTitle.questSelection;
       break;
     case 'shop':
-      title = 'Shop';
+      title = t.screenTitle.shop;
       break;
     case 'battle':
     case 'testBattle':
       // Get the selected quest title if available
       if (state.selectedQuest) {
         const quest = getQuestById(state.selectedQuest.questId);
-        title = quest?.name || 'Battle';
+        title = quest?.name || t.screenTitle.battle;
       } else {
-        title = 'Battle';
+        title = t.screenTitle.battle;
       }
       break;
     case 'regionSelection':
-      title = 'Region Selection';
+      title = t.screenTitle.regionSelection;
       break;
     case 'pregame':
-      title = 'Character Setup';
+      title = t.screenTitle.characterSetup;
       break;
     case 'profiles':
-      title = 'Profiles';
+      title = t.screenTitle.profiles;
       break;
     case 'index':
-      title = 'Index';
+      title = t.screenTitle.index;
       break;
     case 'preTestSetup':
-      title = 'Test Setup';
+      title = t.screenTitle.testSetup;
       break;
     case 'postRegionAction':
-      title = 'Next Step';
+      title = t.screenTitle.nextStep;
       break;
     case 'loading':
-      title = 'Loading...';
+      title = t.common.loading;
       break;
     default:
       title = 'Runeterrogue';

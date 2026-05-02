@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useGameStore } from '@game/store';
 import { getItemById } from '@data/items';
 import { getItemName, getItemDescription } from '../../../i18n/helpers';
+import { useTranslation } from '../../../hooks/useTranslation';
 import { REGION_STARTER_EQUIPMENT } from '../PreGameSetup/starterEquipment';
 import './Shop.css';
 
@@ -12,6 +13,7 @@ interface ShopProps {
 
 export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
   const { state, addInventoryItem, removeInventoryItem, addGold, useReroll, generateShopInventory, rerollShop, markShopItemSold, updatePlayerHp } = useGameStore();
+  const t = useTranslation();
   
   // Capitalize region name
   const regionName = region.charAt(0).toUpperCase() + region.slice(1);
@@ -182,7 +184,7 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
         
         {slot.soldOut && (
           <div className="sold-out-overlay">
-            <span className="sold-out-text">SOLD OUT</span>
+            <span className="sold-out-text">{t.shop.soldOutText}</span>
           </div>
         )}
         
@@ -232,7 +234,7 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
           onClick={() => handlePurchase(index)}
           disabled={!canAfford || slot.soldOut}
         >
-          {slot.soldOut ? 'Sold Out' : canAfford ? 'Buy' : 'Not enough gold'}
+          {slot.soldOut ? t.shop.soldOut : canAfford ? t.shop.buy : t.shop.notEnoughGold}
         </button>
       </div>
     );
@@ -293,7 +295,7 @@ export const Shop: React.FC<ShopProps> = ({ onBack, region }) => {
   return (
     <div className="shop-container">
       <div className="shop-header">
-        <h2>🏪 {regionName}'s Shop</h2>
+        <h2>{t.shop.title.replace('{{region}}', regionName)}</h2>
         <div className="shop-info">
           <span className="shop-gold">💰 {state.gold}g</span>
           <span className="shop-rerolls">🎲 {state.rerolls} Rerolls</span>

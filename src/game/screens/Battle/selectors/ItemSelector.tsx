@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Tooltip } from '../../../shared/Tooltip';
+import { useTranslation } from '../../../../hooks/useTranslation';
 import './ItemSelector.css';
 
 interface ItemBarProps {
@@ -10,6 +11,7 @@ interface ItemBarProps {
 
 export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse }) => {
   const [tooltipData, setTooltipData] = useState<{ itemId: string; position: { x: number; y: number } } | null>(null);
+  const t = useTranslation();
 
   const handleItemMouseEnter = (itemId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -34,7 +36,7 @@ export const ItemBar: React.FC<ItemBarProps> = ({ usableItems, onUseItem, canUse
 
   return (
     <div className="item-bar">
-      <div className="item-bar-title">Usable Items</div>
+      <div className="item-bar-title">{t.battle.itemsLabel}</div>
       <div className="item-bar-items">
         {itemSlots.map((usableItem, index) => {
           if (!usableItem) {

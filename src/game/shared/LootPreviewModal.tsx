@@ -1,5 +1,6 @@
 import React from 'react';
 import { LootOdds, QuestLootInfo } from '@utils/lootCalculator';
+import { useTranslation } from '../../hooks/useTranslation';
 import './LootPreviewModal.css';
 
 interface LootPreviewModalProps {
@@ -13,8 +14,10 @@ export const LootPreviewModal: React.FC<LootPreviewModalProps> = ({
   isOpen,
   onClose,
   lootInfo,
-  title = 'Possible Loot Drops',
+  title,
 }) => {
+  const t = useTranslation();
+  const resolvedTitle = title ?? t.lootPreview.title;
   if (!isOpen || !lootInfo) return null;
 
   // Group items by rarity
@@ -46,17 +49,17 @@ export const LootPreviewModal: React.FC<LootPreviewModalProps> = ({
     <div className="modal-overlay" onClick={onClose}>
       <div className="loot-preview-modal" onClick={(e) => e.stopPropagation()}>
         <div className="loot-preview-header">
-          <h2>{title}</h2>
+          <h2>{resolvedTitle}</h2>
           <button className="close-button" onClick={onClose}>✕</button>
         </div>
 
         <div className="loot-preview-stats">
           <div className="loot-preview-stat-card">
-            <span className="loot-preview-stat-label">Total Unique Items</span>
+            <span className="loot-preview-stat-label">{t.lootPreview.uniqueItems}</span>
             <span className="loot-preview-stat-value">{lootInfo.uniqueItemCount}</span>
           </div>
           <div className="loot-preview-stat-card">
-            <span className="loot-preview-stat-label">Average Rarity</span>
+            <span className="loot-preview-stat-label">{t.lootPreview.averageRarity}</span>
             <span className="loot-preview-stat-value" style={{ color: rarityColors[lootInfo.averageRarity] }}>
               {lootInfo.averageRarity.toUpperCase()}
             </span>
@@ -75,7 +78,7 @@ export const LootPreviewModal: React.FC<LootPreviewModalProps> = ({
                   <span style={{ color: rarityColors[rarity] }}>
                     {rarity.toUpperCase()}
                   </span>
-                  <span className="loot-preview-item-count">({items.length} items)</span>
+                  <span className="loot-preview-item-count">{t.lootPreview.itemsCount.replace('{{count}}', String(items.length))}</span>
                 </div>
                 <div className="items-grid">
                   {items.map(item => (
@@ -111,9 +114,7 @@ export const LootPreviewModal: React.FC<LootPreviewModalProps> = ({
         </div>
 
         <div className="loot-preview-footer">
-          <p className="info-text">
-            ✨ Drop rates shown are base rates. Your Magic Find stat will increase chances of higher rarity items.
-          </p>
+          <p className="info-text">{t.lootPreview.dropRateInfo}</p>
         </div>
       </div>
     </div>

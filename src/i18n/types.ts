@@ -205,12 +205,21 @@ export interface Translations {
     enemyTurn: string;
     victory: string;
     defeat: string;
+    fled: string;
     selectReward: string;
     nextFloor: string;
     useAbility: string;
     endTurn: string;
     flee: string;
     inventory: string;
+    highestDamageDealt: string;
+    highestDamageTaken: string;
+    lootEarned: string;
+    autoAddedToRun: string;
+    chooseReward: string;
+    itemsLabel: string;
+    spellsLabel: string;
+    weaponsLabel: string;
   };
 
   // Inventory
@@ -237,6 +246,13 @@ export interface Translations {
     exploreDescription: string;
     noEventsAvailable: string;
     currentHp: string;
+    encounterComplete: string;
+    whatWillYouDo: string;
+    continueHint: string;
+    randomEvent: string;
+    restHint: string;
+    buildHint: string;
+    eventHint: string;
   };
 
   // Region Selection
@@ -429,6 +445,8 @@ export interface Translations {
     playAsGuest: string;
     guestWarning: string;
     footer: string;
+    backToLogin: string;
+    orContinueAsGuest: string;
     errors: {
       emptyCredentials: string;
       emptySignUpCredentials: string;
@@ -503,6 +521,180 @@ export interface Translations {
     [key: string]: {
       name: string;
       description: string;
+    };
+  };
+
+  // Loading Screen
+  loading: {
+    travelingTo: string;
+  };
+
+  // Profiles
+  profiles: {
+    title: string;
+    subtitle: string;
+    activeBadge: string;
+    battlesWon: string;
+    enemiesKilled: string;
+    gamesCompleted: string;
+    runsFailed: string;
+    itemsDiscovered: string;
+    timePlayed: string;
+    runInProgress: string;
+    yes: string;
+    no: string;
+    resetConfirmation: string;
+    confirmReset: string;
+    resetProfile: string;
+    useProfile: string;
+    alreadyUnlocked: string;
+    unlockAll: string;
+    unlockConfirmation: string;
+    achievementsWarning: string;
+    confirmUnlock: string;
+    achievementsDisabledWarning: string;
+    renameTooltip: string;
+  };
+
+  // Shop
+  shop: {
+    title: string;
+    soldOut: string;
+    soldOutText: string;
+    notEnoughGold: string;
+    buy: string;
+    usableItems: string;
+    rerolls: string;
+  };
+
+  // Loot Selection
+  lootSelection: {
+    bossDefeated: string;
+    chooseReward: string;
+    viewAllLoot: string;
+    viewAllTooltip: string;
+    reroll: string;
+  };
+
+  // Reward Selection
+  reward: {
+    floorMilestone: string;
+    chooseReward: string;
+    skip: string;
+    reroll: string;
+    select: string;
+    statLabels: {
+      health: string;
+      attackDamage: string;
+      abilityPower: string;
+      armor: string;
+      magicResist: string;
+      speed: string;
+      haste: string;
+      critChance: string;
+      lifeSteal: string;
+    };
+  };
+
+  // Battle Log
+  battleLog: {
+    expandLog: string;
+    collapseLog: string;
+  };
+
+  // Turn Timeline
+  timeline: {
+    title: string;
+  };
+
+  // Loot Preview Modal
+  lootPreview: {
+    title: string;
+    uniqueItems: string;
+    averageRarity: string;
+    dropRateInfo: string;
+    itemsCount: string;
+  };
+
+  // Screen Title
+  screenTitle: {
+    quest: string;
+    shop: string;
+    battle: string;
+    regionSelection: string;
+    pregame: string;
+    profiles: string;
+    index: string;
+    preTestSetup: string;
+    postRegionAction: string;
+    loading: string;
+    default: string;
+  };
+
+  // Familiar Status
+  familiar: {
+    ready: string;
+    readyThisTurn: string;
+    actsIn: string;
+    actsInTurns: string;
+    actsInTurnsPlural: string;
+    atFightStart: string;
+    atFightEnd: string;
+    activatesAtFightStart: string;
+    activatesAtFightEnd: string;
+  };
+
+  // Event Screen
+  event: {
+    title: string;
+    subtitle: string;
+    chooseYourFate: string;
+    description: string;
+    rerollButton: string;
+    noEvents: string;
+    enterEvent: string;
+    eventResolved: string;
+    appliedMessage: string;
+    selectedEventLabel: string;
+    continue: string;
+  };
+
+  // Build Modification
+  buildMod: {
+    title: string;
+    subtitle: string;
+    tabClass: string;
+    tabStats: string;
+    tabItems: string;
+    selectClass: string;
+    currentBadge: string;
+    adjustStats: string;
+    statInfo: string;
+    resetStats: string;
+    manageInventory: string;
+    noItems: string;
+    removeCurse: string;
+    discard: string;
+    applyButton: string;
+    continueButton: string;
+    loading: string;
+  };
+
+  // Rest Screen
+  rest: {
+    title: string;
+    subtitle: string;
+    healthLabel: string;
+    levelLabel: string;
+    goldLabel: string;
+    fullyRestored: string;
+    chooseAction: string;
+    selectActionPrompt: string;
+    continueButton: string;
+    actions: {
+      meditate: { name: string; description: string; benefit: string };
+      train: { name: string; description: string; benefit: string };
+      scout: { name: string; description: string; benefit: string };
     };
   };
 }

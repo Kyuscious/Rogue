@@ -10,6 +10,7 @@ import {
   unlockAllContent,
   PlayerProfile,
 } from '../MainMenu/Profiles/profileSystem';
+import { useTranslation } from '../../../hooks/useTranslation';
 import './Profiles.css';
 
 interface ProfilesProps {
@@ -23,6 +24,7 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
   const [editingName, setEditingName] = useState<string>('');
   const [showResetConfirm, setShowResetConfirm] = useState<number | null>(null);
   const [showUnlockConfirm, setShowUnlockConfirm] = useState<number | null>(null);
+  const t = useTranslation();
 
   // Load profiles on mount
   useEffect(() => {
@@ -74,12 +76,12 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
   return (
     <div className="profiles-screen">
       <button className="back-btn" onClick={onBack}>
-        ← Back to Menu
+        {t.preGameSetup.backToMenu}
       </button>
 
       <div className="profiles-content">
-        <h1 className="profiles-title">Player Profiles</h1>
-        <p className="profiles-subtitle">Choose a profile to track your progress</p>
+        <h1 className="profiles-title">{t.profiles.title}</h1>
+        <p className="profiles-subtitle">{t.profiles.subtitle}</p>
 
         <div className="profiles-grid">
           {profiles.map((profile) => (
@@ -115,14 +117,14 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
                     <button
                       className="rename-btn"
                       onClick={() => handleStartRename(profile)}
-                      title="Rename profile"
+                      title={t.profiles.renameTooltip}
                     >
                       ✏️
                     </button>
                   </div>
                 )}
                 {activeProfileId === profile.id && (
-                  <div className="active-badge">ACTIVE</div>
+                  <div className="active-badge">{t.profiles.activeBadge}</div>
                 )}
               </div>
 
@@ -130,39 +132,39 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
               <div className="profile-stats">
                 <div className="stat-item">
                   <span className="stat-icon">⚔️</span>
-                  <span className="stat-label">Battles Won</span>
+                  <span className="stat-label">{t.profiles.battlesWon}</span>
                   <span className="stat-value">{profile.stats.battlesWon}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">☠️</span>
-                  <span className="stat-label">Enemies Killed</span>
+                  <span className="stat-label">{t.profiles.enemiesKilled}</span>
                   <span className="stat-value">{profile.stats.enemiesKilled || 0}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">👑</span>
-                  <span className="stat-label">Games Completed</span>
+                  <span className="stat-label">{t.profiles.gamesCompleted}</span>
                   <span className="stat-value">{profile.stats.gamesCompleted}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">💀</span>
-                  <span className="stat-label">Runs Failed</span>
+                  <span className="stat-label">{t.profiles.runsFailed}</span>
                   <span className="stat-value">{profile.stats.runsFailed}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">🎁</span>
-                  <span className="stat-label">Items Discovered</span>
+                  <span className="stat-label">{t.profiles.itemsDiscovered}</span>
                   <span className="stat-value">{profile.stats.itemsDiscovered.length}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">⏱️</span>
-                  <span className="stat-label">Time Played</span>
+                  <span className="stat-label">{t.profiles.timePlayed}</span>
                   <span className="stat-value">{formatPlayTime(profile.stats.hoursPlayed)}</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-icon">🎮</span>
-                  <span className="stat-label">Run in Progress</span>
+                  <span className="stat-label">{t.profiles.runInProgress}</span>
                   <span className={`stat-value ${hasRunInProgress(profile.id) ? 'run-active' : 'run-inactive'}`}>
-                    {hasRunInProgress(profile.id) ? 'Yes' : 'No'}
+                    {hasRunInProgress(profile.id) ? t.profiles.yes : t.profiles.no}
                   </span>
                 </div>
               </div>
@@ -170,7 +172,7 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
               {/* Achievements Disabled Warning */}
               {profile.stats.achievementsDisabled && (
                 <div className="achievements-warning">
-                  ⚠️ Achievements disabled on this profile
+                  {t.profiles.achievementsDisabledWarning}
                 </div>
               )}
 
@@ -181,23 +183,23 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
                     className="use-profile-btn"
                     onClick={() => handleUseProfile(profile.id)}
                   >
-                    Use Profile
+                    {t.profiles.useProfile}
                   </button>
                 )}
                 {showResetConfirm === profile.id ? (
                   <div className="reset-confirm">
-                    <p>Reset all progress?</p>
+                    <p>{t.profiles.resetConfirmation}</p>
                     <button
                       className="confirm-reset-btn"
                       onClick={() => handleResetProfile(profile.id)}
                     >
-                      Yes, Reset
+                      {t.profiles.confirmReset}
                     </button>
                     <button
                       className="cancel-reset-btn"
                       onClick={() => setShowResetConfirm(null)}
                     >
-                      Cancel
+                      {t.common.cancel}
                     </button>
                   </div>
                 ) : (
@@ -205,7 +207,7 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
                     className="reset-profile-btn"
                     onClick={() => setShowResetConfirm(profile.id)}
                   >
-                    Reset Profile
+                    {t.profiles.resetProfile}
                   </button>
                 )}
                 
@@ -215,26 +217,26 @@ export const Profiles: React.FC<ProfilesProps> = ({ onBack }) => {
                   onClick={() => setShowUnlockConfirm(profile.id)}
                   disabled={profile.stats.achievementsDisabled}
                 >
-                  {profile.stats.achievementsDisabled ? 'Already Unlocked' : 'Unlock All'}
+                  {profile.stats.achievementsDisabled ? t.profiles.alreadyUnlocked : t.profiles.unlockAll}
                 </button>
                 
                 {/* Unlock All Modal */}
                 {showUnlockConfirm === profile.id && (
                   <div className="unlock-modal-overlay" onClick={() => setShowUnlockConfirm(null)}>
                     <div className="unlock-confirm" onClick={(e) => e.stopPropagation()}>
-                      <p>⚠️ Unlock all content?</p>
-                      <p className="unlock-warning">Achievements will be disabled on this profile</p>
+                      <p>{t.profiles.unlockConfirmation}</p>
+                      <p className="unlock-warning">{t.profiles.achievementsWarning}</p>
                       <button
                         className="confirm-unlock-btn"
                         onClick={() => handleUnlockAll(profile.id)}
                       >
-                        Yes, Unlock All
+                        {t.profiles.confirmUnlock}
                       </button>
                       <button
                         className="cancel-unlock-btn"
                         onClick={() => setShowUnlockConfirm(null)}
                       >
-                        Cancel
+                        {t.common.cancel}
                       </button>
                     </div>
                   </div>

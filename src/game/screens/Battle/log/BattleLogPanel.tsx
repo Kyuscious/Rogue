@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { TurnAction } from '../Flow/turnSystemV2';
 import { BattleLogEntry } from './types';
+import { useTranslation } from '../../../../hooks/useTranslation';
 
 interface BattleLogPanelProps {
   battleLog: BattleLogEntry[];
@@ -27,6 +28,7 @@ export const BattleLogPanel: React.FC<BattleLogPanelProps> = ({
 }) => {
   const logEntriesRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
+  const t = useTranslation();
 
   const scrollBattleLogToBottom = () => {
     if (!shouldAutoScrollRef.current) return;
@@ -77,8 +79,8 @@ export const BattleLogPanel: React.FC<BattleLogPanelProps> = ({
         <button
           className={`log-expand-btn${expanded ? ' log-expand-btn--expanded' : ''}`}
           onClick={onToggleExpand}
-          title={expanded ? 'Collapse log' : 'Expand log'}
-          aria-label={expanded ? 'Collapse battle log' : 'Expand battle log'}
+          title={expanded ? t.battleLog.collapseLog : t.battleLog.expandLog}
+          aria-label={expanded ? t.battleLog.collapseLog : t.battleLog.expandLog}
         >
           {expanded ? '▼' : '▲'}
         </button>
