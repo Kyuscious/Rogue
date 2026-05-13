@@ -15,7 +15,7 @@ export interface UnlockRequirement {
 export interface UnlockableItem {
   id: string;
   name: string;
-  category: 'starter_item' | 'character' | 'feature';
+  category: 'starter_item' | 'character' | 'feature' | 'artifact';
   requirement: UnlockRequirement;
   isUnlocked: (stats: any) => boolean;
   getProgress: (stats: any) => { current: number; required: number };
@@ -161,6 +161,29 @@ export const UNLOCKABLES: Record<string, UnlockableItem> = {
       };
     },
   },
+
+  // ARTIFACTS
+  // Note: unlock requirements are intentionally hidden from the player (description is '???')
+  world_rune_of_domination: {
+    id: 'world_rune_of_domination',
+    name: 'World Rune of Domination',
+    category: 'artifact',
+    requirement: {
+      type: 'games_completed',
+      value: 3,
+      description: '???',
+    },
+    isUnlocked: (stats) => {
+      if (stats.achievementsDisabled) return true;
+      const unlockedItems = stats.unlockedItems || [];
+      if (unlockedItems.includes('world_rune_of_domination')) return true;
+      return (stats.gamesCompleted || 0) >= 3;
+    },
+    getProgress: (stats) => ({
+      current: Math.min(stats.gamesCompleted || 0, 3),
+      required: 3,
+    }),
+  },
 };
 
 /**
@@ -211,6 +234,36 @@ export function getStarterItemsWithUnlockStatus(): Array<{
         requirement: unlockable.requirement,
       };
     });
+}
+
+/**
+ * Get all artifact unlockables with their unlock status.
+ * Unlock progress is intentionally not exposed to the player.
+ */
+export function getArtifactsWithUnlockStatus(): Array<{
+  id: string;
+  name: string;
+  unlocked: boolean;
+}> {
+  const profile = getActiveProfile();
+
+  return Object.values(UNLOCKABLES)
+    .filter(u => u.category === 'artifact')
+    .map(unlockable => ({
+      id: unlockable.id,
+      name: unlockable.name,
+      unlocked: unlockable.isUnlocked(profile.stats),
+    }));
+}
+
+/**
+ * Check if an artifact is unlocked for the active profile.
+ */
+export function isArtifactUnlocked(artifactId: string): boolean {
+  const unlockable = UNLOCKABLES[artifactId];
+  if (!unlockable || unlockable.category !== 'artifact') return false;
+  const profile = getActiveProfile();
+  return unlockable.isUnlocked(profile.stats);
 }
 
 /**

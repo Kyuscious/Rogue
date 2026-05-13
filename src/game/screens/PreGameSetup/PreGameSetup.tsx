@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Region } from '@game/types';
 import { ITEM_DATABASE } from '@data/items';
-import { getStarterItemsWithUnlockStatus, getUnlockProgress } from '../MainMenu/Profiles/profileUnlocks';
+import { getStarterItemsWithUnlockStatus, getUnlockProgress, getArtifactsWithUnlockStatus } from '../MainMenu/Profiles/profileUnlocks';
+import { ARTIFACT_DATABASE } from '@data/artifacts';
+import { useGameStore } from '@game/store';
 import { getRegionDisplayName } from '../PostRegionChoice/regionGraph';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { getItemName } from '../../../i18n/helpers';
@@ -37,10 +39,13 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
   onTutorialSkip,
 }) => {
   const t = useTranslation();
+  const { setActiveArtifacts } = useGameStore();
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
   const [starterItems, setStarterItems] = useState<any[]>([]);
+  const [artifacts, setArtifacts] = useState<Array<{ id: string; name: string; unlocked: boolean }>>([]);
+  const [activeArtifacts, setLocalActiveArtifacts] = useState<string[]>([]);
   const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -67,6 +72,8 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
   useEffect(() => {
     const items = getStarterItemsWithUnlockStatus();
     setStarterItems(items);
+    const arts = getArtifactsWithUnlockStatus();
+    setArtifacts(arts);
   }, []);
 
   const STARTER_ITEMS = starterItems;
@@ -135,6 +142,9 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
       setTutorialStep('done');
       onTutorialComplete?.();
     }
+
+    // Commit artifact selection to the store before starting the run
+    setActiveArtifacts(activeArtifacts);
 
     onStartRun(selectedRegion as Region, selectedItem);
   };
@@ -283,6 +293,46 @@ export const PreGameSetup: React.FC<PreGameSetupProps> = ({
             })}
           </div>
         </div>
+
+        {/* Artifacts Section — only shown when at least one artifact is unlocked */}
+        {artifacts.some(a => a.unlocked) && (
+          <div className={`selection-section artifacts-section ${isTutorialActive ? 'tutorial-muted' : ''}`}>
+            <h2 className="section-title artifacts-title">Artifacts</h2>
+            <div className="selection-grid artifacts-grid">
+              {artifacts.map((artifact) => {
+                const artifactData = ARTIFACT_DATABASE[artifact.id];
+                const isActive = activeArtifacts.includes(artifact.id);
+                return (
+                  <div
+                    key={artifact.id}
+                    className={`selection-item artifact-item ${
+                      !artifact.unlocked ? 'locked' : isActive ? 'artifact-active' : ''
+                    }`}
+                    onClick={() => {
+                      if (!artifact.unlocked || isBlockingTutorialStep) return;
+                      setLocalActiveArtifacts(prev =>
+                        isActive ? prev.filter(id => id !== artifact.id) : [...prev, artifact.id]
+                      );
+                    }}
+                    title={artifact.unlocked ? artifactData?.description : undefined}
+                  >
+                    {!artifact.unlocked && <div className="lock-icon">🔒</div>}
+                    {artifact.unlocked && (
+                      <div className={`artifact-toggle-indicator ${isActive ? 'on' : 'off'}`}>
+                        {isActive ? 'ON' : 'OFF'}
+                      </div>
+                    )}
+                    <div className="artifact-rune-icon">⬡</div>
+                    <div className="item-name artifact-name">{artifact.name}</div>
+                    {artifact.unlocked && artifactData && (
+                      <div className="artifact-description">{artifactData.description}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Start Button */}

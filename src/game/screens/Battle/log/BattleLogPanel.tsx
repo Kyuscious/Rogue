@@ -11,6 +11,7 @@ interface BattleLogPanelProps {
   currentAction?: TurnAction;
   playerName: string;
   tutorialClassName?: string;
+  highlightEntryMatcher?: (entry: BattleLogEntry) => boolean;
   expanded?: boolean;
   onToggleExpand?: () => void;
 }
@@ -23,6 +24,7 @@ export const BattleLogPanel: React.FC<BattleLogPanelProps> = ({
   currentAction,
   playerName,
   tutorialClassName = '',
+  highlightEntryMatcher,
   expanded = false,
   onToggleExpand,
 }) => {
@@ -88,8 +90,13 @@ export const BattleLogPanel: React.FC<BattleLogPanelProps> = ({
       <div className="log-entries" ref={logEntriesRef} onScroll={handleLogScroll}>
         {battleLog.map((entry, idx) => {
           const { tokens, cleanedMessage } = extractTokens(entry.message);
+          const isTutorialHighlighted = highlightEntryMatcher?.(entry) ?? false;
           return (
-            <div key={idx} className={`log-entry ${entry.type || ''}`} title={entry.tooltip || entry.message}>
+            <div
+              key={idx}
+              className={`log-entry ${entry.type || ''} ${isTutorialHighlighted ? 'tutorial-log-highlight' : ''}`}
+              title={entry.tooltip || entry.message}
+            >
               {tokens.length > 0 && (
                 <span className="log-entry-token-row">
                   {tokens.slice(0, 2).map((token) => (

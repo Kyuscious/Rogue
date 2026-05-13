@@ -3,6 +3,8 @@ import { DEFAULT_STATS } from '@utils/statsSystem';
 import { getDemaciaEnemyById, resolveDemaciaEnemyId } from './demacia/enemies';
 import { getIoniaEnemyById, resolveIoniaEnemyId } from './ionia/enemies';
 import { getShurimaEnemyById, resolveShurimaEnemyId } from './shurima/enemies';
+import { getRuneterraEnemyById } from './runeterra/enemies';
+import { getBandleCityEnemyById } from './bandle_city/enemies';
 
 // Placeholder enemies for regions without implemented enemies yet
 export const PLACEHOLDER_MINION: Character = {
@@ -88,6 +90,12 @@ export function getEnemyById(id: string): Character | undefined {
 
   const shurimaEnemy = getShurimaEnemyById(id);
   if (shurimaEnemy) return shurimaEnemy;
+
+  const runeterraEnemy = getRuneterraEnemyById(id);
+  if (runeterraEnemy) return runeterraEnemy;
+
+  const bandleCityEnemy = getBandleCityEnemyById(id);
+  if (bandleCityEnemy) return bandleCityEnemy;
 
   // Fall back to placeholders - return copies to prevent mutation
   if (id === 'placeholder_minion') return { ...PLACEHOLDER_MINION, stats: { ...PLACEHOLDER_MINION.stats }, abilities: [...PLACEHOLDER_MINION.abilities] };

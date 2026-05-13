@@ -360,6 +360,79 @@
   align-items: center;
 }
 
+.artifact-header-button-wrap {
+  position: relative;
+}
+
+.btn-artifacts {
+  padding: 8px 14px;
+  background: rgba(110, 70, 180, 0.25);
+  border: 2px solid rgba(186, 142, 255, 0.65);
+  border-radius: 8px;
+  color: #e8d6ff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: default;
+  transition: all 0.2s;
+}
+
+.artifact-header-button-wrap:hover .btn-artifacts {
+  border-color: #d2adff;
+  background: rgba(128, 84, 206, 0.35);
+  box-shadow: 0 4px 12px rgba(160, 105, 255, 0.28);
+}
+
+.artifact-header-tooltip {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 260px;
+  max-width: 360px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(188, 145, 255, 0.45);
+  background: linear-gradient(135deg, rgba(27, 18, 45, 0.98) 0%, rgba(40, 22, 67, 0.98) 100%);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.artifact-header-button-wrap:hover .artifact-header-tooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.artifact-tooltip-title {
+  margin: 0 0 8px;
+  color: #d6b6ff;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.artifact-tooltip-entry + .artifact-tooltip-entry {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(188, 145, 255, 0.25);
+}
+
+.artifact-tooltip-name {
+  color: #f1e5ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.artifact-tooltip-effect {
+  margin-top: 2px;
+  color: #c8b4e3;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .btn-settings {
   padding: 8px 16px;
   background: rgba(200, 155, 60, 0.2);
@@ -381,6 +454,38 @@
 
 .btn-settings:active {
   transform: translateY(0);
+}
+
+.btn-tutorial-toggle.active {
+  background: rgba(84, 197, 131, 0.2);
+  border-color: #54c583;
+  color: #c9ffd8;
+  box-shadow: 0 0 14px rgba(84, 197, 131, 0.38);
+}
+
+/* Inline header badge — shown inside header-actions */
+.tutorial-checkpoint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(250, 216, 87, 0.55);
+  background: rgba(250, 216, 87, 0.12);
+  color: #ffeeb2;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* Fixed corner badge used on the pregame scene (no top-level header) */
+.tutorial-checkpoint-badge-fixed {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 55;
 }
 
 .scene-tutorial-overlay {

@@ -32,12 +32,15 @@ export function spawnEnemies(
     });
     console.log('  🎯 Floor:', floor, '| Tier:', enemy.tier, '| Level:', enemyLevel);
 
-    // Get items for this enemy
-    const enemyItems = getRandomItemsForEnemy(
-      enemy.class,
-      encountersCompleted + 1 + revisitScaling.encounterBonusForItems,
-      regionTier
-    );
+    // Get items for this enemy (skip for tutorial enemies to keep stats predictable)
+    const isTutorialEnemy = enemy.id.includes('tutorial');
+    const enemyItems = isTutorialEnemy
+      ? []
+      : getRandomItemsForEnemy(
+          enemy.class,
+          encountersCompleted + 1 + revisitScaling.encounterBonusForItems,
+          regionTier
+        );
     console.log('  🎁 Items:', enemyItems.map((i) => i.name));
 
     // Apply item stats to base stats

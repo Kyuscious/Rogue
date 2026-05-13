@@ -28,6 +28,8 @@ export interface Weapon {
   imagePath?: string;
   cooldown?: number; // Turns until can use again (0 = no cooldown)
   originRegion?: Region; // Primary region this weapon originates from
+  // Weapon stats are metadata for attack behavior (for example weapon-specific range)
+  // and must not be merged into player core stats just by equipping the weapon.
   stats?: {
     // Survivability
     health?: number;
@@ -70,10 +72,6 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       },
     ],
     originRegion: 'demacia',
-    stats: {
-      magicResist: 10,
-      attackDamage: 5,
-    },
     cooldown: 0,
     targeting: {
       mode: 'single',
@@ -101,7 +99,6 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     originRegion: 'ionia',
     stats: {
       attackRange: 375,
-      movementSpeed: 30,
     },
     cooldown: 0,
     targeting: {
@@ -128,8 +125,7 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     ],
     originRegion: 'shurima',
     stats: {
-      speed: 0.2,
-      attackRange: 100,
+      attackRange: 150,
     },
     cooldown: 0,
     targeting: {
@@ -174,9 +170,9 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
       {
         type: 'damage',
         damageScaling: {
-          attackDamage: 15, // 15% AD scaling
+          attackDamage: 30, // 30% AD scaling
         },
-        description: 'Deals 15% of your Attack Damage as physical damage.',
+        description: 'Deals 30% of your Attack Damage as physical damage.',
       },
     ],
     cooldown: 0,
@@ -235,9 +231,37 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     cooldown: 0,
     originRegion: 'shurima',
     stats: {
-      speed: 0.3,
-      abilityPower: 50,
       attackRange: 425,
+    },
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      requiresTargetInRange: true,
+    },
+  },
+
+  blowgun: {
+    id: 'blowgun',
+    name: 'Blowgun',
+    description: 'A precise dart weapon. Deals 50% AP on hit and applies poison for 3 turns. Poison does not stack and refreshes duration.',
+    rarity: 'legendary',
+    effects: [
+      {
+        type: 'damage',
+        damageScaling: {
+          abilityPower: 50,
+        },
+        description: 'Deals magic damage equal to 50% of the wielder\'s Ability Power.',
+      },
+      {
+        type: 'debuff',
+        description: 'Applies Poison: 30% current AP per turn for 3 turns. Reapplying refreshes duration only.',
+      },
+    ],
+    cooldown: 0,
+    originRegion: 'bandle_city',
+    stats: {
+      attackRange: 475,
     },
     targeting: {
       mode: 'single',
@@ -273,6 +297,33 @@ export const WEAPON_DATABASE: Record<string, Weapon> = {
     },
   },
 };
+
+export const MELEE_RANGE_THRESHOLD = 150;
+
+export type WeaponAttackType = 'melee' | 'ranged';
+
+/**
+ * Returns the effective range used by this weapon attack.
+ * - Ranged weapons: explicit weapon range above melee threshold.
+ * - Melee weapons: always use player range (even if player range is buffed above 150).
+ */
+export function getEffectiveWeaponRange(weapon: Weapon, playerAttackRange: number): number {
+  const weaponConfiguredRange = weapon.targeting?.range ?? weapon.stats?.attackRange;
+  if (weaponConfiguredRange !== undefined && weaponConfiguredRange > MELEE_RANGE_THRESHOLD) {
+    return weaponConfiguredRange;
+  }
+  return playerAttackRange;
+}
+
+/**
+ * Weapon attack type is based on weapon definition, never on current player range.
+ */
+export function getWeaponAttackType(weapon: Weapon): WeaponAttackType {
+  const weaponConfiguredRange = weapon.targeting?.range ?? weapon.stats?.attackRange;
+  return weaponConfiguredRange !== undefined && weaponConfiguredRange > MELEE_RANGE_THRESHOLD
+    ? 'ranged'
+    : 'melee';
+}
 
 /**
  * Get weapon by ID

@@ -219,6 +219,8 @@ export interface GameStoreState {
     // Event weight modifiers (for items that modify event probabilities)
     eventWeightModifiers: Record<string, number>; // Event ID -> weight multiplier (e.g., "treasure_events": 2.0)
     globalEventWeightModifier: number; // Global multiplier for all events (e.g., 1.0, 1.5, 0.5)
+    // Artifact system
+    activeArtifacts: string[]; // IDs of artifacts toggled on for the current run
     // Language/Settings
     currentLanguage: Language; // Current selected language
     showSettings: boolean; // Show settings modal
@@ -296,6 +298,8 @@ export interface GameStoreState {
   setGlobalEventWeightModifier: (multiplier: number) => void; // Apply multiplier to ALL events
   getEventWeightMultiplier: (eventId: string) => number; // Get final weight multiplier for an event after all modifiers
   resetEventWeights: () => void; // Reset all event weight modifiers to defaults
+  // Artifact methods
+  setActiveArtifacts: (artifactIds: string[]) => void; // Set the active artifacts for the current run
   // Language/Settings methods
   setLanguage: (language: Language) => void; // Change language
   toggleSettings: () => void; // Show/hide settings modal
@@ -363,6 +367,8 @@ export const useGameStore = create<GameStoreState>((set) => ({
     // Event weight modifiers (RNG system)
     eventWeightModifiers: {}, // Event ID -> multiplier
     globalEventWeightModifier: 1.0, // Default 1.0 (no change)
+    // Artifact system
+    activeArtifacts: [], // No artifacts active by default
   },
 
   setUsername: (username: string) =>
@@ -822,6 +828,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
           pendingPostRegionAction: null,
           eventWeightModifiers: {}, // Reset event RNG modifiers
           globalEventWeightModifier: 1.0, // Reset global event weight modifier
+          activeArtifacts: [], // Clear artifacts for new run
           currentLanguage: store.state.currentLanguage, // Persist language
           showSettings: false,
           audioSettings: store.state.audioSettings, // Persist audio settings
@@ -1094,6 +1101,7 @@ export const useGameStore = create<GameStoreState>((set) => ({
             completedQuestPaths: loadedState.completedQuestPaths || [],
             eventWeightModifiers: loadedState.eventWeightModifiers || {},
             globalEventWeightModifier: loadedState.globalEventWeightModifier || 1.0,
+            activeArtifacts: loadedState.activeArtifacts || [],
           },
         }));
         console.log('Run loaded successfully');
@@ -1706,6 +1714,15 @@ export const useGameStore = create<GameStoreState>((set) => ({
         ...store.state,
         eventWeightModifiers: {},
         globalEventWeightModifier: 1.0,
+      },
+    })),
+
+  // Artifact methods
+  setActiveArtifacts: (artifactIds: string[]) =>
+    set((store) => ({
+      state: {
+        ...store.state,
+        activeArtifacts: artifactIds,
       },
     })),
 

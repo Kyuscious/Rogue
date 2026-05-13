@@ -1,7 +1,6 @@
 import { Character, InventoryItem } from '@game/types';
 import { CharacterStats, getClassStatBonuses } from '@utils/statsSystem';
 import { ITEM_DATABASE } from '@data/items';
-import { getWeaponById } from '@data/weapons';
 
 /**
  * Calculate player's current maximum HP with all bonuses
@@ -40,18 +39,11 @@ export function getPlayerCombatStats(player: Character): CharacterStats {
 export function mergePlayerEquipmentStats(
   player: Character,
   inventory: InventoryItem[],
-  equippedWeaponId?: string | null
+  _equippedWeaponId?: string | null
 ): CharacterStats {
   const mergedStats: CharacterStats = { ...player.stats };
-  const equippedWeapon = equippedWeaponId ? getWeaponById(equippedWeaponId) : null;
-
-  if (equippedWeapon?.stats) {
-    Object.entries(equippedWeapon.stats).forEach(([stat, value]) => {
-      if (value !== undefined && value !== null && typeof value === 'number') {
-        (mergedStats as any)[stat] = ((mergedStats as any)[stat] || 0) + value;
-      }
-    });
-  }
+  // Intentionally do not merge equipped weapon stats into player stats.
+  // Weapon effects (damage/range/utility) are applied at action resolution time.
 
   inventory.forEach((invItem) => {
     const item = ITEM_DATABASE[invItem.itemId];

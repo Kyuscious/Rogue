@@ -91,6 +91,7 @@ export interface Character {
     items?: Array<{ itemId: string; chance: number; quantity?: number }>;
     familiars?: Array<{ familiarId: string; chance: number }>;
   };
+  passiveAbilities?: string[]; // Innate passive labels (not from items) — shown in inspect panel passives section
 }
 
 export interface Ability {

@@ -64,6 +64,27 @@ export const BANDLE_CITY_BOSSES: Character[] = [
     experience: 0,
     stats: DEFAULT_STATS,
   },
+  {
+    id: 'bandle_tutorial_teemo',
+    name: 'Teemo',
+    role: 'enemy',
+    class: 'marksman',
+    region: 'bandle_city',
+    tier: 'boss',
+    behaviorProfile: 'ranged',
+    hp: 150,
+    abilities: [],
+    level: 10,
+    experience: 0,
+    stats: DEFAULT_STATS,
+    enemyLoadout: {
+      weapons: ['blowgun'],
+      spells: ['blinding_dart', 'guerilla_warfare'],
+      items: ['dagger'],
+      equippedWeaponIndex: 0,
+      equippedSpellIndex: 0,
+    },
+  },
 ];
 
 export function getBandleCityEnemyById(id: string): Character | undefined {

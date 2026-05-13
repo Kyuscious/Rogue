@@ -111,7 +111,8 @@ export const CharacterStatus: React.FC<{
   isRevealed?: boolean; // For stealth/control ward mechanic - enemy visibility
   turnCounter?: number; // Actual turn counter for accurate duration display
   compact?: boolean;
-}> = ({ characterId, combatBuffs, combatDebuffs, isRevealed = true, turnCounter = 0, compact = false }) => {
+  onBuffHover?: (buffName: string) => void;
+}> = ({ characterId, combatBuffs, combatDebuffs, isRevealed = true, turnCounter = 0, compact = false, onBuffHover }) => {
   const { state } = useGameStore();
   const t = useTranslation();
   const [hoveredInfo, setHoveredInfo] = useState<HoverInfo | null>(null);
@@ -160,6 +161,7 @@ export const CharacterStatus: React.FC<{
   if (!character) return null;
 
   const isEnemy = character.role === 'enemy';
+  const hideSensitiveIntel = isEnemy && !isRevealed;
   const displayName = getCharacterName(character);
   const rawFaction = character.faction || (!isEnemy ? (state.selectedRegion || character.region) : character.region) || 'unknown';
   const factionLabel = prettifyLabel(rawFaction);
@@ -247,6 +249,8 @@ export const CharacterStatus: React.FC<{
       duration: buff.isInfinite ? -1 : maxDuration, // -1 for infinite, otherwise longest remaining
       isDebuff: false,
       stackCount: buff.stacks.length, // Track number of stacks for display
+      icon: buff.icon,
+      isPassiveTrait: buff.isPassiveTrait,
     };
   }) || [];
 
@@ -350,9 +354,9 @@ export const CharacterStatus: React.FC<{
 
               {compact && (
                 <div className="compact-header-meta">
-                  <div className="compact-item-count-badge" aria-label={`Items: ${itemCount}`}>
+                  <div className="compact-item-count-badge" aria-label={hideSensitiveIntel ? 'Items hidden' : `Items: ${itemCount}`}>
                     <span className="compact-item-count-icon">I</span>
-                    <span className="compact-item-count-value">{itemCount}</span>
+                    <span className="compact-item-count-value">{hideSensitiveIntel ? '?' : itemCount}</span>
                   </div>
                 </div>
               )}
@@ -361,7 +365,10 @@ export const CharacterStatus: React.FC<{
 
           {compact && (
             <div className="status-buffs-container compact-buffs-container">
-              <BuffsDisplay temporaryStats={allTemporaryStats} />
+              <BuffsDisplay
+                temporaryStats={allTemporaryStats}
+                onModifierHover={(modifier) => onBuffHover?.(modifier.source)}
+              />
             </div>
           )}
 
@@ -399,7 +406,10 @@ export const CharacterStatus: React.FC<{
 
         {!compact && (
           <div className="status-buffs-container">
-            <BuffsDisplay temporaryStats={allTemporaryStats} />
+            <BuffsDisplay
+              temporaryStats={allTemporaryStats}
+              onModifierHover={(modifier) => onBuffHover?.(modifier.source)}
+            />
           </div>
         )}
       </div>

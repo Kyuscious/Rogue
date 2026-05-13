@@ -23,16 +23,50 @@ import { ScreenTitle } from './shared/ScreenTitle';
 import { getQuestById, normalizeEncounterEnemyIds } from './screens/QuestSelect/logic';
 import { resolveEnemyIdByRegion, getEnemyById } from './shared/regions';
 import { Character, Region } from '@game/types';
-import { updatePlayTime, incrementBattlesWon, visitRegion, getActiveProfile } from './screens/MainMenu/Profiles/profileSystem';
+import { updatePlayTime, incrementBattlesWon, visitRegion, getActiveProfile, markHardRegionCompleted } from './screens/MainMenu/Profiles/profileSystem';
 import { loadRegionAssets, unloadRegionAssets } from '@utils/assetLoader';
 import { getActiveFamiliarIds, initializeFamiliarState } from './entity/Player/familiars';
 import { EntityInspectPanel, EntityInspectTarget } from '@entities/shared';
-import { getAvailableDestinations } from './screens/PostRegionChoice/regionGraph';
+import { getAvailableDestinations, getRegionTier } from './screens/PostRegionChoice/regionGraph';
+import { ARTIFACT_DATABASE } from '@data/artifacts';
+import {
+  hasSeenEliteRewardTutorial,
+  hasSeenEliteTutorial,
+  hasSeenRegionTravelTutorial,
+  markEliteRewardTutorialSeen,
+  markEliteTutorialSeen,
+  markRegionTravelTutorialSeen,
+  markTutorialCompleted,
+  markTutorialFullySkipped,
+  markTutorialIntroSeen,
+  resetTutorialReplayFlags,
+  resolveTutorialStageForScene,
+  shouldStartFirstTimeTutorial,
+  type TutorialStage,
+} from './tutorial/tutorialProgress';
+import { CUSTOM_TUTORIAL_RUN_CONFIG, shouldStartCustomTutorialRun } from './tutorial/tutorialRunConfig';
 import './App.css';
 
 type GameScene = 'disclaimer' | 'login' | 'mainMenu' | 'profiles' | 'index' | 'pregame' | 'preTestSetup' | 'quest' | 'shop' | 'battle' | 'testBattle' | 'regionSelection' | 'postRegionAction' | 'loading';
-type TutorialStage = 'none' | 'pregame' | 'quest' | 'battle' | 'battleLoot' | 'battleElite' | 'eliteReward' | 'regionTravel' | 'shop';
 type QuestTutorialFocus = 'header' | 'path' | 'mechanics' | 'stats' | null;
+type TutorialCheckpointStatus = 'complete' | 'current' | 'pending';
+
+interface TutorialCheckpointItem {
+  id: string;
+  label: string;
+  status: TutorialCheckpointStatus;
+}
+
+type TutorialBattleAction = {
+  type: 'spell' | 'attack' | 'item' | 'move' | 'inspect';
+  spellId?: string;
+  weaponId?: string;
+  itemId?: string;
+  distance?: number;
+  targetId?: string;
+  attackTurn?: boolean;
+  viaBuffHover?: boolean;
+};
 
 interface ResetConfirmModalProps {
   isOpen: boolean;
@@ -174,10 +208,26 @@ export const App: React.FC = () => {
   const [showBattleActionPrompt, setShowBattleActionPrompt] = useState(false);
   const [showEliteRewardPrompt, setShowEliteRewardPrompt] = useState(false);
   const [questTutorialFocus, setQuestTutorialFocus] = useState<QuestTutorialFocus>(null);
+  const [isCustomTutorialRunActive, setIsCustomTutorialRunActive] = useState(false);
+  const [tutorialFightStep, setTutorialFightStep] = useState<'spell' | 'attack' | 'finish' | null>(null);
+  const [tutorialFightIntroStep, setTutorialFightIntroStep] = useState<0 | 1 | 2 | null>(null);
+  const [tutorialSecondFightStep, setTutorialSecondFightStep] = useState<'potion' | 'inspect' | 'move' | 'melee' | 'finish' | null>(null);
+  const [tutorialSecondFightPrepared, setTutorialSecondFightPrepared] = useState(false);
+  const [tutorialThirdFightStep, setTutorialThirdFightStep] = useState<'inspect-first' | 'ward' | 'inspect-reveal' | 'purify' | 'finish' | null>(null);
+  const [tutorialThirdFightPrepared, setTutorialThirdFightPrepared] = useState(false);
+  const [tutorialRewardBriefingDone, setTutorialRewardBriefingDone] = useState(false);
   const [appInspectOpen, setAppInspectOpen] = useState(false);
   const [appInspectTargetId, setAppInspectTargetId] = useState<string | null>(null);
 
   const activeFamiliarIds = useMemo(() => getActiveFamiliarIds(state.familiars), [state.familiars]);
+  const activeArtifactIds = state.activeArtifacts ?? [];
+  const activeArtifactDetails = useMemo(
+    () =>
+      activeArtifactIds
+        .map((artifactId) => ARTIFACT_DATABASE[artifactId])
+        .filter((artifact): artifact is NonNullable<typeof artifact> => Boolean(artifact)),
+    [activeArtifactIds]
+  );
 
   const appInspectContext = scene === 'quest' ? 'quest' : scene === 'regionSelection' ? 'region' : 'generic';
   const appInspectTargets = useMemo<EntityInspectTarget[]>(() => {
@@ -210,70 +260,20 @@ export const App: React.FC = () => {
     setAppInspectOpen(true);
   };
 
-  const getTutorialStorageKey = (profileId: number) => `tutorialCompleted_profile_${profileId}`;
-  const getEliteTutorialStorageKey = (profileId: number) => `eliteTutorialSeen_profile_${profileId}`;
-  const getEliteRewardTutorialStorageKey = (profileId: number) => `eliteRewardTutorialSeen_profile_${profileId}`;
-  const getRegionTravelTutorialStorageKey = (profileId: number) => `regionTravelTutorialSeen_profile_${profileId}`;
-
-  const shouldStartFirstTimeTutorial = () => {
-    const profile = getActiveProfile();
-    const hasCompletedTutorial = localStorage.getItem(getTutorialStorageKey(profile.id)) === 'true';
-    const hasNeverPlayed = profile.stats.hoursPlayed <= 0;
-    return hasNeverPlayed && !hasCompletedTutorial;
-  };
-
-  const markTutorialCompleted = (completed: boolean) => {
-    const profile = getActiveProfile();
-    localStorage.setItem(getTutorialStorageKey(profile.id), completed ? 'true' : 'false');
-  };
-
-  const hasSeenEliteTutorial = () => {
-    const profile = getActiveProfile();
-    return localStorage.getItem(getEliteTutorialStorageKey(profile.id)) === 'true';
-  };
-
-  const markEliteTutorialSeen = (seen: boolean) => {
-    const profile = getActiveProfile();
-    localStorage.setItem(getEliteTutorialStorageKey(profile.id), seen ? 'true' : 'false');
-  };
-
-  const hasSeenEliteRewardTutorial = () => {
-    const profile = getActiveProfile();
-    return localStorage.getItem(getEliteRewardTutorialStorageKey(profile.id)) === 'true';
-  };
-
-  const markEliteRewardTutorialSeen = (seen: boolean) => {
-    const profile = getActiveProfile();
-    localStorage.setItem(getEliteRewardTutorialStorageKey(profile.id), seen ? 'true' : 'false');
-  };
-
-  const hasSeenRegionTravelTutorial = () => {
-    const profile = getActiveProfile();
-    return localStorage.getItem(getRegionTravelTutorialStorageKey(profile.id)) === 'true';
-  };
-
-  const markRegionTravelTutorialSeen = (seen: boolean) => {
-    const profile = getActiveProfile();
-    localStorage.setItem(getRegionTravelTutorialStorageKey(profile.id), seen ? 'true' : 'false');
-  };
-
   const startTutorialFromStage = (stage: Exclude<TutorialStage, 'none'>) => {
-    markTutorialCompleted(false);
-    markEliteTutorialSeen(false);
-    markEliteRewardTutorialSeen(false);
-    markRegionTravelTutorialSeen(false);
+    const profile = getActiveProfile();
+    resetTutorialReplayFlags(profile.id);
     setSceneTutorialStep(0);
     setTutorialStage(stage);
     if (stage === 'pregame') {
+      markTutorialIntroSeen(profile.id, true);
       setScene('pregame');
     }
   };
 
   const handleTutorialSkipAnytime = () => {
-    markTutorialCompleted(true);
-    markEliteTutorialSeen(true);
-    markEliteRewardTutorialSeen(true);
-    markRegionTravelTutorialSeen(true);
+    const profile = getActiveProfile();
+    markTutorialFullySkipped(profile.id);
     setSceneTutorialStep(0);
     setShowBattleActionPrompt(false);
     setShowEliteRewardPrompt(false);
@@ -284,23 +284,14 @@ export const App: React.FC = () => {
   };
 
   const handleReenableTutorial = () => {
-    if (scene === 'quest') {
-      startTutorialFromStage('quest');
+    if (scene === 'pregame') {
+      const profile = getActiveProfile();
+      resetTutorialReplayFlags(profile.id);
+      markTutorialIntroSeen(profile.id, true);
+      startCustomTutorialRun('dorans_blade');
       return;
     }
-    if (scene === 'battle') {
-      startTutorialFromStage('battle');
-      return;
-    }
-    if (scene === 'shop') {
-      startTutorialFromStage('shop');
-      return;
-    }
-    if (scene === 'regionSelection') {
-      startTutorialFromStage('regionTravel');
-      return;
-    }
-    startTutorialFromStage('pregame');
+    startTutorialFromStage(resolveTutorialStageForScene(scene));
   };
 
   // Apply theme settings on mount to prevent extension interference
@@ -386,12 +377,16 @@ export const App: React.FC = () => {
   };
 
   const handleMainMenuStart = () => {
-    if (shouldStartFirstTimeTutorial()) {
-      setTutorialStage('pregame');
-      setSceneTutorialStep(0);
-    } else {
-      setTutorialStage('none');
+    const profile = getActiveProfile();
+
+    if (shouldStartFirstTimeTutorial(profile)) {
+      markTutorialIntroSeen(profile.id, true);
+      if (startCustomTutorialRun('dorans_blade')) {
+        return;
+      }
     }
+
+    setTutorialStage('none');
     setScene('pregame');
   };
 
@@ -407,15 +402,64 @@ export const App: React.FC = () => {
     useGameStore.getState().toggleSettings();
   };
 
+  const startCustomTutorialRun = (startingItemId: string) => {
+    const tutorialEncounterQueue = CUSTOM_TUTORIAL_RUN_CONFIG.encounterEnemyIds
+      .map((encounterEnemyIds) => encounterEnemyIds
+        .map((enemyId) => getEnemyById(enemyId))
+        .filter((enemy): enemy is typeof enemy & {} => enemy !== undefined)
+      )
+      .filter((encounter) => encounter.length > 0);
+
+    if (tutorialEncounterQueue.length === 0) {
+      return false;
+    }
+
+    selectRegion(CUSTOM_TUTORIAL_RUN_CONFIG.region);
+    selectStartingItem(startingItemId);
+    visitRegion(CUSTOM_TUTORIAL_RUN_CONFIG.region);
+
+    useGameStore.setState((prev) => ({
+      state: {
+        ...prev.state,
+        inventory: [{ itemId: startingItemId, quantity: 1 }],
+        spells: ['for_demacia', 'rejuvenation', 'purify'],
+        weapons: ['demacian_steel_blade', 'spirit_tree_bow'],
+      },
+    }));
+
+    setIsCustomTutorialRunActive(true);
+    setTutorialFightIntroStep(0);
+    setTutorialFightStep('spell');
+    setTutorialSecondFightStep(null);
+    setTutorialSecondFightPrepared(false);
+    setTutorialThirdFightStep(null);
+    setTutorialThirdFightPrepared(false);
+    setTutorialRewardBriefingDone(false);
+    setTutorialStage('battle');
+    setSceneTutorialStep(0);
+    startBattle(tutorialEncounterQueue);
+    setScene('battle');
+    return true;
+  };
+
   const handlePreGameSetup = (region: string, itemId: string) => {
-    selectRegion(region as any);
+    const customTutorialStart = shouldStartCustomTutorialRun(tutorialStage);
+
+    if (customTutorialStart && startCustomTutorialRun(itemId)) {
+      return;
+    }
+
+    const startingRegion = customTutorialStart ? CUSTOM_TUTORIAL_RUN_CONFIG.region : (region as Region);
+
+    selectRegion(startingRegion);
     selectStartingItem(itemId);
     // Track that we've visited this region for unlock progress
-    visitRegion(region);
-    // Add 3 health potions to help start the run
+    visitRegion(startingRegion);
+
+    // Normal run: add starting consumables
     addInventoryItem({ itemId: 'health_potion', quantity: 3 });
-    // Add 1 stealth ward for vision control
     addInventoryItem({ itemId: 'stealth_ward', quantity: 1 });
+
     setScene('quest');
   };
 
@@ -434,6 +478,114 @@ export const App: React.FC = () => {
     setTutorialStage('battle');
     setSceneTutorialStep(0);
     setQuestTutorialFocus(null);
+  };
+
+  const isCustomTutorialFirstFight = isCustomTutorialRunActive && scene === 'battle' && state.currentFloor <= 1;
+  const isCustomTutorialSecondFight = isCustomTutorialRunActive && scene === 'battle' && state.currentFloor === 2;
+  const isCustomTutorialThirdFight = isCustomTutorialRunActive && scene === 'battle' && state.currentFloor === 3;
+  const isCustomTutorialRewardBriefingPending = isCustomTutorialRunActive && scene === 'battle' && state.currentFloor === 1 && !tutorialRewardBriefingDone;
+
+  const tutorialCheckpointItems = useMemo<TutorialCheckpointItem[]>(() => {
+    if (tutorialStage === 'none') return [];
+
+    if (tutorialStage === 'battleElite') {
+      return [{ id: 'elite-intro', label: 'Elite encounter intro', status: 'current' }];
+    }
+
+    if (tutorialStage === 'eliteReward') {
+      return [{ id: 'elite-reward', label: 'Elite reward tutorial', status: 'current' }];
+    }
+
+    if (tutorialStage === 'regionTravel') {
+      return [{ id: 'region-travel', label: 'Region travel tutorial', status: 'current' }];
+    }
+
+    const stageOrder: Array<Exclude<TutorialStage, 'none' | 'battleElite' | 'eliteReward' | 'regionTravel'>> = [
+      'pregame',
+      'quest',
+      'battle',
+      'battleLoot',
+      'shop',
+    ];
+
+    const currentStageIndex = stageOrder.indexOf(tutorialStage as (typeof stageOrder)[number]);
+
+    const getStageStatus = (
+      targetStage: (typeof stageOrder)[number],
+      targetIndex: number
+    ): TutorialCheckpointStatus => {
+      if (currentStageIndex > targetIndex) return 'complete';
+      if (tutorialStage === targetStage) return 'current';
+      return 'pending';
+    };
+
+    const battleActionStatus: TutorialCheckpointStatus =
+      tutorialStage === 'battleLoot' || tutorialStage === 'shop'
+        ? 'complete'
+        : tutorialStage === 'battle' && sceneTutorialStep >= 11 && showBattleActionPrompt
+          ? 'current'
+          : tutorialStage === 'battle' && sceneTutorialStep >= 11
+            ? 'complete'
+            : 'pending';
+
+    return [
+      { id: 'setup', label: 'Setup basics', status: getStageStatus('pregame', 0) },
+      { id: 'quest', label: 'Quest screen basics', status: getStageStatus('quest', 1) },
+      { id: 'battle', label: 'Battle basics', status: getStageStatus('battle', 2) },
+      { id: 'forced-action', label: 'Use a spell or item', status: battleActionStatus },
+      {
+        id: 'loot',
+        label: 'Loot and reward summary',
+        status: tutorialStage === 'shop' ? 'complete' : tutorialStage === 'battleLoot' ? 'current' : 'pending',
+      },
+      { id: 'shop', label: 'Shop basics', status: tutorialStage === 'shop' ? 'current' : 'pending' },
+    ];
+  }, [tutorialStage, sceneTutorialStep, showBattleActionPrompt]);
+
+  const renderTutorialCheckpointBadge = () => {
+    if (tutorialStage === 'none') return null;
+
+    if (isCustomTutorialRunActive || tutorialStage === 'battleLoot') {
+      let label: string;
+      if (scene === 'battle') {
+        if (isCustomTutorialFirstFight && tutorialFightIntroStep !== null) label = 'Listen to Ryze';
+        else if (tutorialFightStep === 'spell') label = 'Cast for_demacia 0/1';
+        else if (tutorialFightStep === 'attack') label = 'Attack with spirit_tree_bow 0/1';
+        else if (tutorialFightStep === 'finish') label = 'Finish the fight';
+        else if (isCustomTutorialRewardBriefingPending) label = 'Listen to Ryze: Rewards';
+        else if (isCustomTutorialSecondFight && tutorialSecondFightStep === 'potion') label = 'Use health_potion 0/1';
+        else if (isCustomTutorialSecondFight && tutorialSecondFightStep === 'inspect') label = 'Hover enemy buff to inspect it';
+        else if (isCustomTutorialSecondFight && tutorialSecondFightStep === 'move') label = 'Move closer to the enemy';
+        else if (isCustomTutorialSecondFight && tutorialSecondFightStep === 'melee') label = 'Melee attack with demacian_steel_blade 0/1';
+        else if (isCustomTutorialThirdFight && tutorialThirdFightStep === null) label = 'Inspect Teemo: Guerilla Warfare + Blowgun + Blinding Dart';
+        else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'inspect-first') label = 'Inspect Teemo: Guerilla Warfare + Blowgun + Blinding Dart';
+        else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'ward') label = 'Use stealth_ward 0/1';
+        else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'inspect-reveal') label = 'Inspect again to verify reveal';
+        else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'purify') label = 'Use Purify to cleanse Poison';
+        else label = 'Finish the fight';
+      } else if (tutorialStage === 'battleLoot') {
+        label = 'Review your loot';
+      } else if (tutorialStage === 'shop') {
+        label = 'Visit the shop';
+      } else {
+        label = 'Continue';
+      }
+      return (
+        <span className="tutorial-checkpoint-badge" title="Tutorial task">
+          🎓 {label}
+        </span>
+      );
+    }
+
+    if (tutorialCheckpointItems.length === 0) return null;
+    const current = tutorialCheckpointItems.find((c) => c.status === 'current') ?? tutorialCheckpointItems[0];
+    const doneCount = tutorialCheckpointItems.filter((c) => c.status === 'complete').length;
+    const total = tutorialCheckpointItems.length;
+    return (
+      <span className="tutorial-checkpoint-badge" title={`Tutorial progress: ${doneCount}/${total} steps done`}>
+        🎓 {current.label}
+      </span>
+    );
   };
 
   const getSceneTutorialSteps = () => {
@@ -491,10 +643,10 @@ export const App: React.FC = () => {
       if (tutorialStage === 'battle') {
         setTutorialStage('shop');
       } else if (tutorialStage === 'battleElite') {
-        markEliteTutorialSeen(true);
+        markEliteTutorialSeen(getActiveProfile().id, true);
         setTutorialStage('none');
       } else if (tutorialStage === 'shop') {
-        markTutorialCompleted(true);
+        markTutorialCompleted(getActiveProfile().id, true);
         setTutorialStage('none');
       }
       setSceneTutorialStep(0);
@@ -504,9 +656,63 @@ export const App: React.FC = () => {
     setSceneTutorialStep(prev => prev + 1);
   };
 
-  const handleBattleTutorialActionUsed = () => {
-    if (scene !== 'battle' || tutorialStage !== 'battle') return;
+  const handleBattleTutorialActionUsed = (action: TutorialBattleAction) => {
+    if (scene !== 'battle') return;
 
+    if (isCustomTutorialRunActive) {
+      const resolvedSpellId = action.spellId ?? state.spells[state.equippedSpellIndex];
+
+      // Be resilient to stale intro state: if the required first cast happened, advance anyway.
+      if (isCustomTutorialFirstFight && tutorialFightStep === 'spell' && action.type === 'spell' && resolvedSpellId === 'for_demacia') {
+        if (tutorialFightIntroStep !== null) {
+          setTutorialFightIntroStep(null);
+        }
+        setTutorialFightStep('attack');
+        return;
+      }
+
+      if (tutorialFightIntroStep !== null) return;
+
+      if (isCustomTutorialFirstFight && tutorialFightStep === 'attack' && action.type === 'attack' && action.weaponId === 'spirit_tree_bow') {
+        setTutorialFightStep('finish');
+      } else if (isCustomTutorialSecondFight && tutorialSecondFightStep === 'potion') {
+        if (action.type === 'item' && action.itemId === 'health_potion') {
+          setTutorialSecondFightStep('inspect');
+        }
+      } else if (isCustomTutorialSecondFight && tutorialSecondFightStep === 'inspect' && action.type === 'inspect') {
+        const isEnemyTarget = Boolean(action.targetId && action.targetId !== 'player-main' && !action.targetId.startsWith('familiar-'));
+        // Accept enemy inspect interactions from either buff hover or opening inspect panel.
+        if (isEnemyTarget) {
+          setTutorialSecondFightStep('move');
+        }
+      } else if (isCustomTutorialSecondFight && tutorialSecondFightStep === 'move' && action.type === 'move') {
+        setTutorialSecondFightStep('melee');
+      } else if (
+        isCustomTutorialSecondFight &&
+        tutorialSecondFightStep === 'melee' &&
+        action.type === 'attack' &&
+        action.weaponId === 'demacian_steel_blade'
+      ) {
+        setTutorialSecondFightStep('finish');
+      } else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'inspect-first' && action.type === 'inspect') {
+        const isEnemyTarget = Boolean(action.targetId && action.targetId !== 'player-main' && !action.targetId.startsWith('familiar-'));
+        if (isEnemyTarget) {
+          setTutorialThirdFightStep('ward');
+        }
+      } else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'ward' && action.type === 'item' && action.itemId === 'stealth_ward') {
+        setTutorialThirdFightStep('inspect-reveal');
+      } else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'inspect-reveal' && action.type === 'inspect') {
+        const isEnemyTarget = Boolean(action.targetId && action.targetId !== 'player-main' && !action.targetId.startsWith('familiar-'));
+        if (isEnemyTarget) {
+          setTutorialThirdFightStep('purify');
+        }
+      } else if (isCustomTutorialThirdFight && tutorialThirdFightStep === 'purify' && action.type === 'spell' && resolvedSpellId === 'purify') {
+        setTutorialThirdFightStep('finish');
+      }
+      return;
+    }
+
+    if (tutorialStage !== 'battle') return;
     if (sceneTutorialStep >= 11) {
       setShowBattleActionPrompt(false);
       setTutorialStage('battleLoot');
@@ -515,6 +721,19 @@ export const App: React.FC = () => {
   };
 
   const handleBattleLootTutorialComplete = () => {
+    if (isCustomTutorialRunActive && state.currentFloor === 1 && !tutorialRewardBriefingDone) {
+      setTutorialRewardBriefingDone(true);
+      setTutorialSecondFightStep('potion');
+      setTutorialSecondFightPrepared(false);
+      return;
+    }
+
+    if (isCustomTutorialRunActive && state.currentFloor === 2) {
+      setTutorialThirdFightStep('inspect-first');
+      setTutorialThirdFightPrepared(false);
+      return;
+    }
+
     if (tutorialStage === 'battleLoot') {
       setTutorialStage('shop');
     }
@@ -523,7 +742,7 @@ export const App: React.FC = () => {
   const handleEliteRewardTutorialTrigger = () => {
     if (scene !== 'battle') return;
     if (tutorialStage !== 'none') return;
-    if (hasSeenEliteRewardTutorial()) return;
+    if (hasSeenEliteRewardTutorial(getActiveProfile().id)) return;
 
     setTutorialStage('eliteReward');
     setSceneTutorialStep(0);
@@ -533,7 +752,7 @@ export const App: React.FC = () => {
     setShowEliteRewardPrompt(false);
 
     if (tutorialStage === 'eliteReward') {
-      markEliteRewardTutorialSeen(true);
+      markEliteRewardTutorialSeen(getActiveProfile().id, true);
       setTutorialStage('none');
       setSceneTutorialStep(0);
     }
@@ -541,7 +760,7 @@ export const App: React.FC = () => {
 
   const handleRegionTravelTutorialComplete = () => {
     if (tutorialStage === 'regionTravel') {
-      markRegionTravelTutorialSeen(true);
+      markRegionTravelTutorialSeen(getActiveProfile().id, true);
       setTutorialStage('none');
       setSceneTutorialStep(0);
     }
@@ -552,6 +771,80 @@ export const App: React.FC = () => {
       setSceneTutorialStep(0);
     }
   }, [scene, tutorialStage]);
+
+  useEffect(() => {
+    if (!isCustomTutorialFirstFight) {
+      setTutorialFightIntroStep(null);
+      if (tutorialFightStep === 'finish') {
+        setTutorialFightStep(null);
+      }
+    }
+  }, [isCustomTutorialFirstFight, tutorialFightStep]);
+
+  useEffect(() => {
+    if (!isCustomTutorialSecondFight) return;
+    if (tutorialSecondFightPrepared) return;
+
+    useGameStore.setState((prev) => {
+      const maxHealth = Math.max(1, Math.round(prev.state.playerCharacter.stats.health));
+      const targetHp = Math.max(1, Math.floor(maxHealth * 0.5));
+      return {
+        state: {
+          ...prev.state,
+          inventory: [{ itemId: 'health_potion', quantity: 2 }],
+          spellCooldowns: {},
+          playerCharacter: {
+            ...prev.state.playerCharacter,
+            hp: targetHp,
+          },
+        },
+      };
+    });
+
+    setTutorialSecondFightPrepared(true);
+  }, [isCustomTutorialSecondFight, tutorialSecondFightPrepared]);
+
+  useEffect(() => {
+    if (!isCustomTutorialThirdFight) return;
+    if (tutorialThirdFightPrepared) return;
+
+    useGameStore.setState((prev) => {
+      const maxHealth = Math.max(1, Math.round(prev.state.playerCharacter.stats.health));
+      return {
+        state: {
+          ...prev.state,
+          inventory: [
+            { itemId: 'health_potion', quantity: 3 },
+            { itemId: 'stealth_ward', quantity: 1 },
+            { itemId: 'oracle_lens', quantity: 1 },
+          ],
+          spellCooldowns: {},
+          playerCharacter: {
+            ...prev.state.playerCharacter,
+            hp: maxHealth,
+          },
+          enemyCharacters: prev.state.enemyCharacters.map((enemy) => ({
+            ...enemy,
+            inventory: [],
+            enemyLoadout: enemy.enemyLoadout
+              ? {
+                  ...enemy.enemyLoadout,
+                  items: [],
+                }
+              : enemy.enemyLoadout,
+          })),
+        },
+      };
+    });
+
+    setTutorialThirdFightPrepared(true);
+  }, [isCustomTutorialThirdFight, tutorialThirdFightPrepared]);
+
+  useEffect(() => {
+    if (!isCustomTutorialThirdFight) return;
+    if (tutorialThirdFightStep !== null) return;
+    setTutorialThirdFightStep('inspect-first');
+  }, [isCustomTutorialThirdFight, tutorialThirdFightStep]);
 
   useEffect(() => {
     if (scene !== 'battle' || tutorialStage !== 'battle') {
@@ -567,7 +860,7 @@ export const App: React.FC = () => {
     if (scene !== 'battle') return;
     if (tutorialStage !== 'none') return;
     if (state.currentFloor !== 5) return;
-    if (hasSeenEliteTutorial()) return;
+    if (hasSeenEliteTutorial(getActiveProfile().id)) return;
 
     setTutorialStage('battleElite');
     setSceneTutorialStep(0);
@@ -577,13 +870,49 @@ export const App: React.FC = () => {
     if (scene !== 'regionSelection') return;
     if (tutorialStage !== 'none') return;
     if (!state.completedRegion) return;
-    if (hasSeenRegionTravelTutorial()) return;
+    if (hasSeenRegionTravelTutorial(getActiveProfile().id)) return;
 
     setTutorialStage('regionTravel');
     setSceneTutorialStep(0);
   }, [scene, tutorialStage, state.completedRegion]);
 
   const renderSceneTutorialOverlay = () => {
+    if (isCustomTutorialFirstFight && tutorialFightIntroStep !== null) {
+      const introText =
+        tutorialFightIntroStep === 0
+          ? 'Ryze: This side is your team. You can see your health, your stats, and what abilities are ready.'
+          : tutorialFightIntroStep === 1
+            ? 'Ryze: And this is the enemy you have encountered. Watch their health — reduce it to zero to win.'
+            : 'Ryze: This timeline shows whose turn it is. When it\'s your turn, you can attack or cast a spell. Then the enemy gets their turn. Repeat until one side falls.';
+
+      return (
+        <>
+          <div className="scene-tutorial-overlay" />
+          <div className="scene-tutorial-dialogue-box">
+            <button className="scene-tutorial-skip-top-btn" onClick={handleTutorialSkipAnytime}>
+              {t.tutorial.skip}
+            </button>
+            <div className="scene-tutorial-character">🧙</div>
+            <div className="scene-tutorial-content">
+              <p className="scene-tutorial-speaker-name">Ryze</p>
+              <p className="scene-tutorial-text">{introText}</p>
+              <div className="scene-tutorial-actions">
+                <button
+                  className="scene-tutorial-action-btn"
+                  onClick={() => setTutorialFightIntroStep((prev) => (prev === 0 ? 1 : prev === 1 ? 2 : null))}
+                >
+                  {tutorialFightIntroStep === 2 ? t.common.confirm : t.common.continue}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    // Keep custom run narration handled by objective-based tutorial, not generic step-through.
+    if (isCustomTutorialRunActive) return null;
+
     const steps = getSceneTutorialSteps();
     if (steps.length === 0) return null;
 
@@ -699,7 +1028,19 @@ export const App: React.FC = () => {
 
   // Handle completing a quest (10 fights) and moving to region selection
   const handleQuestComplete = () => {
+    if (isCustomTutorialRunActive) {
+      setIsCustomTutorialRunActive(false);
+      setTutorialStage('shop');
+      setSceneTutorialStep(0);
+      setScene('shop');
+      return;
+    }
+
     if (!state.selectedRegion) return;
+
+    if (getRegionTier(state.selectedRegion) === 'hard') {
+      markHardRegionCompleted(state.selectedRegion);
+    }
     
     // Mark the completed quest path
     if (state.selectedQuest) {
@@ -907,6 +1248,11 @@ export const App: React.FC = () => {
           onTutorialComplete={handlePreGameTutorialComplete}
           onTutorialSkip={handleTutorialSkipAnytime}
         />
+        {tutorialStage !== 'none' && (
+          <div className="tutorial-checkpoint-badge-fixed">
+            {renderTutorialCheckpointBadge()}
+          </div>
+        )}
         <SettingsScreen />
       </div>
     );
@@ -948,7 +1294,28 @@ export const App: React.FC = () => {
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
-            <button className="btn-settings" onClick={handleReenableTutorial} title={t.tutorial.reenable}>
+            <div className="artifact-header-button-wrap">
+              <button
+                className="btn-artifacts"
+                title="Active artifacts"
+                type="button"
+              >
+                ◈ {activeArtifactDetails.length}
+              </button>
+              {activeArtifactDetails.length > 0 && (
+                <div className="artifact-header-tooltip" role="tooltip">
+                  <p className="artifact-tooltip-title">Active Modificators</p>
+                  {activeArtifactDetails.map((artifact) => (
+                    <div key={artifact.id} className="artifact-tooltip-entry">
+                      <div className="artifact-tooltip-name">{artifact.name}</div>
+                      <div className="artifact-tooltip-effect">{artifact.description}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {renderTutorialCheckpointBadge()}
+            <button className={`btn-settings btn-tutorial-toggle ${tutorialStage !== 'none' ? 'active' : ''}`} onClick={handleReenableTutorial} title={t.tutorial.reenable}>
               ❔
             </button>
             <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title="Settings">
@@ -1074,7 +1441,8 @@ export const App: React.FC = () => {
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
-            <button className="btn-settings" onClick={handleReenableTutorial} title={t.tutorial.reenable}>
+            {renderTutorialCheckpointBadge()}
+            <button className={`btn-settings btn-tutorial-toggle ${tutorialStage !== 'none' ? 'active' : ''}`} onClick={handleReenableTutorial} title={t.tutorial.reenable}>
               ❔
             </button>
             <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>
@@ -1110,7 +1478,7 @@ export const App: React.FC = () => {
     const isBattleActionPromptActive =
       tutorialStage === 'battle' && scene === 'battle' && sceneTutorialStep === 11 && showBattleActionPrompt;
 
-    const battleTutorialFocus = tutorialStage === 'battle' && scene === 'battle'
+    const battleTutorialFocus = !isCustomTutorialRunActive && tutorialStage === 'battle' && scene === 'battle'
       ? (isBattleActionPromptActive
           ? null
           : sceneTutorialStep === 0
@@ -1138,6 +1506,28 @@ export const App: React.FC = () => {
                               : 'cast')
       : null;
 
+    const tutorialBattleGate: 'locked' | 'spell-only' | 'attack-only' | 'inspect-only' | 'item-only' | 'move-only' | 'heal-only' | 'finish-no-move-item' | null =
+      isCustomTutorialRunActive && scene === 'battle'
+        ? isCustomTutorialFirstFight && tutorialFightIntroStep !== null
+          ? 'locked'
+          : tutorialFightStep === 'spell'
+            ? 'spell-only'
+            : tutorialFightStep === 'attack'
+              ? 'attack-only'
+              : tutorialFightStep === 'finish'
+                ? 'finish-no-move-item'
+                : null
+        : null;
+
+    const tutorialLaneHighlight: 'player-lane' | 'enemy-lane' | 'timeline' | null =
+      isCustomTutorialFirstFight && tutorialFightIntroStep !== null
+        ? tutorialFightIntroStep === 0
+          ? 'player-lane'
+          : tutorialFightIntroStep === 1
+            ? 'enemy-lane'
+            : 'timeline'
+        : null;
+
     return (
       <div className="game-wrapper">
         <div className="ui-header">
@@ -1151,7 +1541,8 @@ export const App: React.FC = () => {
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
-            <button className="btn-settings" onClick={handleReenableTutorial} title={t.tutorial.reenable}>
+            {renderTutorialCheckpointBadge()}
+            <button className={`btn-settings btn-tutorial-toggle ${tutorialStage !== 'none' ? 'active' : ''}`} onClick={handleReenableTutorial} title={t.tutorial.reenable}>
               ❔
             </button>
             <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>
@@ -1162,17 +1553,36 @@ export const App: React.FC = () => {
             </button>
           </div>
         </div>
+
         <Battle
           onBack={() => setScene('pregame')}
           onQuestComplete={handleQuestComplete}
           tutorialFocus={battleTutorialFocus}
           tutorialActionPromptActive={isBattleActionPromptActive}
+          tutorialGate={tutorialBattleGate}
+          tutorialLaneHighlight={tutorialLaneHighlight}
+          playerStartPosition={isCustomTutorialSecondFight ? 90 : undefined}
+          enemyStartPosition={isCustomTutorialFirstFight || isCustomTutorialSecondFight ? -90 : undefined}
           eliteRewardTutorialEnabled={tutorialStage === 'eliteReward'}
           onEliteRewardTutorialTrigger={handleEliteRewardTutorialTrigger}
           onEliteRewardTutorialComplete={handleEliteRewardTutorialComplete}
           onTutorialActionUsed={handleBattleTutorialActionUsed}
-          lootTutorialEnabled={tutorialStage === 'battleLoot'}
+          tutorialSecondFightStep={isCustomTutorialSecondFight ? tutorialSecondFightStep : null}
+          tutorialThirdFightStep={isCustomTutorialThirdFight ? tutorialThirdFightStep : null}
+          lootTutorialEnabled={tutorialStage === 'battleLoot' || isCustomTutorialRewardBriefingPending}
+          lootTutorialTextOverride={isCustomTutorialRewardBriefingPending ? 'Ryze: Rewards are your power spikes. Pick what helps the next fight most, then we continue.' : undefined}
           onLootTutorialComplete={handleBattleLootTutorialComplete}
+          disableEnemyFlee={isCustomTutorialRunActive}
+          tutorialRewardItems={undefined}
+          forcedLootItem={
+            isCustomTutorialRunActive && state.currentFloor === 1
+              ? { itemId: 'glowing_mote', quantity: 1 }
+              : isCustomTutorialRunActive && state.currentFloor === 2
+              ? { itemId: 'heartbound_axe', quantity: 1 }
+              : isCustomTutorialRunActive && state.currentFloor === 3
+              ? null
+              : undefined
+          }
         />
 
         {renderSceneTutorialOverlay()}
@@ -1252,7 +1662,8 @@ export const App: React.FC = () => {
             <span>🎲 Rerolls: {state.rerolls}</span>
           </div>
           <div className="header-actions">
-            <button className="btn-settings" onClick={handleReenableTutorial} title={t.tutorial.reenable}>
+            {renderTutorialCheckpointBadge()}
+            <button className={`btn-settings btn-tutorial-toggle ${tutorialStage !== 'none' ? 'active' : ''}`} onClick={handleReenableTutorial} title={t.tutorial.reenable}>
               ❔
             </button>
             <button className="btn-settings" onClick={() => useGameStore.getState().toggleSettings()} title={t.uiHeader.settings}>

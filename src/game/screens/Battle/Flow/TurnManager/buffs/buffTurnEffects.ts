@@ -1,14 +1,18 @@
 import { computeBuffDisplayValues, decayBuffStacks, type CombatBuff } from '@utils/itemSystem';
+import { calculateMagicDamage } from '@utils/statsSystem';
 
 interface PlayerTurnBuffParams {
   playerName: string;
   playerHp: number;
   playerMaxHp: number;
   playerHealthRegen: number;
+  playerMagicResist: number;
   playerBuffs: CombatBuff[];
+  playerDebuffs: CombatBuff[];
   turnCounter: number;
   updatePlayerHp: (hp: number) => void;
   setPlayerBuffs: (updater: (prev: CombatBuff[]) => CombatBuff[]) => void;
+  setPlayerDebuffs: (updater: (prev: CombatBuff[]) => CombatBuff[]) => void;
   statusTurnLineParts: string[];
   statusTurnLineTooltips: string[];
 }
@@ -36,10 +40,13 @@ export function applyPlayerTurnBuffAndRegenEffects(params: PlayerTurnBuffParams)
     playerHp,
     playerMaxHp,
     playerHealthRegen,
+    playerMagicResist,
     playerBuffs,
+    playerDebuffs,
     turnCounter,
     updatePlayerHp,
     setPlayerBuffs,
+    setPlayerDebuffs,
     statusTurnLineParts,
     statusTurnLineTooltips,
   } = params;
@@ -79,6 +86,24 @@ export function applyPlayerTurnBuffAndRegenEffects(params: PlayerTurnBuffParams)
 
   if (playerBuffs.length > 0) {
     setPlayerBuffs((prevBuffs) => decayBuffStacks(prevBuffs, turnCounter));
+  }
+
+  if (playerDebuffs.length > 0 && playerHp > 0) {
+    const poisonDebuff = playerDebuffs.find((d) => d.id === 'blowgun_poison');
+    if (poisonDebuff) {
+      const { totalAmount } = computeBuffDisplayValues(poisonDebuff, turnCounter);
+      const magicDamageBeforeMitigation = Math.max(1, Math.floor(totalAmount));
+      const damageAmount = calculateMagicDamage(magicDamageBeforeMitigation, playerMagicResist || 0, 0);
+      const newPlayerHp = Math.max(0, playerHp - damageAmount);
+      const actualDamage = playerHp - newPlayerHp;
+      if (actualDamage > 0) {
+        updatePlayerHp(newPlayerHp);
+        statusTurnLineParts.push(`☠️ ${playerName} -${actualDamage}`);
+        statusTurnLineTooltips.push(`${playerName} took ${actualDamage} magic damage from Poison.`);
+      }
+    }
+
+    setPlayerDebuffs((prevDebuffs) => decayBuffStacks(prevDebuffs, turnCounter));
   }
 }
 

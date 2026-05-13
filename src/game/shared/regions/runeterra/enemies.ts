@@ -7,6 +7,28 @@ import { DEFAULT_STATS } from '@utils/statsSystem';
 // Generic minion-tier enemies (bandits, mercenaries, wild creatures)
 export const RUNETERRA_MINIONS: Character[] = [
   {
+    id: 'runeterra_tutorial_creep',
+    name: 'Creep',
+    role: 'enemy',
+    class: 'skirmisher',
+    region: 'runeterra',
+    tier: 'minion',
+    faction: 'none',
+    hp: 36,
+    abilities: [],
+    level: 1,
+    experience: 0,
+    stats: {
+      ...DEFAULT_STATS,
+      health: 36,
+      attackDamage: 4,
+      abilityPower: 10,
+      armor: 4,
+      movementSpeed: 135,
+      speed: 0.55,
+    },
+  },
+  {
     id: 'runeterra_bandit',
     name: 'Runeterra Bandit',
     role: 'enemy',
@@ -115,6 +137,29 @@ export const RUNETERRA_MINIONS: Character[] = [
 
 // Elite-tier enemies
 export const RUNETERRA_ELITES: Character[] = [
+  {
+    id: 'runeterra_tutorial_poro',
+    name: 'Poro',
+    role: 'enemy',
+    class: 'enchanter',
+    region: 'runeterra',
+    tier: 'elite',
+    faction: 'poro',
+    passiveAbilities: ['Small Target'],
+    hp: 82,
+    abilities: [],
+    level: 2,
+    experience: 0,
+    stats: {
+      ...DEFAULT_STATS,
+      health: 82,
+      attackDamage: 14,
+      abilityPower: 16,
+      armor: 10,
+      magicResist: 12,
+      speed: 0.58,
+    },
+  },
   {
     id: 'runeterra_elder_dragon',
     name: 'Elder Dragon',

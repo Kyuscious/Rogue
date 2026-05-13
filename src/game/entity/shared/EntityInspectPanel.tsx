@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Character } from '@game/types';
+import { Character, InventoryItem } from '@game/types';
 import { CharacterStats } from '@utils/statsSystem';
 import { useGameStore } from '@game/store';
 import { getCharacterName, getSpellName, getWeaponName } from '../../../i18n/helpers';
@@ -62,6 +62,7 @@ const STAT_ABBREV: Partial<Record<string, string>> = {
   omnivamp: 'OV',
   tenacity: 'Ten',
   haste: 'Haste',
+  magicDamage: 'MagicDmg',
   heal_shield_power: 'HSP',
   magicFind: 'MF',
   goldGain: 'Gold',
@@ -103,8 +104,12 @@ const formatValue = (stat: keyof CharacterStats, value: number): string => {
 const mapBuffsToRows = (buffs: CombatBuff[] = [], turnCounter = 0, isDebuff = false): string[] => {
   return buffs.map((buff) => {
     const { totalAmount, maxDuration } = computeBuffDisplayValues(buff, turnCounter);
-    const sign = totalAmount > 0 ? '+' : '';
     const duration = buff.isInfinite ? 'inf' : `${Math.max(0, maxDuration)}t`;
+    if (buff.isPassiveTrait) {
+      const icon = buff.icon ? `${buff.icon} ` : '';
+      return `${icon}Passive: ${buff.name} (${duration})`;
+    }
+    const sign = totalAmount > 0 ? '+' : '';
     return `${isDebuff ? 'Debuff' : 'Buff'}: ${buff.name} (${sign}${totalAmount.toFixed(1)} ${buff.stat}, ${duration}, x${buff.stacks.length})`;
   });
 };
@@ -148,6 +153,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
   if (!isOpen || !activeTarget) return null;
 
   const canReveal = activeTarget.kind === 'familiar' || activeTarget.isRevealed !== false;
+  const hideSensitiveIntel = activeTarget.kind === 'character' && activeTarget.character?.role === 'enemy' && !canReveal;
   const isCharacter = activeTarget.kind === 'character' && activeTarget.character;
   const isFamiliar = activeTarget.kind === 'familiar' && activeTarget.familiarId;
 
@@ -162,7 +168,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
     ? (character.characterArt || (character.role === 'player' ? '/assets/global/images/player/miko1.png' : undefined))
     : undefined;
   const title = isCharacter
-    ? `${character?.role === 'enemy' ? 'Enemy' : 'Player'} Inspect: ${canReveal ? characterName : 'Unknown Target'}`
+    ? `${character?.role === 'enemy' ? 'Enemy' : 'Player'} Inspect: ${characterName || 'Unknown Target'}`
     : `Familiar Inspect: ${familiar?.name || 'Unknown Familiar'}`;
 
   const loadout = character
@@ -177,18 +183,33 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
         })
     : null;
 
-  const equippedItems = character
-    ? (character.role === 'player' ? state.inventory : (character.inventory || []))
+  const equippedItems: InventoryItem[] = character
+    ? (character.role === 'player'
+      ? state.inventory
+      : (() => {
+          const merged = new Map<string, number>();
+          (character.inventory || []).forEach((entry) => {
+            merged.set(entry.itemId, (merged.get(entry.itemId) || 0) + entry.quantity);
+          });
+          const loadoutItems = (character.enemyLoadout || getDefaultEnemyLoadout()).items || [];
+          loadoutItems.forEach((itemId) => {
+            merged.set(itemId, (merged.get(itemId) || 0) + 1);
+          });
+          return Array.from(merged.entries()).map(([itemId, quantity]) => ({ itemId, quantity }));
+        })())
     : [];
 
   const passiveLines = character
-    ? (character.role === 'player'
-      ? getPassiveIdsFromInventory(state.inventory).map((passiveId) => formatLabel(passiveId))
-      : (character.inventory || [])
-          .flatMap((entry) => {
-            const passiveId = getItemById(entry.itemId)?.passiveId;
-            return passiveId ? [formatLabel(passiveId)] : [];
-          }))
+    ? [
+        ...(character.role === 'player'
+          ? getPassiveIdsFromInventory(state.inventory).map((passiveId) => formatLabel(passiveId))
+          : equippedItems
+              .flatMap((entry) => {
+                const passiveId = getItemById(entry.itemId)?.passiveId;
+                return passiveId ? [formatLabel(passiveId)] : [];
+              })),
+        ...(character.passiveAbilities ?? []),
+      ]
     : [];
 
   const classBonuses = character ? getClassStatBonuses(character.class, character.level) : null;
@@ -229,9 +250,9 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                   </div>
                 )}
                 <div className="inspect-identity-info">
-                  <h3>{canReveal ? characterName : 'Unknown Enemy'}</h3>
+                  <h3>{characterName || 'Unknown Enemy'}</h3>
                   <p>{formatLabel(character!.tier || character!.role)}</p>
-                  {character!.role === 'enemy' && <p>Faction: {canReveal ? formatLabel(character!.faction || 'unknown') : '???'}</p>}
+                  {character!.role === 'enemy' && <p>Faction: {formatLabel(character!.faction || 'unknown')}</p>}
                   {character!.role === 'player' && <p>Faction: N/A</p>}
                   {character!.region && <p>Region: {formatLabel(character!.region)}</p>}
                 </div>
@@ -262,18 +283,18 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                 <div className="inspect-hp-block">
                   <span className="inspect-hp-label">HP</span>
                   <span className="inspect-hp-value">
-                    {canReveal ? `${Math.max(0, Math.round(character.hp))} / ${Math.max(1, Math.round(character.stats.health))}` : '??? / ???'}
+                    {`${Math.max(0, Math.round(character.hp))} / ${Math.max(1, Math.round(character.stats.health))}`}
                   </span>
                   <div className="inspect-hp-bar-track">
                     <div
                       className="inspect-hp-bar-fill"
-                      style={{ width: canReveal ? `${Math.max(0, Math.min(100, (character.hp / Math.max(1, character.stats.health)) * 100))}%` : '0%' }}
+                      style={{ width: `${Math.max(0, Math.min(100, (character.hp / Math.max(1, character.stats.health)) * 100))}%` }}
                     />
                   </div>
                 </div>
 
                 <div className="inspect-class-line">
-                  {canReveal && classBonuses ? (
+                  {!hideSensitiveIntel && classBonuses ? (
                     <span className="inspect-class-chips">
                       <span className="inspect-class-name">{PRETTY_CLASS[character!.class] || formatLabel(character!.class)}</span>
                       {Object.entries(classBonuses)
@@ -293,7 +314,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                   character={character}
                   combatBuffs={activeTarget.combatBuffs}
                   combatDebuffs={activeTarget.combatDebuffs}
-                  isRevealed={canReveal}
+                  isRevealed={!hideSensitiveIntel}
                   turnCounter={activeTarget.turnCounter}
                   detailedView
                 />
@@ -304,7 +325,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                     {[...buffRows, ...debuffRows].length > 0 ? (
                       <div className="inspect-stack-list">
                         {[...buffRows, ...debuffRows].map((line) => (
-                          <div key={line} className="inspect-stack-row">{canReveal ? line : 'Hidden'}</div>
+                          <div key={line} className="inspect-stack-row">{line}</div>
                         ))}
                       </div>
                     ) : (
@@ -350,16 +371,34 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
             <h4>Loadout</h4>
             {isCharacter && character && loadout ? (
               <>
-                <div className="inspect-loadout-group">
+                <div className="inspect-loadout-group inspect-loadout-icon-group">
                   <h5>Weapons</h5>
                   {loadout.weapons.length > 0 ? (
                     loadout.weapons.map((weaponId, index) => {
                       const weapon = getWeaponById(weaponId);
                       return (
-                        <div key={`${weaponId}-${index}`} className="inspect-loadout-row">
-                          <span>{canReveal ? getWeaponName({ id: weaponId, name: weapon?.name }) : '???'}</span>
-                          {index === loadout.equippedWeaponIndex && <span className="inspect-equipped-chip">Equipped</span>}
-                          {weapon?.cooldown ? <span className="inspect-cooldown-chip">CD {weapon.cooldown}</span> : null}
+                        <div key={`${weaponId}-${index}`} className={`inspect-loadout-slot rarity-${weapon?.rarity || 'common'}`}>
+                          {!hideSensitiveIntel && weapon?.imagePath ? (
+                            <img src={weapon.imagePath} alt={weapon.name || weaponId} className="inspect-loadout-icon-image" />
+                          ) : (
+                            <span className="inspect-loadout-icon-fallback">{hideSensitiveIntel ? '?' : 'W'}</span>
+                          )}
+                          {weapon?.cooldown ? <span className="inspect-loadout-cooldown">CD {weapon.cooldown}</span> : null}
+                          <div className="inspect-loadout-hovercard">
+                            <div className="inspect-loadout-hover-title">
+                              {!hideSensitiveIntel ? getWeaponName({ id: weaponId, name: weapon?.name }) : 'Hidden Intel'}
+                            </div>
+                            {!hideSensitiveIntel && weapon?.description ? (
+                              <p className="inspect-loadout-hover-description">{weapon.description}</p>
+                            ) : null}
+                            {!hideSensitiveIntel && weapon?.effects?.length ? (
+                              <div className="inspect-loadout-hover-effects">
+                                {weapon.effects.map((eff, effIdx) => (
+                                  <p key={effIdx} className="inspect-loadout-hover-effect">{eff.description}</p>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       );
                     })
@@ -368,16 +407,34 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                   )}
                 </div>
 
-                <div className="inspect-loadout-group">
+                <div className="inspect-loadout-group inspect-loadout-icon-group">
                   <h5>Spells</h5>
                   {loadout.spells.length > 0 ? (
                     loadout.spells.map((spellId, index) => {
                       const spell = getSpellById(spellId);
                       return (
-                        <div key={`${spellId}-${index}`} className="inspect-loadout-row">
-                          <span>{canReveal ? getSpellName({ id: spellId, name: spell?.name }) : '???'}</span>
-                          {index === loadout.equippedSpellIndex && <span className="inspect-equipped-chip">Equipped</span>}
-                          {spell?.cooldown ? <span className="inspect-cooldown-chip">CD {spell.cooldown}</span> : null}
+                        <div key={`${spellId}-${index}`} className={`inspect-loadout-slot rarity-${spell?.rarity || 'common'}`}>
+                          {!hideSensitiveIntel && spell?.imagePath ? (
+                            <img src={spell.imagePath} alt={spell.name || spellId} className="inspect-loadout-icon-image" />
+                          ) : (
+                            <span className="inspect-loadout-icon-fallback">{hideSensitiveIntel ? '?' : 'S'}</span>
+                          )}
+                          {spell?.cooldown ? <span className="inspect-loadout-cooldown">CD {spell.cooldown}</span> : null}
+                          <div className="inspect-loadout-hovercard">
+                            <div className="inspect-loadout-hover-title">
+                              {!hideSensitiveIntel ? getSpellName({ id: spellId, name: spell?.name }) : 'Hidden Intel'}
+                            </div>
+                            {!hideSensitiveIntel && spell?.description ? (
+                              <p className="inspect-loadout-hover-description">{spell.description}</p>
+                            ) : null}
+                            {!hideSensitiveIntel && spell?.effects?.length ? (
+                              <div className="inspect-loadout-hover-effects">
+                                {spell.effects.map((eff, effIdx) => (
+                                  <p key={effIdx} className="inspect-loadout-hover-effect">{eff.description}</p>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       );
                     })
@@ -386,15 +443,30 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                   )}
                 </div>
 
-                <div className="inspect-loadout-group">
+                <div className="inspect-loadout-group inspect-loadout-icon-group">
                   <h5>Consumables</h5>
                   {loadout.items.length > 0 ? (
                     loadout.items.map((itemId, index) => {
                       const item = getItemById(itemId);
                       return (
-                        <div key={`${itemId}-${index}`} className="inspect-loadout-row">
-                          <span>{canReveal ? (item?.name || itemId) : '???'}</span>
-                          {item?.active?.cooldown ? <span className="inspect-cooldown-chip">CD {item.active.cooldown}</span> : null}
+                        <div key={`${itemId}-${index}`} className={`inspect-loadout-slot rarity-${item?.rarity || 'common'}`}>
+                          {!hideSensitiveIntel && item?.imagePath ? (
+                            <img src={item.imagePath} alt={item.name || itemId} className="inspect-loadout-icon-image" />
+                          ) : (
+                            <span className="inspect-loadout-icon-fallback">{hideSensitiveIntel ? '?' : 'I'}</span>
+                          )}
+                          {item?.active?.cooldown ? <span className="inspect-loadout-cooldown">CD {item.active.cooldown}</span> : null}
+                          <div className="inspect-loadout-hovercard">
+                            <div className="inspect-loadout-hover-title">
+                              {!hideSensitiveIntel ? (item?.name || itemId) : 'Hidden Intel'}
+                            </div>
+                            {!hideSensitiveIntel && item?.description ? (
+                              <p className="inspect-loadout-hover-description">{item.description}</p>
+                            ) : null}
+                            {!hideSensitiveIntel && item?.active?.description ? (
+                              <p className="inspect-loadout-hover-effect">{item.active.description}</p>
+                            ) : null}
+                          </div>
                         </div>
                       );
                     })
@@ -406,7 +478,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
                 <div className="inspect-loadout-group">
                   <h5>Passives</h5>
                   {passiveLines.length > 0 ? (
-                    passiveLines.map((passive) => <div key={passive} className="inspect-loadout-row"><span>{canReveal ? passive : '???'}</span></div>)
+                    passiveLines.map((passive) => <div key={passive} className="inspect-loadout-row"><span>{!hideSensitiveIntel ? passive : '???'}</span></div>)
                   ) : (
                     <p className="inspect-obscured-copy">No passive entries.</p>
                   )}
@@ -425,7 +497,7 @@ export const EntityInspectPanel: React.FC<EntityInspectPanelProps> = ({
         <div className="entity-inspect-footer">
           <ItemsBar
             inventory={equippedItems}
-            isRevealed={canReveal}
+            isRevealed={!hideSensitiveIntel}
           />
         </div>
 

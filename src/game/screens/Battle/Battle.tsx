@@ -8,6 +8,7 @@ import { BattleLogPanel } from './log/BattleLogPanel';
 import { useBattleLog } from './log/useBattleLog';
 import { runTurnManager } from './Flow/TurnManager';
 import { getScaledStats, calculatePhysicalDamage, calculateMagicDamage, rollCriticalStrike, calculateCriticalDamage } from '@utils/statsSystem';
+import { getArtifactDamageMultiplier } from '@data/artifacts';
 import { getPassiveIdsFromInventory } from '@data/items';
 import { calculateOnHitEffects, applyOnHitEffects, formatOnHitEffects } from '@battle/logic/onHitEffects';
 import { calculateCCDuration } from '@battle/logic/crowdControlSystem';
@@ -38,7 +39,7 @@ import { discoverEnemy, discoverFamiliar, discoverSpell, discoverWeapon, increme
 import { useTranslation } from '../../../hooks/useTranslation';
 import { ItemBar, SpellSelector, WeaponSelector } from './selectors';
 import { BattleSummary } from './summary';
-import { getWeaponById } from '@data/weapons';
+import { getWeaponById, getWeaponAttackType } from '@data/weapons';
 import { getSpellById } from '@data/spells';
 import { mergePlayerEquipmentStats } from '../../entity/Player/playerStats';
 import { Character, InventoryItem } from '@game/types';
@@ -64,17 +65,43 @@ import { getDefaultSpellTargetingProfile, getDefaultWeaponTargetingProfile } fro
 import { resolveEnemyDefeat, resolvePlayerDefeat } from './Flow/Resolver';
 import './Battle.css';
 
+// Passive buff automatically applied to all poro-faction units
+const PORO_TOO_SMALL_BUFF: CombatBuff = {
+  id: 'too_small_to_hit',
+  name: 'Small Target',
+  stat: 'xpGain', // cosmetic only — isPassiveTrait=true suppresses numeric display
+  stacks: [{ addedTime: 0, expiresAtTurn: 99999, effectAmount: 0, stackId: 'poro_passive_trait' }],
+  isInfinite: true,
+  isPassiveTrait: true,
+  icon: '🐾',
+};
+
+const GUERILLA_WARFARE_INVISIBLE_BUFF_ID = 'guerilla_warfare_invisible';
+const GUERILLA_WARFARE_HASTE_BUFF_ID = 'guerilla_warfare_haste';
+const BLOWGUN_POISON_DEBUFF_ID = 'blowgun_poison';
+const BLIND_DEBUFF_ID = 'blind';
+
 interface BattleProps {
   onBack?: () => void;
   onQuestComplete?: () => void;
   tutorialFocus?: 'battle' | 'enemy' | 'turns-battlefield' | 'turns-timeline' | 'turns-log' | 'actions' | 'speed' | 'speed-move' | 'speed-attack' | 'haste' | 'haste-item' | 'cast' | null;
   tutorialActionPromptActive?: boolean;
+  tutorialGate?: 'locked' | 'spell-only' | 'attack-only' | 'inspect-only' | 'item-only' | 'move-only' | 'heal-only' | 'finish-no-move-item' | null;
+  tutorialLaneHighlight?: 'player-lane' | 'enemy-lane' | 'timeline' | null;
+  playerStartPosition?: number;
+  enemyStartPosition?: number;
   eliteRewardTutorialEnabled?: boolean;
   onEliteRewardTutorialTrigger?: () => void;
   onEliteRewardTutorialComplete?: () => void;
-  onTutorialActionUsed?: () => void;
+  onTutorialActionUsed?: (action: { type: 'spell' | 'attack' | 'item' | 'move' | 'inspect'; spellId?: string; weaponId?: string; itemId?: string; distance?: number; targetId?: string; attackTurn?: boolean; viaBuffHover?: boolean }) => void;
+  tutorialSecondFightStep?: 'potion' | 'inspect' | 'move' | 'melee' | 'finish' | null;
+  tutorialThirdFightStep?: 'inspect-first' | 'ward' | 'inspect-reveal' | 'purify' | 'finish' | null;
   lootTutorialEnabled?: boolean;
+  lootTutorialTextOverride?: string;
   onLootTutorialComplete?: () => void;
+  disableEnemyFlee?: boolean; // Tutorial: prevent enemies from fleeing the battlefield
+  tutorialRewardItems?: InventoryItem[]; // Tutorial: fixed reward pool instead of random generation
+  forcedLootItem?: InventoryItem | null; // Tutorial: replace the random direct item drop (null = no drop)
 }
 
 export const Battle: React.FC<BattleProps> = ({
@@ -82,16 +109,27 @@ export const Battle: React.FC<BattleProps> = ({
   onQuestComplete,
   tutorialFocus = null,
   tutorialActionPromptActive = false,
+  tutorialGate = null,
+  tutorialLaneHighlight = null,
+  playerStartPosition = PLAYER_START_POSITION,
+  enemyStartPosition = ENEMY_START_POSITION,
   eliteRewardTutorialEnabled = false,
   onEliteRewardTutorialTrigger,
   onEliteRewardTutorialComplete,
   onTutorialActionUsed,
+  tutorialSecondFightStep = null,
+  tutorialThirdFightStep = null,
   lootTutorialEnabled = false,
+  lootTutorialTextOverride,
   onLootTutorialComplete,
+  disableEnemyFlee = false,
+  tutorialRewardItems,
+  forcedLootItem,
 }) => {
   const t = useTranslation();
   const store = useGameStore();
   const state = store.state;
+  const artifactDamageMultiplier = getArtifactDamageMultiplier(state.activeArtifacts ?? []);
   const { updateEnemyHp, updatePlayerHp, addInventoryItem, addWeapon, addSpell, addFamiliar, addGold, startBattle, consumeInventoryItem, addExperience, useReroll, updateMaxAbilityPower, setCompletedRegion, revealEnemy, decayRevealedEnemies, updatePersistentBuff, incrementEncounterCount, updateFamiliarHp } = store;
   const playerName = state.username;
   const [playerTurnDone, setPlayerTurnDone] = useState(false);
@@ -132,7 +170,7 @@ export const Battle: React.FC<BattleProps> = ({
   const [inspectTargetId, setInspectTargetId] = useState<string | null>(null);
 
   // Movement and range system
-  const [playerPosition, setPlayerPosition] = useState(PLAYER_START_POSITION);
+  const [playerPosition, setPlayerPosition] = useState(playerStartPosition);
   const [enemyPositionsById, setEnemyPositionsById] = useState<Record<string, number>>({});
 
   const playerChar = state.playerCharacter;
@@ -173,7 +211,7 @@ export const Battle: React.FC<BattleProps> = ({
   const POSITION_STEP = 10;
   const COLLISION_DISTANCE = 9;
 
-  const getDefaultEnemySpawnPosition = (index: number): number => ENEMY_START_POSITION + index * POSITION_STEP;
+  const getDefaultEnemySpawnPosition = (index: number): number => enemyStartPosition + index * POSITION_STEP;
 
   const getEnemyPositionById = (instanceId: string, fallbackIndex: number): number => {
     return enemyPositionsById[instanceId] ?? getDefaultEnemySpawnPosition(fallbackIndex);
@@ -375,11 +413,24 @@ export const Battle: React.FC<BattleProps> = ({
     setSelectedEnemyTargetId(defaultEnemyTargetId);
     setEnemyBuffsById({});
     setEnemyDebuffsById({}); // Reset enemy debuffs for new encounter
+
+    // Auto-apply faction passives — poro-faction units get "Small Target" on spawn
+    const initialFactionBuffs: Record<string, CombatBuff[]> = {};
+    state.enemyCharacters.forEach((enemy, idx) => {
+      const instanceId = getCharacterInstanceId(enemy, idx);
+      if (enemy.faction?.toLowerCase() === 'poro') {
+        initialFactionBuffs[instanceId] = [{ ...PORO_TOO_SMALL_BUFF }];
+      }
+    });
+    if (Object.keys(initialFactionBuffs).length > 0) {
+      setEnemyBuffsById(initialFactionBuffs);
+    }
     
     // CRITICAL FIX FOR BUFF DURATION EXTENDING BETWEEN ENCOUNTERS:
     // Reset playerBuffs to only persistent buffs (clear temporary buffs from previous fight)
     // This prevents old buffs with old expiresAtTurn values from showing extended durations
     setPlayerBuffs(state.persistentBuffs || []);
+    setPlayerDebuffs([]);
     
     // Initialize manaflow buff if player has the passive but no buff exists yet
     const hasManaflowPassive = playerPassiveIds.includes('manaflow');
@@ -433,9 +484,9 @@ export const Battle: React.FC<BattleProps> = ({
       occupiedSpawnPositions.push(resolvedSpawn);
     });
 
-    setPlayerPosition(PLAYER_START_POSITION);
+    setPlayerPosition(playerStartPosition);
     setEnemyPositionsById(nextEnemyPositions);
-  }, [activeEnemyInstanceId, defaultEnemyTargetId, playerChar.level, playerChar.class, state.currentFloor]);
+  }, [activeEnemyInstanceId, defaultEnemyTargetId, playerChar.level, playerChar.class, state.currentFloor, playerStartPosition, enemyStartPosition]);
 
   // Initialize battle log
   const encounterNumber = state.encountersCompleted + 1;
@@ -452,6 +503,7 @@ export const Battle: React.FC<BattleProps> = ({
     const persistentBuffs = state.persistentBuffs || [];
     return [...persistentBuffs];
   });
+  const [playerDebuffs, setPlayerDebuffs] = useState<CombatBuff[]>([]);
 
   // Track active buffs and debuffs on enemies by battle instance
   const [enemyBuffsById, setEnemyBuffsById] = useState<Record<string, CombatBuff[]>>({});
@@ -460,6 +512,17 @@ export const Battle: React.FC<BattleProps> = ({
   const enemyDebuffs = enemyDebuffsById[activeEnemyInstanceId] || [];
   const selectedEnemyBuffs = enemyBuffsById[selectedEnemyInstanceId] || [];
   const selectedEnemyDebuffs = enemyDebuffsById[selectedEnemyInstanceId] || [];
+
+  const hasActiveStacks = (buff: CombatBuff): boolean => {
+    if (buff.isInfinite) return true;
+    if (buff.stacks.length === 0) return false;
+    return buff.stacks.some((stack) => stack.expiresAtTurn >= turnCounter);
+  };
+
+  const isEnemyInvisible = (targetId: string): boolean => {
+    const buffs = enemyBuffsById[targetId] || [];
+    return buffs.some((buff) => buff.id === GUERILLA_WARFARE_INVISIBLE_BUFF_ID && hasActiveStacks(buff));
+  };
 
   const updateEnemyBuffsForId = (targetId: string, updater: (prev: CombatBuff[]) => CombatBuff[]) => {
     setEnemyBuffsById((prev) => ({
@@ -547,6 +610,8 @@ export const Battle: React.FC<BattleProps> = ({
     highestDamageTakenSource: 'attack' as 'attack' | 'spell',
   });
   const [showSummary, setShowSummary] = useState(false);
+  const [firstFightPromptStep, setFirstFightPromptStep] = useState<'none' | 'after-shield' | 'attack-instruction' | 'after-attack' | 'finish-instruction'>('none');
+  const [secondFightPromptStep, setSecondFightPromptStep] = useState<'none' | 'after-potion'>('none');
   const [showLootTutorialPrompt, setShowLootTutorialPrompt] = useState(false);
   const [summaryRewards, setSummaryRewards] = useState<{
     gold: number;
@@ -612,11 +677,11 @@ export const Battle: React.FC<BattleProps> = ({
       return;
     }
 
-    const escapedEnemy = state.enemyCharacters.find((enemy, index) => {
+    const escapedEnemy = !disableEnemyFlee ? state.enemyCharacters.find((enemy, index) => {
       if (enemy.hp <= 0) return false;
       const instanceId = getCharacterInstanceId(enemy, index);
       return isOutsideBattlefield(getEnemyPositionById(instanceId, index));
-    });
+    }) : undefined;
 
     if (escapedEnemy) {
       const remainingEnemies = state.originalEnemyQueue;
@@ -944,8 +1009,60 @@ export const Battle: React.FC<BattleProps> = ({
             enemyBuffsById[resolvedEnemyInstanceId] ?? [],
             enemyDebuffsById[resolvedEnemyInstanceId] ?? []
           );
+
+    const isDirectWeaponTarget = weaponTargeting.mode !== 'aoe' && weaponTargeting.targets.length === 1;
+    if (resolvedEnemyInstanceId && isDirectWeaponTarget && isEnemyInvisible(resolvedEnemyInstanceId)) {
+      appendLog(`[P1] ${playerChar.name} cannot directly target ${getCharacterName(resolvedEnemyChar)} while Invisible.`);
+      return;
+    }
     
     discoverWeapon(equippedWeaponId);
+
+    const blindDebuff = playerDebuffs.find((debuff) => debuff.id === BLIND_DEBUFF_ID);
+    if (blindDebuff && blindDebuff.stacks.length > 0) {
+      setPlayerDebuffs((prevDebuffs) => {
+        const currentBlind = prevDebuffs.find((debuff) => debuff.id === BLIND_DEBUFF_ID);
+        if (!currentBlind || currentBlind.stacks.length <= 1) {
+          return prevDebuffs.filter((debuff) => debuff.id !== BLIND_DEBUFF_ID);
+        }
+
+        return prevDebuffs.map((debuff) =>
+          debuff.id !== BLIND_DEBUFF_ID
+            ? debuff
+            : {
+                ...debuff,
+                stacks: debuff.stacks.slice(1),
+              }
+        );
+      });
+
+      appendLog(`[P1] ${playerChar.name} is Blinded and misses with ${equippedWeapon.name}!`);
+
+      if (equippedWeapon.cooldown && equippedWeapon.cooldown > 0) {
+        setWeaponCooldowns((prev) => ({ ...prev, [equippedWeaponId]: equippedWeapon.cooldown! + 1 }));
+      }
+
+      setSequenceIndex((prev) => prev + 1);
+      setTurnCounter((prev) => Math.ceil(prev + 1));
+      setPlayerTurnDone(true);
+      onTutorialActionUsed?.({ type: 'attack', weaponId: equippedWeaponId });
+      return;
+    }
+
+    // Poro faction passive: "Small Target" — long-range single-target attacks miss
+    const isRangedWeapon = getWeaponAttackType(equippedWeapon) === 'ranged';
+    const isSingleTargetAttack = weaponTargeting.targets.length === 1;
+    if (isRangedWeapon && isSingleTargetAttack && resolvedEnemyChar.faction?.toLowerCase() === 'poro') {
+      appendLog(`[P1] ${playerChar.name} fires ${equippedWeapon.name} at ${getCharacterName(resolvedEnemyChar)}... Missed! [Small Target: immune to long-range direct damage]`);
+      if (equippedWeapon.cooldown && equippedWeapon.cooldown > 0) {
+        setWeaponCooldowns((prev) => ({ ...prev, [equippedWeaponId]: equippedWeapon.cooldown! + 1 }));
+      }
+      setSequenceIndex((prev) => prev + 1);
+      setTurnCounter((prev) => Math.ceil(prev + 1));
+      setPlayerTurnDone(true);
+      onTutorialActionUsed?.({ type: 'attack', weaponId: equippedWeaponId });
+      return;
+    }
 
     // Calculate damage based on weapon effects
     let totalDamage = 0;
@@ -1009,9 +1126,9 @@ export const Battle: React.FC<BattleProps> = ({
         totalDamage += finalDamage;
         
         if (isCrit) {
-          logMessages.push({ message: `[P1] 💥 CRITICAL HIT! ${playerChar.name} attacks [E${resolvedEnemyIndex + 1}] ${getCharacterName(resolvedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `[P1] 💥 CRITICAL HIT! ${playerChar.name} attacks [E${resolvedEnemyIndex + 1}] ${getCharacterName(resolvedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage * artifactDamageMultiplier)} damage!` });
         } else {
-          logMessages.push({ message: `[P1] ${playerChar.name} attacks [E${resolvedEnemyIndex + 1}] ${getCharacterName(resolvedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `[P1] ${playerChar.name} attacks [E${resolvedEnemyIndex + 1}] ${getCharacterName(resolvedEnemyChar)} with ${equippedWeapon.name} for ${Math.round(finalDamage * artifactDamageMultiplier)} damage!` });
         }
       }
       
@@ -1030,6 +1147,10 @@ export const Battle: React.FC<BattleProps> = ({
         setPlayerPosition(newPosition);
         logMessages.push({ message: `[P1] ${playerChar.name} moves ${direction} by ${distance} units!` });
       }
+    }
+
+    if (totalDamage > 0) {
+      totalDamage *= artifactDamageMultiplier;
     }
     
     // Apply damage to all resolved targets (handles both single and AoE)
@@ -1218,6 +1339,10 @@ export const Battle: React.FC<BattleProps> = ({
       logMessages.push({ message: `${playerChar.name} attacked with ${equippedWeapon.name}.` });
     }
     appendEntries(logMessages);
+
+    if (isFirstTutorialFight && tutorialGate === 'attack-only' && equippedWeaponId === 'spirit_tree_bow') {
+      setFirstFightPromptStep('after-attack');
+    }
     
     // Apply weapon cooldown
     // TIMING MODEL: Cooldowns snap to next integer turn (same as spells)
@@ -1247,12 +1372,11 @@ export const Battle: React.FC<BattleProps> = ({
     }
     
     // Advance to next action in sequence
-    
-    // Advance to next action in sequence
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
-    
+    onTutorialActionUsed?.({ type: 'attack', weaponId: equippedWeaponId });
+
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
       setTurnSequence(generateMultiEntityTurnSequence(allTurnEntities, 20));
@@ -1335,6 +1459,16 @@ export const Battle: React.FC<BattleProps> = ({
     );
     const resolvedSpellDistance = Math.abs(playerPosition - resolvedSpellEnemyPosition);
 
+    const isDirectSpellTarget =
+      spellProfile.mode !== 'aoe' &&
+      spellProfile.mode !== 'self' &&
+      spellProfile.mode !== 'none' &&
+      Boolean(resolvedSpellEnemyTarget);
+    if (resolvedSpellEnemyTarget && isDirectSpellTarget && isEnemyInvisible(resolvedSpellEnemyInstanceId)) {
+      appendLog(`[P1] ${equippedSpell.name} cannot directly target ${getCharacterName(resolvedSpellEnemyChar)} while Invisible.`);
+      return;
+    }
+
     if (resolvedSpellEnemyTarget && resolvedSpellEnemyInstanceId !== selectedEnemyInstanceId) {
       setSelectedEnemyTargetId(resolvedSpellEnemyInstanceId);
     }
@@ -1387,7 +1521,7 @@ export const Battle: React.FC<BattleProps> = ({
         finalDamage += trueDamage;
         
         totalDamage += finalDamage;
-        logMessages.push({ message: `[P1] ${playerChar.name} casts ${equippedSpell.name} on [E${resolvedSpellEnemyIndex + 1}] ${getCharacterName(resolvedSpellEnemyChar)} for ${Math.round(finalDamage)} damage!` });
+        logMessages.push({ message: `[P1] ${playerChar.name} casts ${equippedSpell.name} on [E${resolvedSpellEnemyIndex + 1}] ${getCharacterName(resolvedSpellEnemyChar)} for ${Math.round(finalDamage * artifactDamageMultiplier)} damage!` });
       }
       
       if (effect.type === 'heal' && effect.healScaling) {
@@ -1567,6 +1701,20 @@ export const Battle: React.FC<BattleProps> = ({
           logMessages.push({ message: `🛡️ ${playerChar.name} gains +${adBonus} AD and ${buff.shieldAmount} shield for 2 turns!` });
         }
       }
+
+      if (effect.type === 'utility' && equippedSpell.id === 'purify') {
+        const removedDebuffCount = playerDebuffs.length;
+        if (removedDebuffCount > 0) {
+          setPlayerDebuffs(() => []);
+          logMessages.push({ message: `✨ ${playerChar.name} casts Purify and removes ${removedDebuffCount} debuff${removedDebuffCount > 1 ? 's' : ''}!` });
+        } else {
+          logMessages.push({ message: `✨ ${playerChar.name} casts Purify, but no debuffs were active.` });
+        }
+      }
+    }
+
+    if (totalDamage > 0) {
+      totalDamage *= artifactDamageMultiplier;
     }
     
     // Update enemy HP if damage was dealt
@@ -1633,6 +1781,10 @@ export const Battle: React.FC<BattleProps> = ({
       logMessages.push({ message: `${playerChar.name} cast ${equippedSpell.name}.` });
     }
     appendEntries(logMessages);
+
+    if (isFirstTutorialFight && tutorialGate === 'spell-only' && equippedSpellId === 'for_demacia') {
+      setFirstFightPromptStep('after-shield');
+    }
     
     // Update store with any changes made to playerChar (shields, effects, etc.)
     // Note: Do NOT include hp here since updatePlayerHp() already synced it to the store
@@ -1679,7 +1831,7 @@ export const Battle: React.FC<BattleProps> = ({
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
-    onTutorialActionUsed?.();
+    onTutorialActionUsed?.({ type: 'spell', spellId: equippedSpellId });
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
@@ -1717,6 +1869,7 @@ export const Battle: React.FC<BattleProps> = ({
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
+    onTutorialActionUsed?.({ type: 'move', distance: newDistance });
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
@@ -1727,6 +1880,28 @@ export const Battle: React.FC<BattleProps> = ({
 
   const handleUseItem = (itemId: string) => {
     if (!playerEntity || !enemyEntity) return;
+
+    // Teemo tutorial lock: Stealth Ward unlocks only on its explicit tutorial step.
+    if (isThirdTutorialFight && itemId === 'stealth_ward') {
+      const stealthWardAllowed = tutorialThirdFightStep === 'ward';
+      if (!stealthWardAllowed) {
+        appendLog('Tutorial: Stealth Ward is locked until the next instruction.');
+        return;
+      }
+    }
+
+    // Teemo tutorial lock: Oracle Lens only works while Teemo is actually invisible.
+    // Block it at all other times so the player can't waste it before Guerilla Warfare fires.
+    if (isThirdTutorialFight && itemId === 'oracle_lens') {
+      const anyEnemyInvisible = state.enemyCharacters.some((enemy, index) => {
+        const instanceId = getCharacterInstanceId(enemy, index);
+        return isEnemyInvisible(instanceId);
+      });
+      if (!anyEnemyInvisible) {
+        appendLog('Tutorial: Oracle Lens can only be used while Teemo is invisible.');
+        return;
+      }
+    }
     
     const item = getItemById(itemId);
     if (!item) return;
@@ -1769,6 +1944,27 @@ export const Battle: React.FC<BattleProps> = ({
       
       appendLog(`👁️ ${playerChar.name} placed a Control Ward! Enemy stats will be revealed for the next 3 encounters!`);
       
+      consumeInventoryItem(itemId);
+    } else if (itemId === 'oracle_lens') {
+      const revealedEnemies: string[] = [];
+      state.enemyCharacters.forEach((enemy, index) => {
+        const enemyInstanceId = getCharacterInstanceId(enemy, index);
+        const hasStealth = (enemyBuffsById[enemyInstanceId] || []).some(
+          (buff) => buff.id === GUERILLA_WARFARE_INVISIBLE_BUFF_ID
+        );
+        if (hasStealth) {
+          revealedEnemies.push(getCharacterName(enemy));
+          updateEnemyBuffsForId(enemyInstanceId, (prevBuffs) =>
+            prevBuffs.filter((buff) => buff.id !== GUERILLA_WARFARE_INVISIBLE_BUFF_ID)
+          );
+        }
+      });
+
+      if (revealedEnemies.length > 0) {
+        appendLog(`🔍 ${playerChar.name} used Oracle Lens! Revealed ${revealedEnemies.join(', ')}.`);
+      } else {
+        appendLog(`🔍 ${playerChar.name} used Oracle Lens! Hidden tricks are now exposed for upcoming actions.`);
+      }
       consumeInventoryItem(itemId);
     } else if (itemId === 'flashbomb_trap' && item.active) {
       // Handle flashbomb trap placement
@@ -1844,7 +2040,12 @@ export const Battle: React.FC<BattleProps> = ({
     setSequenceIndex((prev) => prev + 1);
     setTurnCounter((prev) => Math.ceil(prev + 1));
     setPlayerTurnDone(true);
-    onTutorialActionUsed?.();
+    onTutorialActionUsed?.({ type: 'item', itemId });
+
+    // Fight B: show review prompt after potion is used
+    if (isSecondTutorialFight && tutorialSecondFightStep === 'potion' && itemId === 'health_potion') {
+      setSecondFightPromptStep('after-potion');
+    }
     
     // Regenerate if needed
     if (sequenceIndex > turnSequence.length - 10) {
@@ -1994,11 +2195,38 @@ export const Battle: React.FC<BattleProps> = ({
       behaviorProfile,
       enemyLoadout,
       currentActionType: currentAction.actionType,
+      noFlee: disableEnemyFlee,
     };
     
     // Get AI decision
     const aiAction = decideEnemyAction(aiContext);
     let chosenEnemyTarget = chooseAutoTarget(playerTeamTargets) || playerTeamTargets[0];
+
+    const actedSpellId = aiAction.type === 'spell' ? enemyLoadout.spells[aiAction.spellIndex] : null;
+    const actingEnemyInvisible = isEnemyInvisible(actingEnemyInstanceId);
+    const shouldBreakStealth =
+      actingEnemyInvisible &&
+      aiAction.type !== 'item' &&
+      aiAction.type !== 'skip' &&
+      !(aiAction.type === 'spell' && actedSpellId === 'guerilla_warfare');
+
+    if (shouldBreakStealth) {
+      updateEnemyBuffsForId(actingEnemyInstanceId, (prevBuffs) => {
+        const withoutStealth = prevBuffs.filter((buff) => buff.id !== GUERILLA_WARFARE_INVISIBLE_BUFF_ID);
+        return addOrMergeBuffStack(
+          withoutStealth,
+          GUERILLA_WARFARE_HASTE_BUFF_ID,
+          'Ambush Rush',
+          'speed',
+          0.5,
+          2,
+          turnCounter,
+          'instant',
+          false
+        );
+      });
+      appendLog(`🫥 ${getCharacterName(actingEnemy)} breaks stealth and gains Ambush Rush (+0.5 attack speed for 2 turns).`);
+    }
 
     const resolveEnemyTargetSnapshot = (target = chosenEnemyTarget) => {
       const targetedFamiliar = target?.kind === 'familiar' ? getFamiliarById(target.baseId) : null;
@@ -2102,9 +2330,9 @@ export const Battle: React.FC<BattleProps> = ({
           totalDamage += finalDamage;
           
           if (isCrit) {
-            logMessages.push({ message: `💥 CRITICAL HIT! ${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage)} damage!` });
+            logMessages.push({ message: `💥 CRITICAL HIT! ${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage * artifactDamageMultiplier)} damage!` });
           } else {
-            logMessages.push({ message: `${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage)} damage!` });
+            logMessages.push({ message: `${getCharacterName(actingEnemy)} uses ${weapon.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage * artifactDamageMultiplier)} damage!` });
           }
         }
         
@@ -2128,6 +2356,10 @@ export const Battle: React.FC<BattleProps> = ({
           logMessages.push({ message: `${getCharacterName(actingEnemy)} dashes ${direction}!` });
         }
       }
+
+      if (totalDamage > 0) {
+        totalDamage *= artifactDamageMultiplier;
+      }
       
       // Apply damage to the chosen target
       if (totalDamage > 0) {
@@ -2138,6 +2370,41 @@ export const Battle: React.FC<BattleProps> = ({
         } else {
           const damageResult = applyDamageWithShield(playerChar, totalDamage);
           updatePlayerHp(playerChar.hp);
+
+          if (weaponId === 'blowgun' && playerChar.hp > 0) {
+            const poisonPerTurn = Math.max(1, Math.round((actingEnemyStats.abilityPower || 0) * 0.30));
+            setPlayerDebuffs((prevDebuffs) => {
+              const existingPoison = prevDebuffs.find((debuff) => debuff.id === BLOWGUN_POISON_DEBUFF_ID);
+              if (!existingPoison) {
+                logMessages.push({ message: `☠️ Blowgun Poison applied: ${poisonPerTurn} damage/turn for 3 turns.` });
+                return addOrMergeBuffStack(
+                  prevDebuffs,
+                  BLOWGUN_POISON_DEBUFF_ID,
+                  'Poison',
+                  'magicDamage',
+                  poisonPerTurn,
+                  3,
+                  turnCounter,
+                  'instant',
+                  false
+                );
+              }
+
+              logMessages.push({ message: `☠️ Blowgun Poison refreshed (duration reset to 3 turns).` });
+              return prevDebuffs.map((debuff) =>
+                debuff.id !== BLOWGUN_POISON_DEBUFF_ID
+                  ? debuff
+                  : {
+                      ...debuff,
+                      stacks: debuff.stacks.map((stack, stackIndex) => ({
+                        ...stack,
+                        effectAmount: stackIndex === 0 ? poisonPerTurn : stack.effectAmount,
+                        expiresAtTurn: turnCounter + 3,
+                      })),
+                    }
+              );
+            });
+          }
           
           // Track damage taken
           if (totalDamage > combatStats.highestDamageTaken) {
@@ -2191,15 +2458,17 @@ export const Battle: React.FC<BattleProps> = ({
         return;
       }
 
+      const enemySpellProfile = getDefaultSpellTargetingProfile(spell);
+      const isEnemySelfCast = enemySpellProfile.mode === 'self';
       const enemySpellTargeting = resolveActionTargeting({
         actorInstanceId: actingEnemyInstanceId,
         actorSide: 'enemy',
         actorPosition: actingEnemyPosition,
-        targets: playerTeamTargets,
+        targets: isEnemySelfCast ? enemyTargets : playerTeamTargets,
         profile: {
-          ...getDefaultSpellTargetingProfile(spell),
+          ...enemySpellProfile,
           selectionRule: 'auto-priority',
-          targetSide: 'player',
+          targetSide: isEnemySelfCast ? 'enemy' : 'player',
         },
       });
 
@@ -2277,7 +2546,7 @@ export const Battle: React.FC<BattleProps> = ({
           finalDamage += trueDamage;
           
           totalDamage += finalDamage;
-          logMessages.push({ message: `${getCharacterName(actingEnemy)} casts ${spell.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage)} damage!` });
+          logMessages.push({ message: `${getCharacterName(actingEnemy)} casts ${spell.name} on ${targetSnapshot.targetName} for ${Math.round(finalDamage * artifactDamageMultiplier)} damage!` });
         }
         
         if (effect.type === 'heal' && effect.healScaling) {
@@ -2319,6 +2588,44 @@ export const Battle: React.FC<BattleProps> = ({
 
           logMessages.push({ message: `🛡️ ${getCharacterName(actingEnemy)} gains +${adBonus} AD and ${buff.shieldAmount} shield for 2 turns!` });
         }
+
+        if (effect.type === 'buff' && spell.id === 'guerilla_warfare') {
+          updateEnemyBuffsForId(actingEnemyInstanceId, (prevBuffs) =>
+            addOrMergeBuffStack(
+              prevBuffs.filter((buff) => buff.id !== GUERILLA_WARFARE_INVISIBLE_BUFF_ID),
+              GUERILLA_WARFARE_INVISIBLE_BUFF_ID,
+              'Invisible',
+              'xpGain',
+              0,
+              99,
+              turnCounter,
+              'instant',
+              false
+            )
+          );
+          logMessages.push({ message: `🫥 ${getCharacterName(actingEnemy)} casts Guerilla Warfare and becomes Invisible.` });
+        }
+
+        if (effect.type === 'debuff' && spell.id === 'blinding_dart' && !targetSnapshot.targetedFamiliar) {
+          setPlayerDebuffs((prevDebuffs) =>
+            addOrMergeBuffStack(
+              prevDebuffs,
+              BLIND_DEBUFF_ID,
+              'Blind',
+              'xpGain',
+              0,
+              99,
+              turnCounter,
+              'instant',
+              false
+            )
+          );
+          logMessages.push({ message: `🌫️ ${targetSnapshot.targetName} is Blinded and will miss the next attack!` });
+        }
+      }
+
+      if (totalDamage > 0) {
+        totalDamage *= artifactDamageMultiplier;
       }
       
       // Apply damage to the chosen target
@@ -2649,6 +2956,7 @@ export const Battle: React.FC<BattleProps> = ({
       playerScaledStats,
       enemyScaledStats,
       playerBuffs,
+      playerDebuffs,
       enemyBuffs,
       enemyDebuffs,
       enemyBuffsById,
@@ -2664,6 +2972,7 @@ export const Battle: React.FC<BattleProps> = ({
       updateEnemyDebuffsForId,
       updateEnemyBuffsForId,
       setPlayerBuffs: (updater) => setPlayerBuffs(updater),
+      setPlayerDebuffs: (updater) => setPlayerDebuffs(updater),
       setFamiliarNextActionTurn: (nextTimers) => setFamiliarNextActionTurn(nextTimers),
       reduceSpellCooldowns,
     });
@@ -2770,6 +3079,8 @@ export const Battle: React.FC<BattleProps> = ({
         addGold,
         addExperience,
         updatePlayerHp,
+        overrideRewardItems: tutorialRewardItems,
+        forcedLootItem,
       });
     }
     // Note: Player defeat is now handled immediately when damage is dealt
@@ -2787,6 +3098,15 @@ export const Battle: React.FC<BattleProps> = ({
   const canSpell = isPlayerTurn && currentAction?.actionType === 'spell';
   // Can move on attack OR move turns (move is alternative to attack)
   const canMove = isPlayerTurn && (currentAction?.actionType === 'attack' || currentAction?.actionType === 'move');
+  const isFirstTutorialFight =
+    state.currentFloor === 1 &&
+    (tutorialGate === 'spell-only' || tutorialGate === 'attack-only' || tutorialGate === 'finish-no-move-item');
+  const isSecondTutorialFight =
+    state.currentFloor === 2 &&
+    tutorialSecondFightStep !== null;
+  const isThirdTutorialFight =
+    state.currentFloor === 3 &&
+    tutorialThirdFightStep !== null;
   // Player movement distance based on his movement speed
   const moveDistance = Math.floor(MOVE_DISTANCE);
   const currentQuestPath = useMemo(() => {
@@ -2812,9 +3132,100 @@ export const Battle: React.FC<BattleProps> = ({
   const allowCastTutorialOverride = tutorialFocus === 'cast';
   const blockSpellDuringTutorial = tutorialFocus === 'actions' || tutorialFocus === 'haste';
   const blockItemDuringTutorial = tutorialFocus === 'actions' || tutorialFocus === 'haste';
+  // Gate system: hard-locks all sections except the required one
+  const isLockedGate = tutorialGate === 'locked';
+  const isSpellGate = tutorialGate === 'spell-only';
+  const isAttackGate = tutorialGate === 'attack-only';
+  const isInspectGate = tutorialGate === 'inspect-only';
+  const isItemGate = tutorialGate === 'item-only';
+  const isMoveGate = tutorialGate === 'move-only';
+  const isHealGate = tutorialGate === 'heal-only';
+  const isFinishGate = tutorialGate === 'finish-no-move-item';
+  const enforceSpellGate = isSpellGate && canSpell;
+  const enforceAttackGate = isAttackGate && canAttack;
+  const enforceInspectGate = isInspectGate && canAttack;
+  const enforceItemGate = isItemGate && canSpell;
+  // Gray out all actions while inspect panel is open or during tutorial inspect-gated steps
+  const isInspectPanelOpen = inspectOpen;
+  const isInspectTutorialStep =
+    (isSecondTutorialFight && tutorialSecondFightStep === 'inspect') ||
+    (isThirdTutorialFight && (tutorialThirdFightStep === 'inspect-first' || tutorialThirdFightStep === 'inspect-reveal'));
+  const blockAllDuringInspect = isInspectPanelOpen || isInspectTutorialStep;
+  const gateBlockMove   = blockAllDuringInspect || (tutorialGate !== null && !isMoveGate);
+  const gateBlockAttack = blockAllDuringInspect || isSpellGate || isLockedGate || isMoveGate || isHealGate || isInspectGate || isItemGate;
+  const gateBlockItem   = blockAllDuringInspect || (tutorialGate !== null && !isHealGate && !isItemGate);
+  const gateBlockSpell  = blockAllDuringInspect || enforceAttackGate || isLockedGate || isMoveGate || isInspectGate || isItemGate || (isSpellGate && !canSpell);
+  const gateBlockSkip =
+    blockAllDuringInspect ||
+    (tutorialGate !== null &&
+    (isLockedGate || isMoveGate || isHealGate || isFinishGate || enforceSpellGate || enforceAttackGate || enforceInspectGate || enforceItemGate));
+  const showSpellTurnCoachPrompt = enforceSpellGate;
+  const showShieldReviewModal = firstFightPromptStep === 'after-shield';
+  const showAttackReviewModal = firstFightPromptStep === 'after-attack';
+  const showAttackInstructionPrompt = firstFightPromptStep === 'attack-instruction' && isAttackGate;
+  const showFinishInstructionPrompt = firstFightPromptStep === 'finish-instruction' && isFinishGate;
+  const highlightPlayerShieldZone = showShieldReviewModal;
+  const highlightEnemyHpZone = showAttackReviewModal;
+  const highlightIncomingEnemySpell = showShieldReviewModal;
+  const highlightShieldLogEntry = (entry: { message: string }) => /shield|for demacia/i.test(entry.message);
+  const highlightDamageLogEntry = (entry: { message: string }) => /spirit tree bow|critical hit/i.test(entry.message);
+
+  // Fight B derived state
+  const showPotionReviewModal = secondFightPromptStep === 'after-potion';
+  const showPotionInstructionBanner = isSecondTutorialFight && tutorialSecondFightStep === 'potion' && secondFightPromptStep === 'none';
+  const showInspectInstructionBanner = isSecondTutorialFight && tutorialSecondFightStep === 'inspect';
+  const showMoveInstructionBanner = isSecondTutorialFight && tutorialSecondFightStep === 'move';
+  const showMeleeInstructionBanner = isSecondTutorialFight && tutorialSecondFightStep === 'melee';
+  const showThirdInspectIntroBanner = isThirdTutorialFight && tutorialThirdFightStep === 'inspect-first';
+  const showThirdWardBanner = isThirdTutorialFight && tutorialThirdFightStep === 'ward';
+  const showThirdInspectRevealBanner = isThirdTutorialFight && tutorialThirdFightStep === 'inspect-reveal';
+  const showThirdPurifyBanner = isThirdTutorialFight && tutorialThirdFightStep === 'purify';
+  const showThirdFinishBanner = isThirdTutorialFight && tutorialThirdFightStep === 'finish';
+  const highlightPlayerHpZone = showPotionReviewModal;
+  const highlightEnemyInspectGate = showInspectInstructionBanner || showMeleeInstructionBanner || showThirdInspectIntroBanner || showThirdInspectRevealBanner;
+  const highlightPotionLogEntry = (entry: { message: string }) => /health potion|restoring|hp per turn/i.test(entry.message);
+
+  const handleFirstFightPromptContinue = () => {
+    if (firstFightPromptStep === 'after-shield') {
+      setFirstFightPromptStep('attack-instruction');
+      return;
+    }
+    if (firstFightPromptStep === 'after-attack') {
+      setFirstFightPromptStep('finish-instruction');
+    }
+  };
+
+  const handleSecondFightPromptContinue = () => {
+    setSecondFightPromptStep('none');
+  };
+
+  useEffect(() => {
+    if (!isFirstTutorialFight) {
+      setFirstFightPromptStep('none');
+    }
+  }, [isFirstTutorialFight]);
+
+  useEffect(() => {
+    if (!isSecondTutorialFight) {
+      setSecondFightPromptStep('none');
+    }
+  }, [isSecondTutorialFight]);
+
+  useEffect(() => {
+    if (battleEnded || showSummary) {
+      setFirstFightPromptStep('none');
+      setSecondFightPromptStep('none');
+    }
+  }, [battleEnded, showSummary]);
+
   const getTutorialClass = (isHighlighted: boolean) => {
     if (!isBattleTutorial) return '';
     return isHighlighted ? 'battle-tutorial-highlight' : 'battle-tutorial-muted';
+  };
+
+  const getLaneHighlightClass = (lane: 'player-lane' | 'enemy-lane' | 'timeline') => {
+    if (!tutorialLaneHighlight) return '';
+    return tutorialLaneHighlight === lane ? 'battle-tutorial-highlight' : 'battle-tutorial-muted';
   };
 
   // Formation presets: per-count configuration for spacing and slot placement
@@ -2901,7 +3312,7 @@ export const Battle: React.FC<BattleProps> = ({
         tokenAccent: '#1fb6ff',
         markerImageSrc: playerChar.characterArt || '/assets/global/images/player/miko1.png',
         widthClass: 'w-100',
-        content: <CharacterStatus combatBuffs={playerBuffs} turnCounter={turnCounter} compact />,
+        content: <CharacterStatus combatBuffs={playerBuffs} combatDebuffs={playerDebuffs} turnCounter={turnCounter} compact />,
       },
     ];
 
@@ -2930,7 +3341,7 @@ export const Battle: React.FC<BattleProps> = ({
     });
 
     return units.sort((a, b) => a.position - b.position);
-  }, [familiarCombatants, familiarNextActionTurn, playerBuffs, playerPosition, turnCounter]);
+  }, [familiarCombatants, familiarNextActionTurn, playerBuffs, playerDebuffs, playerPosition, turnCounter]);
 
   const enemyFormationUnits = useMemo<FormationUnit[]>(() => {
     const units = state.enemyCharacters.map((enemy, index) => {
@@ -2957,9 +3368,15 @@ export const Battle: React.FC<BattleProps> = ({
         content: (
           <CharacterStatus
             characterId={targetId}
+            combatBuffs={enemyBuffsById[targetId] || []}
             combatDebuffs={enemyDebuffsById[targetId] || []}
             isRevealed={store.isEnemyRevealed(enemy.id)}
             turnCounter={turnCounter}
+            onBuffHover={() => {
+              if (isSecondTutorialFight && tutorialSecondFightStep === 'inspect') {
+                onTutorialActionUsed?.({ type: 'inspect', targetId, attackTurn: canAttack, viaBuffHover: true });
+              }
+            }}
             compact
           />
         ),
@@ -2967,7 +3384,7 @@ export const Battle: React.FC<BattleProps> = ({
     });
 
     return units.sort((a, b) => b.position - a.position);
-  }, [enemyDebuffsById, enemyPositionsById, state.enemyCharacters, store, turnCounter]);
+  }, [enemyBuffsById, enemyDebuffsById, enemyPositionsById, state.enemyCharacters, store, turnCounter]);
 
   const timelineEntityVisuals = useMemo(() => {
     const visuals: Record<string, { imageSrc?: string; fallbackLabel: string; team: 'player' | 'enemy' | 'familiar' }> = {
@@ -3007,7 +3424,7 @@ export const Battle: React.FC<BattleProps> = ({
         isRevealed: true,
         character: playerChar,
         combatBuffs: playerBuffs,
-        combatDebuffs: [],
+        combatDebuffs: playerDebuffs,
         turnCounter,
       },
     ];
@@ -3030,7 +3447,8 @@ export const Battle: React.FC<BattleProps> = ({
         id: targetId,
         kind: 'character',
         context: 'battle',
-        isRevealed: store.isEnemyRevealed(enemy.id),
+        // Tutorial enemies are always treated as revealed so inspect panel shows their full loadout
+        isRevealed: isThirdTutorialFight ? true : store.isEnemyRevealed(enemy.id),
         character: enemy,
         combatBuffs: enemyBuffsById[targetId] || [],
         combatDebuffs: enemyDebuffsById[targetId] || [],
@@ -3044,6 +3462,7 @@ export const Battle: React.FC<BattleProps> = ({
   const handleOpenInspect = (targetId: string) => {
     setInspectTargetId(targetId);
     setInspectOpen(true);
+    onTutorialActionUsed?.({ type: 'inspect', targetId, attackTurn: canAttack });
   };
 
   const handleSelectInspectTarget = (targetId: string) => {
@@ -3176,7 +3595,7 @@ export const Battle: React.FC<BattleProps> = ({
         </div>
 
         <div className="battle-lanes">
-          <div className="team-player formation-lane team-player-theme">
+          <div className={`team-player formation-lane team-player-theme ${getLaneHighlightClass('player-lane')}`}>
             <div className="formation-lane-grid" data-spacing={playerPreset.spacing}>
               {playerLaneSlots.map((slotUnit, slotIndex) => (
                 <div
@@ -3185,7 +3604,7 @@ export const Battle: React.FC<BattleProps> = ({
                 >
                   {slotUnit && (
                     <div
-                      className={`team-status-slot formation-entity-card ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''}`}
+                      className={`team-status-slot formation-entity-card ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''} ${(highlightPlayerShieldZone || highlightPlayerHpZone) && slotUnit.id === 'player-main' ? 'battle-tutorial-highlight' : ''}`}
                       role="button"
                       tabIndex={0}
                       onClick={() => handleOpenInspect(slotUnit.id)}
@@ -3207,7 +3626,7 @@ export const Battle: React.FC<BattleProps> = ({
             </div>
           </div>
           
-          <div className="team-enemy formation-lane team-enemy-theme">
+          <div className={`team-enemy formation-lane team-enemy-theme ${getLaneHighlightClass('enemy-lane')}`}>
             <div className="formation-lane-grid" data-spacing={enemyPreset.spacing}>
               {enemyLaneSlots.map((slotUnit, slotIndex) => (
                 <div
@@ -3216,7 +3635,7 @@ export const Battle: React.FC<BattleProps> = ({
                 >
                   {slotUnit && (
                     <div
-                      className={`team-status-slot enemy-status-slot formation-entity-card enemy-target-panel ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${slotUnit.defeated ? 'defeated' : ''} ${slotUnit.id === selectedEnemyInstanceId ? 'selected' : ''} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''}`}
+                      className={`team-status-slot enemy-status-slot formation-entity-card enemy-target-panel ${slotUnit.compact ? 'compact-unit-card' : 'primary-unit-card'} ${slotUnit.defeated ? 'defeated' : ''} ${slotUnit.id === selectedEnemyInstanceId ? 'selected' : ''} ${hoveredPreviewTargetIds.includes(slotUnit.id) ? 'preview-targeted' : ''} ${highlightEnemyHpZone ? 'battle-tutorial-highlight' : ''} ${highlightEnemyInspectGate ? 'battle-tutorial-inspect-pulse' : ''}`}
                       role="button"
                       tabIndex={0}
                       onClick={() => {
@@ -3254,6 +3673,7 @@ export const Battle: React.FC<BattleProps> = ({
           currentAction={currentAction}
           playerName={playerName || ''}
           tutorialClassName={getTutorialClass(isLogFocus)}
+          highlightEntryMatcher={showShieldReviewModal ? highlightShieldLogEntry : showAttackReviewModal ? highlightDamageLogEntry : showPotionReviewModal ? highlightPotionLogEntry : undefined}
           expanded={logExpanded}
           onToggleExpand={() => setLogExpanded(v => !v)}
         />
@@ -3261,7 +3681,7 @@ export const Battle: React.FC<BattleProps> = ({
         <div className={`battle-controls-panel ${getTutorialClass(isActionsFocus)}`}>
           {/* Turn Timeline - key forces full remount on new enemy */}
           {!showSummary && (
-            <div className={getTutorialClass(isTimelineFocus)}>
+            <div className={`${getTutorialClass(isTimelineFocus)} ${getLaneHighlightClass('timeline')}`}>
               <TurnTimeline
                 key={enemyChar.id}
                 turnSequence={turnSequence}
@@ -3272,6 +3692,7 @@ export const Battle: React.FC<BattleProps> = ({
                 stunPeriods={stunPeriods}
                 entityVisuals={timelineEntityVisuals}
                 familiarTimelineActions={familiarTimelineActions}
+                highlightEnemySpellActions={highlightIncomingEnemySpell}
                 onSimultaneousAction={handleSimultaneousAction}
               />
             </div>
@@ -3279,17 +3700,101 @@ export const Battle: React.FC<BattleProps> = ({
 
           {!showSummary && !battleEnded && (
             <div className={`battle-actions-container ${getTutorialClass(isActionsFocus || isSpeedFocus || isMoveFocus || isAttackFocus || isHasteFocus || isItemFocus || isCastFocus)}`}>
+              {showAttackInstructionPrompt && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Our turn now. Use Spirit Tree Bow and strike before they recover.</span>
+                </div>
+              )}
+
+              {showFinishInstructionPrompt && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Nice pressure. Keep using attacks and spells until this enemy falls.</span>
+                </div>
+              )}
+
+              {showPotionInstructionBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: You are at half health — open your items and use a Health Potion to recover.</span>
+                </div>
+              )}
+
+              {showInspectInstructionBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Check the enemy buff (hover the icon or open inspect), then move closer.</span>
+                </div>
+              )}
+
+              {showMoveInstructionBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Keep your potion running and move closer now. We need melee range on the next turn.</span>
+                </div>
+              )}
+
+              {showMeleeInstructionBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: You are close enough. Use Demacian Steel Blade to melee attack, then finish the fight while HP keeps restoring.</span>
+                </div>
+              )}
+
+              {showThirdInspectIntroBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Open Teemo's inspect panel. Read Guerilla Warfare, Blowgun, and Blinding Dart before acting.</span>
+                </div>
+              )}
+
+              {showThirdWardBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Use Stealth Ward now. It reveals enemy intel so hidden traits are easier to track.</span>
+                </div>
+              )}
+
+              {showThirdInspectRevealBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Open inspect again and confirm Teemo's Guerilla Warfare, Blowgun, and Blinding Dart details are visible.</span>
+                </div>
+              )}
+
+              {showThirdPurifyBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: After Teemo poisons you, cast Purify to cleanse the debuff before finishing the fight.</span>
+                </div>
+              )}
+
+              {showThirdFinishBanner && (
+                <div className="first-fight-step-banner" role="status" aria-live="polite">
+                  <span className="first-fight-step-banner-icon">🧙</span>
+                  <span className="first-fight-step-banner-text">Ryze: Intel phase complete. Finish the fight.</span>
+                </div>
+              )}
+
+              {showSpellTurnCoachPrompt && (
+                <div className="battle-turn-coach-banner" role="status" aria-live="polite">
+                  <span className="battle-turn-coach-icon">🧙</span>
+                  <span className="battle-turn-coach-text">Ryze: The enemy is about to hit us. Cast for_demacia now and shield yourself.</span>
+                </div>
+              )}
+
               {/* Main Action Row */}
               <div className="main-actions-row">
                 {/* Move Section */}
-                <div className={`action-section move-section ${getTutorialClass(isSpeedFocus || isMoveFocus)}`}>
+                <div className={`action-section move-section ${getTutorialClass(isSpeedFocus || isMoveFocus)} ${gateBlockMove ? 'tutorial-gate-blocked' : ''}`}>
                   <div className="section-label">Move</div>
                   <div className="move-buttons-vertical">
                     <button 
                       onClick={() => handlePlayerMove('towards')} 
-                      className={`move-btn forward ${!canMove ? 'disabled' : ''} ${canMove && !canPlayerAttack ? 'breathing-yellow' : ''}`}
-                      disabled={!canMove}
-                      title={canMove ? 'Move forward towards enemy' : 'Wait for your turn'}
+                      className={`move-btn forward ${!canMove || gateBlockMove ? 'disabled' : ''} ${canMove && !canPlayerAttack && !gateBlockMove ? 'breathing-yellow' : ''}`}
+                      disabled={!canMove || gateBlockMove}
+                      title={gateBlockMove ? 'Complete the current tutorial step first' : canMove ? 'Move forward towards enemy' : 'Wait for your turn'}
                     >
                       <span className="arrow">↑</span>
                       <span className="move-text">Forward</span>
@@ -3297,9 +3802,9 @@ export const Battle: React.FC<BattleProps> = ({
                     </button>
                     <button 
                       onClick={() => handlePlayerMove('away')} 
-                      className={`move-btn backward ${!canMove ? 'disabled' : ''}`}
-                      disabled={!canMove}
-                      title={canMove ? 'Move back away from enemy' : 'Wait for your turn'}
+                      className={`move-btn backward ${!canMove || gateBlockMove ? 'disabled' : ''}`}
+                      disabled={!canMove || gateBlockMove}
+                      title={gateBlockMove ? 'Complete the current tutorial step first' : canMove ? 'Move back away from enemy' : 'Wait for your turn'}
                     >
                       <span className="arrow">↓</span>
                       <span className="move-text">Back</span>
@@ -3309,11 +3814,11 @@ export const Battle: React.FC<BattleProps> = ({
                 </div>
 
                 {/* Attack Section */}
-                <div className={`action-section attack-section ${getTutorialClass(isSpeedFocus || isAttackFocus)}`}>
+                <div className={`action-section attack-section ${getTutorialClass(isSpeedFocus || isAttackFocus)} ${isAttackGate || isFinishGate || showMeleeInstructionBanner ? 'battle-tutorial-highlight' : ''} ${gateBlockAttack ? 'tutorial-gate-blocked' : ''}`}>
                   <div className="section-label">Attack</div>
                   <WeaponSelector
                     onAttack={(index) => handleAttack(index)}
-                    canAttack={canAttack}
+                    canAttack={canAttack && !gateBlockAttack}
                     attackRange={playerScaledStats.attackRange}
                     onHoverChange={(weaponId) => {
                       setHoveredActionPreview(weaponId ? { kind: 'attack', actionId: weaponId } : null);
@@ -3322,13 +3827,13 @@ export const Battle: React.FC<BattleProps> = ({
                 </div>
 
                 {/* Skip Section */}
-                <div className={`action-section skip-section ${getTutorialClass(false)}`}>
+                <div className={`action-section skip-section ${getTutorialClass(false)} ${gateBlockSkip ? 'tutorial-gate-blocked' : ''}`}>
                   <div className="section-label">Skip</div>
                   <button 
                     onClick={handleSkip} 
-                    className={`main-action-btn skip-btn ${!isPlayerTurn ? 'disabled' : ''}`}
-                    disabled={!isPlayerTurn}
-                    title={isPlayerTurn ? 'Skip this turn' : 'Wait for your turn'}
+                    className={`main-action-btn skip-btn ${!isPlayerTurn || gateBlockSkip ? 'disabled' : ''}`}
+                    disabled={!isPlayerTurn || gateBlockSkip}
+                    title={gateBlockSkip ? 'Complete the current tutorial step first' : isPlayerTurn ? 'Skip this turn' : 'Wait for your turn'}
                   >
                     <span className="action-icon">⏭️</span>
                     <span className="action-text">Skip Turn</span>
@@ -3336,23 +3841,23 @@ export const Battle: React.FC<BattleProps> = ({
                 </div>
 
                 {/* Item Section */}
-                <div className={`action-section item-section ${getTutorialClass(isHasteFocus || isItemFocus)} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}>
+                <div className={`action-section item-section ${getTutorialClass(isHasteFocus || isItemFocus)} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''} ${showThirdWardBanner ? 'battle-tutorial-highlight' : ''} ${gateBlockItem ? 'tutorial-gate-blocked' : ''}`}>
                   <div className="section-label">Item</div>
                   <ItemBar
                     usableItems={getUsableItems(state.inventory)}
                     onUseItem={handleUseItem}
-                    canUse={canSpell && !blockItemDuringTutorial}
+                    canUse={canSpell && !blockItemDuringTutorial && !gateBlockItem}
                   />
                 </div>
 
                 {/* Spell Section */}
-                <div className={`action-section spell-section ${getTutorialClass(isHasteFocus || isCastFocus)} ${tutorialActionPromptActive ? 'tutorial-action-choice-highlight' : ''}`}>
+                <div className={`action-section spell-section ${getTutorialClass(isHasteFocus || isCastFocus)} ${tutorialActionPromptActive || isSpellGate || showThirdPurifyBanner ? 'tutorial-action-choice-highlight' : ''} ${showThirdPurifyBanner ? 'battle-tutorial-highlight' : ''} ${gateBlockSpell ? 'tutorial-gate-blocked' : ''}`}>
                   <div className="section-label">Cast</div>
                   <SpellSelector
                     onCast={(index) => handleSpell(index)}
                     canCast={canSpell}
-                    blocked={blockSpellDuringTutorial}
-                    allowTutorialOverride={allowCastTutorialOverride}
+                    blocked={blockSpellDuringTutorial || gateBlockSpell}
+                    allowTutorialOverride={allowCastTutorialOverride || isSpellGate}
                     attackRange={playerScaledStats.attackRange}
                     onHoverChange={(spellId) => {
                       setHoveredActionPreview(spellId ? { kind: 'spell', actionId: spellId } : null);
@@ -3446,7 +3951,7 @@ export const Battle: React.FC<BattleProps> = ({
           disableAutoContinue={showLootTutorialPrompt}
           rewardTutorialActive={eliteRewardTutorialEnabled}
           rewardTutorialText={eliteRewardTutorialEnabled ? t.tutorial.battle.eliteRewardPrompt : undefined}
-          tutorialText={showLootTutorialPrompt ? t.tutorial.battle.loot : undefined}
+          tutorialText={showLootTutorialPrompt ? (lootTutorialTextOverride || t.tutorial.battle.loot) : undefined}
           onTutorialConfirm={showLootTutorialPrompt ? handleLootTutorialConfirm : undefined}
           onContinue={handleSummaryContinue}
           fleeMessage={
@@ -3457,6 +3962,46 @@ export const Battle: React.FC<BattleProps> = ({
                 : undefined
           }
         />
+      )}
+
+      {(showShieldReviewModal || showAttackReviewModal) && (
+        <div className="first-fight-step-modal-overlay">
+          <div className="first-fight-step-modal">
+            <div className="first-fight-step-modal-character">🧙</div>
+            <div className="first-fight-step-modal-body">
+              <p className="first-fight-step-modal-name">Ryze</p>
+              <p className="first-fight-step-modal-text">
+                {showShieldReviewModal
+                  ? 'You shielded for this hit. Track the shield on your health bar (blue fill), the shield log entry, and the enemy spell incoming on the timeline.'
+                  : 'That bow shot chunked their health. Watch their HP drop in the health bar and the damage line in the battle log.'}
+              </p>
+              <div className="first-fight-step-modal-actions">
+                <button type="button" className="first-fight-step-modal-btn" onClick={handleFirstFightPromptContinue}>
+                  {t.common.continue}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPotionReviewModal && (
+        <div className="first-fight-step-modal-overlay">
+          <div className="first-fight-step-modal">
+            <div className="first-fight-step-modal-character">🧙</div>
+            <div className="first-fight-step-modal-body">
+              <p className="first-fight-step-modal-name">Ryze</p>
+              <p className="first-fight-step-modal-text">
+                {'Health Potion used! Your HP will restore over the next several turns — watch the health bar and the buff icon. Now move closer so you can melee attack next turn.'}
+              </p>
+              <div className="first-fight-step-modal-actions">
+                <button type="button" className="first-fight-step-modal-btn" onClick={handleSecondFightPromptContinue}>
+                  {t.common.continue}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

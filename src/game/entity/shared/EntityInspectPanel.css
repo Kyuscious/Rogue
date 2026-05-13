@@ -243,22 +243,124 @@
   margin-bottom: 12px;
 }
 
-.inspect-equipped-chip,
-.inspect-cooldown-chip {
+.inspect-loadout-icon-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 8px;
+}
+
+.inspect-loadout-icon-group > h5,
+.inspect-loadout-icon-group > .inspect-obscured-copy {
+  grid-column: 1 / -1;
+}
+
+.inspect-loadout-slot {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.inspect-loadout-slot.rarity-starter {
+  border-color: rgba(15, 76, 129, 0.75);
+}
+
+.inspect-loadout-slot.rarity-common {
+  border-color: rgba(34, 197, 94, 0.75);
+}
+
+.inspect-loadout-slot.rarity-epic {
+  border-color: rgba(125, 211, 252, 0.75);
+}
+
+.inspect-loadout-slot.rarity-legendary {
+  border-color: rgba(239, 68, 68, 0.75);
+}
+
+.inspect-loadout-slot.rarity-mythic {
+  border-color: rgba(168, 85, 247, 0.75);
+}
+
+.inspect-loadout-slot.rarity-ultimate {
+  border-color: rgba(249, 115, 22, 0.75);
+}
+
+.inspect-loadout-slot.rarity-exalted {
+  border-color: rgba(251, 191, 36, 0.75);
+}
+
+.inspect-loadout-slot.rarity-transcendent {
+  border-color: rgba(248, 250, 252, 0.82);
+}
+
+.inspect-loadout-icon-image {
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  object-fit: contain;
+}
+
+.inspect-loadout-icon-fallback {
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.inspect-loadout-cooldown {
+  position: absolute;
+  right: -4px;
+  bottom: -5px;
   border-radius: 999px;
-  font-size: 0.68rem;
-  padding: 2px 7px;
-  border: 1px solid transparent;
-}
-
-.inspect-equipped-chip {
-  color: #86efac;
-  border-color: rgba(134, 239, 172, 0.4);
-}
-
-.inspect-cooldown-chip {
+  font-size: 0.58rem;
+  padding: 1px 5px;
   color: #fbbf24;
-  border-color: rgba(251, 191, 36, 0.4);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  background: rgba(2, 6, 23, 0.92);
+}
+
+.inspect-loadout-hovercard {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: min(260px, 34vw);
+  background: rgba(6, 13, 30, 0.98);
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  z-index: 12;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.inspect-loadout-slot:hover .inspect-loadout-hovercard {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.inspect-loadout-hover-title {
+  font-weight: 700;
+  color: #e0f2fe;
+  font-size: 0.78rem;
+}
+
+.inspect-loadout-hover-description,
+.inspect-loadout-hover-effect {
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  color: #9fbad8;
+  line-height: 1.3;
+}
+
+.inspect-loadout-hover-effect {
+  color: #bfdbfe;
 }
 
 .entity-inspect-footer {
@@ -314,7 +416,7 @@
 
 .inspect-nav-middle {
   color: #9fbad8;
-  min-width: 56px;
+  margin-bottom: 12px;
   text-align: center;
 }
 

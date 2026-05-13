@@ -8,13 +8,16 @@ interface TemporaryStatModifier {
   duration?: number; // -1 = infinite (∞), 0-999 = turns remaining
   isDebuff?: boolean; // true for debuffs, false/undefined for buffs
   stackCount?: number; // Number of stacks (for display)
+  icon?: string; // Optional emoji/icon override
+  isPassiveTrait?: boolean; // True for passive-trait entries (no numeric value shown)
 }
 
 interface BuffsDisplayProps {
   temporaryStats?: TemporaryStatModifier[];
+  onModifierHover?: (modifier: TemporaryStatModifier) => void;
 }
 
-export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [] }) => {
+export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [], onModifierHover }) => {
   const t = useTranslation();
   const [hoveredBuffIndex, setHoveredBuffIndex] = useState<number | null>(null);
   const [showTotalTooltip, setShowTotalTooltip] = useState(false);
@@ -83,9 +86,10 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [] 
         {/* Temporary buffs/debuffs as individual slots */}
         {temporaryStats.map((mod, idx) => {
           const isDebuff = mod.isDebuff === true;
-          const icon = isDebuff ? '🩸' : '✨'; // 🩸 for debuffs, ✨ for buffs
+          const defaultIcon = isDebuff ? '🩸' : '✨';
+          const icon = mod.icon ?? defaultIcon;
           const slotClass = isDebuff ? 'debuff-slot' : 'buff-slot';
-          const showValue = mod.value !== 0; // Show value if non-zero
+          const showValue = !mod.isPassiveTrait && mod.value !== 0; // Never show value for passive traits
           const durationDisplay = mod.duration === -1 ? '∞' : mod.duration; // ∞ for infinite
           
           return (
@@ -99,6 +103,7 @@ export const BuffsDisplay: React.FC<BuffsDisplayProps> = ({ temporaryStats = [] 
                   x: rect.left,
                   y: rect.bottom + 5,
                 });
+                onModifierHover?.(mod);
               }}
               onMouseLeave={() => setHoveredBuffIndex(null)}
             >

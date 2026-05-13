@@ -40,6 +40,7 @@ interface TurnTimelineProps {
   stunPeriods?: StunPeriod[];
   entityVisuals?: Record<string, TimelineEntityVisual>;
   familiarTimelineActions?: FamiliarTimelineAction[];
+  highlightEnemySpellActions?: boolean;
   onSimultaneousAction?: (playerAction: string, enemyAction: string, time: number) => void;
 }
 
@@ -52,6 +53,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
   stunPeriods = [],
   entityVisuals = {},
   familiarTimelineActions = [],
+  highlightEnemySpellActions = false,
   onSimultaneousAction,
 }) => {
   // Get next 30 actions starting from current
@@ -295,6 +297,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
           if (isSimultaneous) {
             const playerAction = group.find(g => g.action.entityId === 'player')!.action;
             const enemyAction = group.find(g => g.action.entityId !== 'player')!.action;
+            const shouldHighlightEnemySpell = highlightEnemySpellActions && enemyAction.actionType === 'spell';
             const playerIcon = playerAction.actionType === 'spell' ? '✨' : playerAction.actionType === 'move' ? '↔' : '⚔️';
             const enemyIcon = enemyAction.actionType === 'spell' ? '✨' : enemyAction.actionType === 'move' ? '↔' : '⚔️';
             const playerVisual = getEntityVisual('player', playerName, true);
@@ -303,7 +306,7 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
             return (
               <div
                 key={timeKey}
-                className={`action-indicator simultaneous ${isActive ? 'active' : ''}`}
+                className={`action-indicator simultaneous ${isActive ? 'active' : ''} ${shouldHighlightEnemySpell ? 'timeline-tutorial-highlight' : ''}`}
                 style={{ left: `${position}%` }}
                 title={`SIMULTANEOUS at ${firstAction.time.toFixed(2)}\n${playerName}: ${playerAction.actionType}\n${enemyAction.entityName || enemyName}: ${enemyAction.actionType}`}
               >
@@ -322,13 +325,14 @@ export const TurnTimeline: React.FC<TurnTimelineProps> = ({
           // Single action (normal case)
           const action = firstAction;
           const isPlayer = action.entityId === 'player';
+          const shouldHighlightEnemySpell = highlightEnemySpellActions && !isPlayer && action.actionType === 'spell';
           const name = isPlayer ? playerName : (action.entityName || enemyName);
           const entityVisual = getEntityVisual(action.entityId, name, isPlayer);
           
           return (
             <div
               key={timeKey}
-              className={`action-indicator ${isActive ? 'active' : ''} ${entityVisual.team}`}
+              className={`action-indicator ${isActive ? 'active' : ''} ${entityVisual.team} ${shouldHighlightEnemySpell ? 'timeline-tutorial-highlight' : ''}`}
               style={{ left: `${position}%` }}
               title={`${name} - ${action.actionType} at ${action.time.toFixed(2)}`}
             >

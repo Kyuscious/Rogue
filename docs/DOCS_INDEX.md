@@ -1,6 +1,6 @@
 # Documentation Index
 
-**Last Updated:** April 24, 2026
+**Last Updated:** May 2, 2026
 
 This index reflects the new category-first documentation structure. The docs root now stays intentionally minimal: the index, the reorganization proposal, and the main subfolders.
 
@@ -61,6 +61,7 @@ This index reflects the new category-first documentation structure. The docs roo
 |----------|--------|-------------|
 | [guides/content-integration.md](guides/content-integration.md) | ✅ DONE | Step-by-step guide for adding items, characters, and regions |
 | [guides/index-guide.md](guides/index-guide.md) | ✅ DONE | Index tabs, discovery rules, and codex visibility behavior |
+| [guides/tutorial-guide.md](guides/tutorial-guide.md) | 🚧 WIP | Tutorial lifecycle spec: auto-start, skip/re-enable, contextual prompts, and custom onboarding segment |
 | [guides/rarity-visual-guide.md](guides/rarity-visual-guide.md) | ✅ DONE | Rarity palette, borders, and origin metadata conventions |
 | [guides/project-structure.md](guides/project-structure.md) | ✅ DONE | Feature-first folder ownership and refactor conventions |
 

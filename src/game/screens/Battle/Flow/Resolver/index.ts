@@ -62,6 +62,8 @@ export interface ResolveEnemyDefeatParams {
   addGold: (amount: number) => void;
   addExperience: (amount: number) => void;
   updatePlayerHp: (newHp: number) => void;
+  overrideRewardItems?: InventoryItem[]; // Tutorial: skip random generation and use these items
+  forcedLootItem?: InventoryItem | null; // Tutorial: replace the random direct item drop (null = no drop)
 }
 
 export function resolvePlayerDefeat(params: {
@@ -113,6 +115,8 @@ export function resolveEnemyDefeat(params: ResolveEnemyDefeatParams): void {
     addGold,
     addExperience,
     updatePlayerHp,
+    overrideRewardItems,
+    forcedLootItem,
   } = params;
 
   setBattleEnded(true);
@@ -221,6 +225,16 @@ export function resolveEnemyDefeat(params: ResolveEnemyDefeatParams): void {
     hasReapPassive
   );
 
+  // Override the random direct item drop when a forced item is specified (tutorial use).
+  // forcedLootItem === null  → strip the random drop entirely
+  // forcedLootItem defined   → replace the random item drop with that specific item
+  if (forcedLootItem !== undefined) {
+    victoryResult.loot = (victoryResult.loot ?? []).filter((r) => r.type !== 'item');
+    if (forcedLootItem !== null) {
+      victoryResult.loot.push({ type: 'item', itemId: forcedLootItem.itemId, amount: forcedLootItem.quantity });
+    }
+  }
+
   const manaflowBuff = playerBuffs.find((b) => b.id === 'manaflow_stacks');
   if (manaflowBuff) {
     const stackCount = manaflowBuff.stacks.length;
@@ -287,7 +301,7 @@ export function resolveEnemyDefeat(params: ResolveEnemyDefeatParams): void {
   }
 
   if (victoryResult.shouldShowRewardSelection) {
-    const rewards = generateRewardOptions(
+    const rewards = overrideRewardItems ?? generateRewardOptions(
       stateSelectedRegion,
       stateCurrentFloor,
       playerChar.class,

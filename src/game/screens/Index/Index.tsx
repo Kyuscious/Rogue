@@ -59,6 +59,7 @@ const ACHIEVEMENTS: Achievement[] = [
   { id: 'discover_all_items', name: 'Master Collector', description: 'Discover all items', icon: '✨', unlocked: false },
   { id: 'play_10_hours', name: 'Dedicated', description: 'Play for 10 hours', icon: '⏱️', unlocked: false },
   { id: 'survive_10_fails', name: 'Persistent', description: 'Fail 10 runs', icon: '💀', unlocked: false },
+  { id: 'complete_tutorial', name: 'Tutorial Graduate', description: 'Complete at least one hard-tier region', icon: '🎓', unlocked: false },
 ];
 
 const RARITY_COLORS: Record<ItemRarity, string> = {
@@ -328,6 +329,9 @@ export const Index: React.FC<IndexProps> = ({ onBack }) => {
           break;
         case 'survive_10_fails':
           unlocked = profile.stats.runsFailed >= 10;
+          break;
+        case 'complete_tutorial':
+          unlocked = (profile.stats.completedHardRegions || []).length >= 1;
           break;
       }
       

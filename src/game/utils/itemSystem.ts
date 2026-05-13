@@ -24,6 +24,8 @@ export interface CombatBuff {
   encountersRemaining?: number; // For encounter-based buffs (persists across battles)
   type?: 'instant' | 'heal_over_time' | 'stacking_permanent'; // Type of buff effect
   isInfinite?: boolean; // For permanent stacking buffs like Life Draining
+  icon?: string; // Optional emoji/icon override shown in BuffsDisplay (defaults to ✨ or 🩸)
+  isPassiveTrait?: boolean; // True for passive-trait buffs with no numeric value (display name only)
   
   // Computed properties (derived from stacks)
   totalAmount?: number; // Sum of all active stack effects (computed)
@@ -44,6 +46,7 @@ export interface CombatBuffStats {
   movementSpeed: number;
   magicFind: number;
   lifeSteal: number;
+  magicDamage: number; // Magic damage-over-time or proc damage labels
   trueDamage: number; // Flat damage that bypasses all resistances
   heal_over_time: number; // Special stat for HoT effects
   xpGain: number; // XP gain multiplier (for manaflow, etc.)

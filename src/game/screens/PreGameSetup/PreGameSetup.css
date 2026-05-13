@@ -751,3 +751,104 @@
     font-size: 14px;
   }
 }
+
+/* ==========================================
+   Artifacts Section
+   ========================================== */
+
+.artifacts-section {
+  border-top: 1px solid rgba(180, 120, 255, 0.2);
+  padding-top: 16px;
+}
+
+.artifacts-title {
+  color: #b47fff !important;
+  text-shadow: 0 0 12px rgba(180, 127, 255, 0.4) !important;
+}
+
+.selection-grid.artifacts-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.artifact-item {
+  border-color: rgba(180, 127, 255, 0.3) !important;
+  background: linear-gradient(135deg, rgba(30, 20, 50, 0.85) 0%, rgba(45, 25, 70, 0.85) 100%) !important;
+  min-height: 130px;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.artifact-item:hover:not(.locked) {
+  border-color: rgba(180, 127, 255, 0.6) !important;
+  background: linear-gradient(135deg, rgba(40, 25, 60, 0.95) 0%, rgba(55, 30, 80, 0.95) 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(180, 127, 255, 0.25);
+}
+
+.artifact-item.artifact-active {
+  border-color: #b47fff !important;
+  background: linear-gradient(135deg, rgba(100, 40, 180, 0.35) 0%, rgba(130, 60, 200, 0.4) 100%) !important;
+  box-shadow: 0 0 20px rgba(180, 127, 255, 0.5), 0 0 6px rgba(180, 127, 255, 0.3) inset;
+}
+
+.artifact-rune-icon {
+  font-size: 28px;
+  color: #b47fff;
+  filter: drop-shadow(0 0 6px rgba(180, 127, 255, 0.6));
+}
+
+.artifact-active .artifact-rune-icon {
+  filter: drop-shadow(0 0 10px rgba(180, 127, 255, 1));
+  animation: runeGlow 2s ease-in-out infinite;
+}
+
+@keyframes runeGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(180, 127, 255, 0.8)); }
+  50% { filter: drop-shadow(0 0 16px rgba(220, 160, 255, 1)); }
+}
+
+.artifact-name {
+  color: #d4a8ff !important;
+  font-size: 13px !important;
+}
+
+.artifact-active .artifact-name {
+  color: #f0d0ff !important;
+}
+
+.artifact-description {
+  font-size: 11px;
+  color: #998aaa;
+  text-align: center;
+  line-height: 1.4;
+  padding: 0 4px;
+}
+
+.artifact-active .artifact-description {
+  color: #c8aadd;
+}
+
+.artifact-toggle-indicator {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.artifact-toggle-indicator.on {
+  color: #b47fff;
+  background: rgba(180, 127, 255, 0.15);
+  border: 1px solid rgba(180, 127, 255, 0.4);
+}
+
+.artifact-toggle-indicator.off {
+  color: #666;
+  background: rgba(80, 80, 80, 0.15);
+  border: 1px solid rgba(80, 80, 80, 0.3);
+}
+

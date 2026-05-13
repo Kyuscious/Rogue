@@ -1338,6 +1338,25 @@
 .move-container.disabled {
   opacity: 0.5;
   cursor: not-allowed;
+.battle-turn-coach-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(245, 197, 66, 0.9);
+  background: linear-gradient(90deg, rgba(64, 46, 20, 0.95) 0%, rgba(84, 61, 25, 0.95) 100%);
+  box-shadow: 0 0 0 1px rgba(255, 228, 130, 0.2) inset;
+  border-radius: 8px;
+}
+.battle-turn-coach-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.battle-turn-coach-text {
+  color: #ffeaa6;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
 }
 
 .move-label {
@@ -1548,9 +1567,152 @@
   border-radius: 10px;
 }
 
+/* Make the shield bar pop visually during the shield review step */
+.battle-tutorial-highlight .shield-fill {
+  box-shadow: 0 0 0 2px rgba(100, 200, 255, 1), 0 0 18px rgba(100, 200, 255, 0.95) !important;
+  animation: shieldTutorialPulse 0.85s ease-in-out infinite !important;
+}
+
+@keyframes shieldTutorialPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Enemy card pulsing highlight for inspect tutorial */
+.battle-tutorial-inspect-pulse {
+  animation: inspectPulse 1s ease-in-out infinite;
+  box-shadow: 0 0 0 3px rgba(255, 214, 102, 0.9), 0 0 24px rgba(255, 214, 102, 0.55) !important;
+  border-radius: 10px;
+}
+
+@keyframes inspectPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(255, 214, 102, 0.9), 0 0 24px rgba(255, 214, 102, 0.55); }
+  50% { box-shadow: 0 0 0 3px rgba(255, 214, 102, 1), 0 0 36px rgba(255, 214, 102, 0.8); }
+}
+
 .battle-tutorial-muted {
   position: relative;
   z-index: 45;
   opacity: 0.55;
   pointer-events: none;
+}
+
+/* Tutorial gate: hard-blocks a section — player cannot interact with it */
+.tutorial-gate-blocked {
+  opacity: 0.28;
+  pointer-events: none;
+  filter: grayscale(70%);
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.tutorial-log-highlight {
+  border: 1px solid rgba(255, 214, 102, 0.85);
+  box-shadow: 0 0 12px rgba(255, 214, 102, 0.45);
+  background: linear-gradient(90deg, rgba(70, 56, 24, 0.85) 0%, rgba(46, 37, 17, 0.85) 100%);
+}
+
+.timeline-tutorial-highlight {
+  filter: drop-shadow(0 0 6px rgba(255, 214, 102, 0.75));
+}
+
+.first-fight-step-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.62);
+  pointer-events: none;
+}
+
+.first-fight-step-modal {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: min(920px, calc(100% - 30px));
+  min-height: 120px;
+  background: linear-gradient(135deg, rgba(17, 23, 39, 0.97) 0%, rgba(26, 20, 50, 0.97) 100%);
+  border: 2px solid rgba(74, 158, 255, 0.78);
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  padding: 16px 16px 16px;
+  z-index: 125;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.58);
+  pointer-events: all;
+}
+
+.first-fight-step-modal-character {
+  width: 74px;
+  height: 74px;
+  border-radius: 8px;
+  background: rgba(74, 158, 255, 0.2);
+  border: 1px solid rgba(74, 158, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  flex-shrink: 0;
+}
+
+.first-fight-step-modal-body {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.first-fight-step-modal-name {
+  margin: 0;
+  color: #8fc3ff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.first-fight-step-modal-text {
+  margin: 0;
+  color: #e8f2ff;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.first-fight-step-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.first-fight-step-modal-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: #2f74d9;
+  color: #f5faff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.first-fight-step-modal-btn:hover {
+  background: #3f86ed;
+}
+
+.first-fight-step-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(142, 194, 255, 0.7);
+  background: linear-gradient(90deg, rgba(22, 37, 68, 0.96) 0%, rgba(17, 30, 57, 0.96) 100%);
+  box-shadow: 0 0 0 1px rgba(142, 194, 255, 0.18) inset;
+}
+
+.first-fight-step-banner-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.first-fight-step-banner-text {
+  color: #deebff;
+  font-weight: 600;
 }

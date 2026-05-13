@@ -15,6 +15,7 @@ interface RunTurnManagerParams {
   playerScaledStats: any;
   enemyScaledStats: any;
   playerBuffs: CombatBuff[];
+  playerDebuffs: CombatBuff[];
   enemyBuffs: CombatBuff[];
   enemyDebuffs: CombatBuff[];
   enemyBuffsById: Record<string, CombatBuff[]>;
@@ -30,6 +31,7 @@ interface RunTurnManagerParams {
   updateEnemyDebuffsForId: (targetId: string, updater: (prev: CombatBuff[]) => CombatBuff[]) => void;
   updateEnemyBuffsForId: (targetId: string, updater: (prev: CombatBuff[]) => CombatBuff[]) => void;
   setPlayerBuffs: (updater: (prev: CombatBuff[]) => CombatBuff[]) => void;
+  setPlayerDebuffs: (updater: (prev: CombatBuff[]) => CombatBuff[]) => void;
   setFamiliarNextActionTurn: (next: Record<string, number>) => void;
   reduceSpellCooldowns: () => void;
 }
@@ -44,6 +46,7 @@ export function runTurnManager(params: RunTurnManagerParams): BattleLogEntry[] {
     playerScaledStats,
     enemyScaledStats,
     playerBuffs,
+    playerDebuffs,
     enemyBuffs,
     enemyDebuffs,
     enemyBuffsById,
@@ -59,6 +62,7 @@ export function runTurnManager(params: RunTurnManagerParams): BattleLogEntry[] {
     updateEnemyDebuffsForId,
     updateEnemyBuffsForId,
     setPlayerBuffs,
+    setPlayerDebuffs,
     setFamiliarNextActionTurn,
     reduceSpellCooldowns,
   } = params;
@@ -72,10 +76,13 @@ export function runTurnManager(params: RunTurnManagerParams): BattleLogEntry[] {
     playerHp: playerChar.hp,
     playerMaxHp: playerScaledStats.health,
     playerHealthRegen: playerScaledStats.health_regen,
+    playerMagicResist: playerScaledStats.magicResist,
     playerBuffs,
+    playerDebuffs,
     turnCounter,
     updatePlayerHp,
     setPlayerBuffs,
+    setPlayerDebuffs,
     statusTurnLineParts,
     statusTurnLineTooltips,
   });

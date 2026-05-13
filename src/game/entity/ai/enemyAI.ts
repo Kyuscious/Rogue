@@ -46,6 +46,7 @@ export interface AIDecisionContext {
   behaviorProfile: AIBehaviorProfile;
   enemyLoadout: EnemyLoadout;
   currentActionType?: 'attack' | 'spell' | 'move';
+  noFlee?: boolean; // When true, enemy will never choose to move away from the player
 }
 
 export type AIAction = 
@@ -141,6 +142,14 @@ function evaluateSpellUse(
   if (distance > spellRange) return 0; // Out of range
   
   let score = 50; // Base score for available spell
+
+  if (spellId === 'guerilla_warfare') {
+    const hpRatio = enemyStats.health > 0 ? enemy.hp / enemyStats.health : 1;
+    if (hpRatio > 0.60) {
+      return 0;
+    }
+    score += 80;
+  }
   
   // Evaluate spell effects
   if (spell.effects) {
@@ -240,6 +249,8 @@ function evaluateMovement(
   direction: 'towards' | 'away'
 ): number {
   const { enemy, player, enemyStats, playerStats, behaviorProfile } = context;
+  // Tutorial enemies are not allowed to flee
+  if (direction === 'away' && context.noFlee) return 0;
   const distance = Math.abs(context.enemyPosition - context.playerPosition);
   const attackRange = enemyStats.attackRange || 125;
   const spellRange = 500; // Standard spell range

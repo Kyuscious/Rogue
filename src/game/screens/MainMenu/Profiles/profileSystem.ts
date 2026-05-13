@@ -20,6 +20,7 @@ export interface ProfileStats {
   discoveredSpells: string[]; // Array of spell IDs cast at least once on this profile
   discoveredFamiliars: string[]; // Array of familiar IDs obtained at least once on this profile
   visitedRegions: string[]; // Array of region IDs that have been visited at least once
+  completedHardRegions: string[]; // Array of hard-tier region IDs cleared at least once
   unlockedItems: string[]; // Array of unlocked item IDs (for items with unlock requirements)
   hoursPlayed: number; // Total hours played
   lastPlayedTimestamp: number; // Timestamp of last session
@@ -47,6 +48,7 @@ const DEFAULT_PROFILE_STATS: ProfileStats = {
   discoveredSpells: [],
   discoveredFamiliars: [],
   visitedRegions: [],
+  completedHardRegions: [],
   unlockedItems: [], // Initialize with empty array
   hoursPlayed: 0,
   lastPlayedTimestamp: Date.now(),
@@ -87,6 +89,7 @@ export function loadProfiles(): PlayerProfile[] {
           discoveredSpells: profile.stats?.discoveredSpells || [],
           discoveredFamiliars: profile.stats?.discoveredFamiliars || [],
           visitedRegions: profile.stats?.visitedRegions || [],
+          completedHardRegions: profile.stats?.completedHardRegions || [],
           unlockedItems: profile.stats?.unlockedItems || [],
         },
       }));
@@ -161,6 +164,7 @@ export function resetProfile(profileId: number): void {
     };
     saveProfiles(profiles);
     localStorage.removeItem(`tutorialCompleted_profile_${profileId}`);
+    localStorage.removeItem(`tutorialIntroSeen_profile_${profileId}`);
     localStorage.removeItem(`eliteTutorialSeen_profile_${profileId}`);
     localStorage.removeItem(`eliteRewardTutorialSeen_profile_${profileId}`);
     localStorage.removeItem(`regionTravelTutorialSeen_profile_${profileId}`);
@@ -367,6 +371,24 @@ export function visitRegion(regionId: string): void {
       stats: {
         ...profile.stats,
         visitedRegions: [...visitedRegions, regionId],
+        lastPlayedTimestamp: Date.now(),
+      },
+    });
+  }
+}
+
+/**
+ * Mark a hard-tier region as completed at least once
+ */
+export function markHardRegionCompleted(regionId: string): void {
+  const profile = getActiveProfile();
+  const completedHardRegions = profile.stats.completedHardRegions || [];
+
+  if (!completedHardRegions.includes(regionId)) {
+    updateProfile(profile.id, {
+      stats: {
+        ...profile.stats,
+        completedHardRegions: [...completedHardRegions, regionId],
         lastPlayedTimestamp: Date.now(),
       },
     });

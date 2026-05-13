@@ -1,5 +1,5 @@
 import { Spell } from '@data/spells';
-import { Weapon } from '@data/weapons';
+import { getEffectiveWeaponRange, Weapon } from '@data/weapons';
 import { BattleTarget, BattleTargetSide } from '@battle/logic/targetingSystem';
 
 export type ActionTargetMode = 'none' | 'self' | 'single' | 'multiple' | 'aoe';
@@ -48,11 +48,13 @@ export function isTargetInRange(target: BattleTarget, actorPosition: number | un
 }
 
 export function getDefaultWeaponTargetingProfile(weapon: Weapon, fallbackRange: number): ActionTargetingProfile {
+  const effectiveRange = getEffectiveWeaponRange(weapon, fallbackRange);
+
   if (weapon.targeting) {
     return {
       mode: weapon.targeting.mode,
       selectionRule: weapon.targeting.selectionRule,
-      range: weapon.targeting.range ?? fallbackRange,
+      range: effectiveRange,
       maxTargets: weapon.targeting.maxTargets,
       targetSide: weapon.targeting.targetSide,
       requiresTargetInRange: weapon.targeting.requiresTargetInRange,
@@ -67,7 +69,7 @@ export function getDefaultWeaponTargetingProfile(weapon: Weapon, fallbackRange: 
   return {
     mode: 'single',
     selectionRule: 'first-in-range',
-    range: fallbackRange,
+    range: effectiveRange,
     targetSide: 'enemy',
     requiresTargetInRange: true,
   };

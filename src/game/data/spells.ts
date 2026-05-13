@@ -181,6 +181,54 @@ export const SPELL_DATABASE: Record<string, Spell> = {
     cooldown: 1,
     originRegion: 'demacia',
   },
+
+  guerilla_warfare: {
+    id: 'guerilla_warfare',
+    name: 'Guerilla Warfare',
+    description: 'Teemo fades from direct sight until he attacks or casts another action. Breaking stealth grants +0.5 attack speed for 2 turns.',
+    rarity: 'legendary',
+    effects: [
+      {
+        type: 'buff',
+        description: 'Become Invisible. Direct-target actions cannot select this unit until stealth breaks.',
+      },
+    ],
+    targeting: {
+      mode: 'self',
+      targetSide: 'player',
+    },
+    cooldown: 3,
+    originRegion: 'bandle_city',
+  },
+
+  blinding_dart: {
+    id: 'blinding_dart',
+    name: 'Blinding Dart',
+    description: 'Teemo fires a toxic dart for 70% AP magic damage and inflicts Blind, causing the target to miss its next attack. Blind stacks.',
+    rarity: 'legendary',
+    effects: [
+      {
+        type: 'damage',
+        damageScaling: {
+          abilityPower: 70,
+        },
+        description: 'Deals magic damage equal to 70% of the caster\'s Ability Power.',
+      },
+      {
+        type: 'debuff',
+        description: 'Applies Blind: the target misses its next attack. This effect stacks.',
+      },
+    ],
+    targeting: {
+      mode: 'single',
+      selectionRule: 'first-in-range',
+      range: 500,
+      requiresTargetInRange: true,
+      targetSide: 'enemy',
+    },
+    cooldown: 2,
+    originRegion: 'bandle_city',
+  },
   // Epic Spells
 
   // Legendary Spells
